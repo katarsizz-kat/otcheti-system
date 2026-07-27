@@ -9,16 +9,11 @@ from utils.pptx_builder import generate_flexible_presentation
 
 st.set_page_config(page_title="Презентация КР", page_icon="🍕", layout="wide")
 
-st.markdown("""
-    <h1 style='text-align: center; color: #E12D26; font-family: Oswald;'>
-        🍕 КОНСТРУКТОР ПРЕЗЕНТАЦИЙ
-    </h1>
-    <p style='text-align: center; color: #03592D; font-family: Roboto Condensed; font-size: 20px;'>
-        Загрузите файлы и опишите структуру — мы соберём идеальную презентацию!
-    </p>
-""", unsafe_allow_html=True)
+# Стандартная шапка как на других страницах
+st.title("🍕 Генерация презентации")
+st.markdown("---")
 
-st.divider()
+st.write("Загрузите Excel-файлы с данными клиентского рейтинга и опишите структуру презентации.")
 
 # ==========================================
 #  БЛОК 1: ЗАГРУЗКА ФАЙЛОВ
@@ -49,7 +44,7 @@ with col2:
 
 # Отображение загруженных файлов
 if st.session_state.uploaded_files:
-    st.markdown(f"** Загружено файлов: {len(st.session_state.uploaded_files)}**")
+    st.markdown(f"**Загружено файлов: {len(st.session_state.uploaded_files)}**")
     
     # Показываем список с возможностью удаления
     files_to_remove = []
@@ -70,7 +65,7 @@ if st.session_state.uploaded_files:
         st.rerun()
     
     # Кнопка очистки всех
-    if st.button("️ Очистить все файлы", type="secondary"):
+    if st.button("🗑️ Очистить все файлы", type="secondary"):
         st.session_state.uploaded_files = []
         st.rerun()
 
@@ -78,15 +73,20 @@ if st.session_state.uploaded_files:
 # 📝 БЛОК 2: СТРУКТУРА ПРЕЗЕНТАЦИИ
 # ==========================================
 st.divider()
-st.subheader(" 2. Структура презентации")
+st.subheader("📝 2. Структура презентации")
 
 st.markdown("""
 **Опишите, какие слайды нужны** (каждый слайд с новой строки):
 
 Пример:
-Титульный слайд: Клиентский рейтинг за Август
+Титульный слайд: Клиентский рейтинг за Июнь 2026
 Общие показатели по сети
 Оценки по Санкт-Петербургу
+Оценки по Тюмени
+Анализ жалоб: Продукт и Приготовление
+Анализ жалоб: Сервис и Доставка
+Положительные отзывы
+Итоги и рекомендации
 """)
 
 presentation_structure = st.text_area(
@@ -104,7 +104,7 @@ st.subheader("⚙️ 3. Настройки")
 col_x, col_y = st.columns(2)
 
 with col_x:
-    report_period = st.text_input("Период отчёта", value="Август 2025")
+    report_period = st.text_input("Период отчёта", value="Июнь 2026")
     
 with col_y:
     color_theme = st.selectbox(
@@ -125,7 +125,7 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
         st.stop()
     
     if not presentation_structure.strip():
-        st.error("❌ Опишите структуру презентации!")
+        st.error(" Опишите структуру презентации!")
         st.stop()
     
     with st.spinner("🔥 Готовим презентацию... Анализируем данные из файлов..."):
@@ -134,20 +134,32 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
         status_text = st.empty()
         
         # Шаг 1: Чтение всех файлов
-        status_text.text(" Читаем файлы...")
+        status_text.text("📖 Читаем файлы...")
         all_dataframes = {}
         for idx, file in enumerate(st.session_state.uploaded_files):
             file.seek(0)  # Сбрасываем указатель в начало
             try:
-                df = pd.read_excel(file, sheet_name=None)  # Читаем все листы
-                all_dataframes[file.name] = df
+                # Читаем все листы
+                df_sheets = pd.read_excel(file, sheet_name=None)
+                
+                # Обрабатываем каждый лист - убираем пустые строки и столбцы
+                processed_sheets = {}
+                for sheet_name, df in df_sheets.items():
+                    # Удаляем полностью пустые строки и столбцы
+                    df = df.dropna(how='all', axis=0)  # пустые строки
+                    df = df.dropna(how='all', axis=1)  # пустые столбцы
+                    # Заполняем NaN пустыми строками для отображения
+                    df = df.fillna('')
+                    processed_sheets[sheet_name] = df
+                
+                all_dataframes[file.name] = processed_sheets
                 progress_bar.progress((idx + 1) / len(st.session_state.uploaded_files) * 0.3)
             except Exception as e:
                 st.error(f"❌ Ошибка чтения файла {file.name}: {e}")
                 st.stop()
         
         # Шаг 2: Парсинг структуры
-        status_text.text("📋 Анализируем структуру...")
+        status_text.text(" Анализируем структуру...")
         slides_structure = [line.strip() for line in presentation_structure.split('\n') if line.strip()]
         progress_bar.progress(0.5)
         
