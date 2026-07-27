@@ -5,6 +5,16 @@
 # ЭФФЕКТЫ ВРЕМЕНИ СУТОК
 # =============================================================================
 
+def get_morning_effect() -> str:
+    """Эффект утреннего рассвета (мягкий свет)."""
+    return (
+        "<style>"
+        ".morning-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at top,rgba(241,148,138,0.15) 0%,transparent 70%);z-index:0;pointer-events:none}"
+        "</style>"
+        "<div class='morning-glow'></div>"
+    )
+
+
 def get_clouds_effect() -> str:
     """Эффект плывущих облаков."""
     return (
@@ -66,6 +76,7 @@ def get_sunset_effect() -> str:
 def get_theme_effect(theme: str) -> str:
     """Возвращает эффекты для темы времени суток."""
     effects = {
+        "morning": get_morning_effect(),  # Новый эффект для утра
         "day": get_clouds_effect(),
         "evening": get_sunset_effect(),
         "night": get_stars_effect(),
@@ -95,7 +106,7 @@ def get_snow_effect() -> str:
         "<div class='snowflake'>❆</div>"
         "<div class='snowflake'>❄</div>"
         "<div class='snowflake'></div>"
-        "<div class='snowflake'>❆</div>"
+        "<div class='snowflake'></div>"
     )
 
 
@@ -135,7 +146,7 @@ def get_falling_pizza_effect() -> str:
         "<div class='falling-pizza'>🍕</div>"
         "<div class='falling-pizza'></div>"
         "<div class='falling-pizza'>🍕</div>"
-        "<div class='falling-pizza'>🍕</div>"
+        "<div class='falling-pizza'></div>"
     )
 
 
@@ -149,7 +160,7 @@ def get_pumpkins_effect() -> str:
         ".pumpkin:nth-child(3){bottom:20%;left:15%;animation-delay:2s}"
         "@keyframes pumpkinFloat{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-20px) rotate(5deg)}}"
         "</style>"
-        "<div class='pumpkin'>🎃</div>"
+        "<div class='pumpkin'></div>"
         "<div class='pumpkin'></div>"
         "<div class='pumpkin'>🎃</div>"
     )
