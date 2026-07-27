@@ -84,3 +84,111 @@ st.markdown("""
 **Опишите, какие слайды нужны** (каждый слайд с новой строки):
 
 Пример:
+Титульный слайд: Клиентский рейтинг за Август
+Общие показатели по сети
+Оценки по Санкт-Петербургу
+""")
+
+presentation_structure = st.text_area(
+    "Структура презентации:",
+    height=200,
+    placeholder="Введите название каждого слайда с новой строки..."
+)
+
+# ==========================================
+# 🎨 БЛОК 3: ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ
+# ==========================================
+st.divider()
+st.subheader("⚙️ 3. Настройки")
+
+col_x, col_y = st.columns(2)
+
+with col_x:
+    report_period = st.text_input("Период отчёта", value="Август 2025")
+    
+with col_y:
+    color_theme = st.selectbox(
+        "Цветовая тема",
+        ["Классическая (Томат + Базилик)", "Оливковая", "Сырная"],
+        index=0
+    )
+
+# ==========================================
+#  ГЕНЕРАЦИЯ ПРЕЗЕНТАЦИИ
+# ==========================================
+st.divider()
+
+if st.button("🍕 Сгенерировать презентацию", type="primary", use_container_width=True):
+    
+    if not st.session_state.uploaded_files:
+        st.error("❌ Загрузите хотя бы один файл!")
+        st.stop()
+    
+    if not presentation_structure.strip():
+        st.error("❌ Опишите структуру презентации!")
+        st.stop()
+    
+    with st.spinner("🔥 Готовим презентацию... Анализируем данные из файлов..."):
+        
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Шаг 1: Чтение всех файлов
+        status_text.text(" Читаем файлы...")
+        all_dataframes = {}
+        for idx, file in enumerate(st.session_state.uploaded_files):
+            file.seek(0)  # Сбрасываем указатель в начало
+            try:
+                df = pd.read_excel(file, sheet_name=None)  # Читаем все листы
+                all_dataframes[file.name] = df
+                progress_bar.progress((idx + 1) / len(st.session_state.uploaded_files) * 0.3)
+            except Exception as e:
+                st.error(f"❌ Ошибка чтения файла {file.name}: {e}")
+                st.stop()
+        
+        # Шаг 2: Парсинг структуры
+        status_text.text("📋 Анализируем структуру...")
+        slides_structure = [line.strip() for line in presentation_structure.split('\n') if line.strip()]
+        progress_bar.progress(0.5)
+        
+        # Шаг 3: Генерация презентации
+        status_text.text("🎨 Создаём слайды...")
+        
+        safe_period = "".join(c for c in report_period if c.isalnum() or c in (' ', '_')).rstrip()
+        output_filename = f"Презентация_КР_{safe_period}.pptx"
+        
+        try:
+            pptx_path = generate_flexible_presentation(
+                all_dataframes=all_dataframes,
+                slides_structure=slides_structure,
+                period_text=report_period,
+                theme=color_theme,
+                output_path=output_filename
+            )
+            
+            progress_bar.progress(1.0)
+            status_text.text("✅ Презентация готова!")
+            
+            # Кнопка скачивания
+            with open(pptx_path, "rb") as file:
+                st.download_button(
+                    label="💾 Скачать презентацию (PPTX)",
+                    data=file,
+                    file_name=output_filename,
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    use_container_width=True
+                )
+            
+            # Показываем превью
+            st.success(f"🎉 Презентация успешно создана! Слайдов: {len(slides_structure)}")
+            st.info(f"📊 Использовано файлов: {len(st.session_state.uploaded_files)}")
+            
+            if os.path.exists(pptx_path):
+                os.remove(pptx_path)
+                
+            st.balloons()
+            
+        except Exception as e:
+            st.error(f"❌ Ошибка генерации: {e}")
+            import traceback
+            st.code(traceback.format_exc())
