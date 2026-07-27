@@ -5,11 +5,10 @@ import sys
 from typing import List, Dict
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.pptx_builder import generate_flexible_presentation
+from utils.pptx_builder import generate_flexible_presentation, parse_kr_excel
 
 st.set_page_config(page_title="Презентация КР", page_icon="🍕", layout="wide")
 
-# Стандартная шапка как на других страницах
 st.title("🍕 Генерация презентации")
 st.markdown("---")
 
@@ -20,7 +19,6 @@ st.write("Загрузите Excel-файлы с данными клиентск
 # ==========================================
 st.subheader("📁 1. Загрузка данных")
 
-# Инициализация session_state для хранения файлов
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = []
 
@@ -42,11 +40,9 @@ with col2:
         else:
             st.warning("⚠️ Сначала выберите файл!")
 
-# Отображение загруженных файлов
 if st.session_state.uploaded_files:
-    st.markdown(f"**Загружено файлов: {len(st.session_state.uploaded_files)}**")
+    st.markdown(f"**📋 Загружено файлов: {len(st.session_state.uploaded_files)}**")
     
-    # Показываем список с возможностью удаления
     files_to_remove = []
     for idx, file in enumerate(st.session_state.uploaded_files):
         col_a, col_b, col_c = st.columns([6, 2, 1])
@@ -58,19 +54,17 @@ if st.session_state.uploaded_files:
             if st.button("🗑️", key=f"remove_{idx}"):
                 files_to_remove.append(idx)
     
-    # Удаляем файлы, если нужно
     if files_to_remove:
         for idx in sorted(files_to_remove, reverse=True):
             st.session_state.uploaded_files.pop(idx)
         st.rerun()
     
-    # Кнопка очистки всех
     if st.button("🗑️ Очистить все файлы", type="secondary"):
         st.session_state.uploaded_files = []
         st.rerun()
 
 # ==========================================
-# 📝 БЛОК 2: СТРУКТУРА ПРЕЗЕНТАЦИИ
+#  БЛОК 2: СТРУКТУРА ПРЕЗЕНТАЦИИ
 # ==========================================
 st.divider()
 st.subheader("📝 2. Структура презентации")
@@ -79,14 +73,11 @@ st.markdown("""
 **Опишите, какие слайды нужны** (каждый слайд с новой строки):
 
 Пример:
-Титульный слайд: Клиентский рейтинг за Июнь 2026
 Общие показатели по сети
 Оценки по Санкт-Петербургу
 Оценки по Тюмени
-Анализ жалоб: Продукт и Приготовление
-Анализ жалоб: Сервис и Доставка
+Анализ жалоб
 Положительные отзывы
-Итоги и рекомендации
 """)
 
 presentation_structure = st.text_area(
@@ -96,7 +87,7 @@ presentation_structure = st.text_area(
 )
 
 # ==========================================
-# 🎨 БЛОК 3: ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ
+# ⚙️ БЛОК 3: НАСТРОЙКИ
 # ==========================================
 st.divider()
 st.subheader("⚙️ 3. Настройки")
@@ -114,7 +105,7 @@ with col_y:
     )
 
 # ==========================================
-#  ГЕНЕРАЦИЯ ПРЕЗЕНТАЦИИ
+# 🍕 ГЕНЕРАЦИЯ ПРЕЗЕНТАЦИИ
 # ==========================================
 st.divider()
 
@@ -125,7 +116,7 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
         st.stop()
     
     if not presentation_structure.strip():
-        st.error(" Опишите структуру презентации!")
+        st.error("❌ Опишите структуру презентации!")
         st.stop()
     
     with st.spinner("🔥 Готовим презентацию... Анализируем данные из файлов..."):
@@ -133,45 +124,45 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
         progress_bar = st.progress(0)
         status_text = st.empty()
         
-        # Шаг 1: Чтение всех файлов
-        status_text.text("📖 Читаем файлы...")
-        all_dataframes = {}
+        # Шаг 1: Парсинг всех файлов
+        status_text.text(" Читаем и парсим файлы...")
+        all_parsed_data = {}
+        
         for idx, file in enumerate(st.session_state.uploaded_files):
-            file.seek(0)  # Сбрасываем указатель в начало
+            file.seek(0)
             try:
-                # Читаем все листы
-                df_sheets = pd.read_excel(file, sheet_name=None)
+                # Сохраняем временно
+                temp_path = f"temp_{file.name}"
+                with open(temp_path, 'wb') as f:
+                    f.write(file.getbuffer())
                 
-                # Обрабатываем каждый лист - убираем пустые строки и столбцы
-                processed_sheets = {}
-                for sheet_name, df in df_sheets.items():
-                    # Удаляем полностью пустые строки и столбцы
-                    df = df.dropna(how='all', axis=0)  # пустые строки
-                    df = df.dropna(how='all', axis=1)  # пустые столбцы
-                    # Заполняем NaN пустыми строками для отображения
-                    df = df.fillna('')
-                    processed_sheets[sheet_name] = df
+                # Парсим файл
+                parsed = parse_kr_excel(temp_path)
+                all_parsed_data[file.name] = parsed
                 
-                all_dataframes[file.name] = processed_sheets
-                progress_bar.progress((idx + 1) / len(st.session_state.uploaded_files) * 0.3)
+                # Удаляем временный файл
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                
+                progress_bar.progress((idx + 1) / len(st.session_state.uploaded_files) * 0.5)
             except Exception as e:
-                st.error(f"❌ Ошибка чтения файла {file.name}: {e}")
+                st.error(f"❌ Ошибка парсинга файла {file.name}: {e}")
                 st.stop()
         
         # Шаг 2: Парсинг структуры
-        status_text.text(" Анализируем структуру...")
+        status_text.text("📋 Анализируем структуру...")
         slides_structure = [line.strip() for line in presentation_structure.split('\n') if line.strip()]
-        progress_bar.progress(0.5)
+        progress_bar.progress(0.7)
         
         # Шаг 3: Генерация презентации
-        status_text.text("🎨 Создаём слайды...")
+        status_text.text(" Создаём слайды...")
         
         safe_period = "".join(c for c in report_period if c.isalnum() or c in (' ', '_')).rstrip()
         output_filename = f"Презентация_КР_{safe_period}.pptx"
         
         try:
             pptx_path = generate_flexible_presentation(
-                all_dataframes=all_dataframes,
+                all_dataframes=all_parsed_data,
                 slides_structure=slides_structure,
                 period_text=report_period,
                 theme=color_theme,
@@ -181,7 +172,6 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
             progress_bar.progress(1.0)
             status_text.text("✅ Презентация готова!")
             
-            # Кнопка скачивания
             with open(pptx_path, "rb") as file:
                 st.download_button(
                     label="💾 Скачать презентацию (PPTX)",
@@ -191,7 +181,6 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
                     use_container_width=True
                 )
             
-            # Показываем превью
             st.success(f"🎉 Презентация успешно создана! Слайдов: {len(slides_structure)}")
             st.info(f"📊 Использовано файлов: {len(st.session_state.uploaded_files)}")
             
