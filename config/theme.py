@@ -2,18 +2,18 @@
 
 THEMES = {
     "day": {
-        "bg_main": "#F8F9FA",
-        "bg_sidebar": "#FFFFFF",
-        "header_bg": "linear-gradient(135deg, #74B9FF 0%, #A29BFE 100%)",
-        "header_text": "#FFFFFF",
-        "text_primary": "#1B4F72",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "#FFFFFF",
-        "card_border": "#E8E8E8",
-        "accent": "#3498DB",
-        "button_bg": "#3498DB",
-        "button_text": "#FFFFFF",
-    },
+    "bg_main": "#2980B9",  # Было: "#F8F9FA" — теперь насыщенный голубой
+    "bg_sidebar": "#3498DB",  # Было: "#FFFFFF"
+    "header_bg": "linear-gradient(135deg, #2980B9 0%, #3498DB 100%)",
+    "header_text": "#FFFFFF",
+    "text_primary": "#FFFFFF",  # Белый текст на голубом фоне
+    "text_secondary": "#ECF0F1",
+    "card_bg": "rgba(255,255,255,0.15)",  # Полупрозрачные карточки
+    "card_border": "rgba(255,255,255,0.3)",
+    "accent": "#F1C40F",
+    "button_bg": "#1ABC9C",
+    "button_text": "#FFFFFF",
+},
     "evening": {
         "bg_main": "linear-gradient(135deg, #2C3E50 0%, #E67E22 100%)",
         "bg_sidebar": "#2C3E50",
