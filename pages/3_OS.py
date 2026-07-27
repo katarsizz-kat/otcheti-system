@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import io
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
 import xlsxwriter
 
 # Импорты из вашего проекта (раскомментируйте при необходимости)
@@ -32,7 +32,6 @@ def extract_restaurant_number(restaurant_name):
     if pd.isna(restaurant_name):
         return 9999
     
-    # Ищем номер в названии
     match = re.search(r'№\s*(\d+)', str(restaurant_name))
     if match:
         return int(match.group(1))
@@ -40,23 +39,34 @@ def extract_restaurant_number(restaurant_name):
 
 
 def sort_restaurants(df, city_column='Город', restaurant_column='Ресторан'):
-    """Сортирует рестораны по возрастанию номера."""
+    """Сортирует рестораны: сначала СПб (по номеру), потом Тюмень (фиксированный порядок)."""
     df_sorted = df.copy()
-    df_sorted['_sort_key'] = df_sorted[restaurant_column].apply(extract_restaurant_number)
     
-    # Для Тюмени — фиксированный порядок
-    def get_sort_value(row):
-        if row[city_column] == 'Тюмень':
+    def get_sort_key(row):
+        city = str(row.get(city_column, ''))
+        restaurant = str(row.get(restaurant_column, ''))
+        
+        # Сначала Санкт-Петербург
+        if 'Санкт-Петербург' in city:
+            num = extract_restaurant_number(restaurant)
+            return (0, num, restaurant)
+        
+        # Потом Тюмень
+        elif 'Тюмень' in city:
             try:
-                return TYUMEN_ORDER.index(row[restaurant_column])
+                order_idx = TYUMEN_ORDER.index(restaurant)
+                return (1, order_idx, restaurant)
             except ValueError:
-                return 9999
+                return (1, 9999, restaurant)
+        
+        # Остальные города
         else:
-            return row['_sort_key']
+            num = extract_restaurant_number(restaurant)
+            return (2, num, restaurant)
     
-    df_sorted['_sort_value'] = df_sorted.apply(get_sort_value, axis=1)
-    df_sorted = df_sorted.sort_values('_sort_value')
-    df_sorted = df_sorted.drop(['_sort_key', '_sort_value'], axis=1)
+    df_sorted['_sort_key'] = df_sorted.apply(get_sort_key, axis=1)
+    df_sorted = df_sorted.sort_values('_sort_key')
+    df_sorted = df_sorted.drop('_sort_key', axis=1)
     return df_sorted
 
 
@@ -90,7 +100,7 @@ def analyze_bot_fails(df):
     for idx, row in df.iterrows():
         text = str(row.get('Первичное сообщение', '')).lower()
         ticket_id = row.get('Номер обращения', '')
-        date = row.get('Дата отзыва', '')
+        date_val = row.get('Дата отзыва', '')
         
         is_bot_fail = any(k in text for k in fail_keywords_bot)
         is_demand = any(k in text for k in client_demand)
@@ -101,7 +111,7 @@ def analyze_bot_fails(df):
             
             bot_fails.append({
                 '№ Обращения': ticket_id,
-                'Дата': date,
+                'Дата': date_val,
                 'Ресторан': row.get('Ресторан', ''),
                 'Суть обращения': summary,
                 'Тип ошибки бота': 'Требовал оператора' if is_demand else 'Бот не понял'
@@ -147,6 +157,12 @@ def get_interval_hours(interval_label):
     return 1
 
 
+def get_weekday_name(date_obj):
+    """Возвращает название дня недели."""
+    weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+    return weekdays[date_obj.weekday()]
+
+
 # --- UI СТРАНИЦЫ ---
 
 def main():
@@ -185,6 +201,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.header("🔍 Фильтры")
     
+    # Фильтр по городам
     available_cities = df['Город'].dropna().unique().tolist() if 'Город' in df.columns else []
     default_cities = [c for c in ['Санкт-Петербург', 'Тюмень'] if c in available_cities]
     
@@ -194,7 +211,52 @@ def main():
         default=default_cities if default_cities else available_cities[:3]
     )
     df_filtered = df[df['Город'].isin(cities)] if cities else df
+    
+    # Фильтр по датам
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📅 Фильтр по датам")
+    
+    date_filter_type = st.sidebar.radio(
+        "Тип фильтра:",
+        ["Интервал дат", "Отдельные даты"],
+        index=0
+    )
+    
+    valid_dates = df_filtered['Дата отзыва'].dropna()
+    
+    if date_filter_type == "Интервал дат":
+        if not valid_dates.empty:
+            min_date = valid_dates.min().date()
+            max_date = valid_dates.max().date()
+            
+            date_range = st.sidebar.date_input(
+                "Выберите период:",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date
+            )
+            
+            if len(date_range) == 2:
+                start_date, end_date = date_range
+                df_filtered = df_filtered[
+                    (df_filtered['Дата отзыва'].dt.date >= start_date) &
+                    (df_filtered['Дата отзыва'].dt.date <= end_date)
+                ]
+    else:  # Отдельные даты
+        if not valid_dates.empty:
+            unique_dates = sorted(valid_dates.dt.date.unique(), reverse=True)
+            selected_dates = st.sidebar.multiselect(
+                "Выберите даты:",
+                options=unique_dates,
+                default=unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
+            )
+            
+            if selected_dates:
+                df_filtered = df_filtered[
+                    df_filtered['Дата отзыва'].dt.date.isin(selected_dates)
+                ]
 
+    # Обновляем информацию о периоде
     valid_dates = df_filtered['Дата отзыва'].dropna()
     if not valid_dates.empty:
         st.success(
@@ -236,6 +298,7 @@ def main():
             for operator in df_operators['Исполнитель'].unique():
                 op_df = df_operators[df_operators['Исполнитель'] == operator]
                 total_tickets = len(op_df)
+                # Используем дату создания обращения для подсчёта рабочих дней
                 unique_days = op_df['Дата_только'].nunique()
                 avg_per_day = total_tickets / unique_days if unique_days > 0 else 0
                 
@@ -273,7 +336,6 @@ def main():
             
             df_operators['Часовой интервал'] = df_operators['Час_МСК'].apply(get_hour_interval)
             
-            # Порядок интервалов
             interval_order = [
                 '00:00-02:00', '02:00-08:00', '08:00', '09:00', '10:00', '11:00',
                 '12:00-16:00', '16:00', '17:00', '18:00', '19:00', '20:00',
@@ -286,13 +348,11 @@ def main():
                 axis=1
             )
             
-            # Сортируем по порядку интервалов
             hour_stats['_sort'] = hour_stats['Часовой интервал'].apply(lambda x: interval_order.index(x) if x in interval_order else 999)
             hour_stats = hour_stats.sort_values('_sort').drop('_sort', axis=1)
             
             st.dataframe(hour_stats, use_container_width=True, hide_index=True)
             
-            # График по часам
             st.markdown("##### 📈 Визуализация нагрузки по часам")
             chart_data = hour_stats.set_index('Часовой интервал')[['Обращений в час']]
             st.bar_chart(chart_data)
@@ -332,7 +392,7 @@ def main():
             )
             pivot['ИТОГО'] = pivot.sum(axis=1)
             
-            # Сортировка по возрастанию номера ресторана
+            # Сортировка: сначала СПб, потом Тюмень
             pivot = sort_restaurants(pivot.reset_index(), 'Город' if 'Город' in pivot.columns else 'Ресторан', 'Ресторан')
             pivot = pivot.set_index('Ресторан')
             
@@ -369,8 +429,8 @@ def main():
     with tab4:
         st.subheader("Генерация сводного Excel-отчета")
         st.info(
-            "Отчет будет содержать 4 листа: Статистика операторов, Часовая нагрузка, "
-            "Жалобы по ресторанам, Ошибки бота. С диаграммами!"
+            "Отчет будет содержать 5 листов: Статистика операторов, Часовая нагрузка, "
+            "Статистика по дням, Жалобы по ресторанам, Ошибки бота. С диаграммами!"
         )
         
         if st.button("📥 Сформировать и скачать Excel", type="primary"):
@@ -416,46 +476,81 @@ def main():
                         chart.set_size({'width': 720, 'height': 400})
                         ws2.insert_chart('E2', chart)
                     
-                    # Лист 3: Жалобы
+                    # Лист 3: Статистика по дням (НОВЫЙ ЛИСТ)
+                    if not df_operators.empty:
+                        # Добавляем день недели
+                        df_operators['День_недели'] = df_operators['Дата_МСК'].dt.date.apply(get_weekday_name)
+                        
+                        # Статистика по календарным дням
+                        day_stats = df_operators.groupby('Дата_только').size().reset_index(name='Обращений')
+                        day_stats = day_stats.sort_values('Обращений', ascending=False)
+                        day_stats['День_недели'] = day_stats['Дата_только'].apply(get_weekday_name)
+                        
+                        # Статистика по дням недели
+                        weekday_stats = df_operators.groupby('День_недели').size().reset_index(name='Обращений')
+                        weekday_order = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+                        weekday_stats['_sort'] = weekday_stats['День_недели'].apply(lambda x: weekday_order.index(x) if x in weekday_order else 999)
+                        weekday_stats = weekday_stats.sort_values('_sort').drop('_sort', axis=1)
+                        
+                        # Записываем оба блока на один лист
+                        day_stats.to_excel(writer, sheet_name='Статистика по дням', index=False, startrow=1)
+                        ws3 = writer.sheets['Статистика по дням']
+                        
+                        ws3.write(0, 0, 'Топ загруженных календарных дней:', workbook.add_format({'bold': True, 'font_size': 14}))
+                        for col_num, value in enumerate(day_stats.columns.values):
+                            ws3.write(1, col_num, value, header_fmt)
+                        ws3.set_column('A:A', 15)
+                        ws3.set_column('B:B', 15)
+                        ws3.set_column('C:C', 15)
+                        
+                        start_row = len(day_stats) + 4
+                        ws3.write(start_row, 0, 'Статистика по дням недели:', workbook.add_format({'bold': True, 'font_size': 14}))
+                        weekday_stats.to_excel(writer, sheet_name='Статистика по дням', index=False, startrow=start_row + 1)
+                        
+                        for col_num, value in enumerate(weekday_stats.columns.values):
+                            ws3.write(start_row + 1, col_num, value, header_fmt)
+                    
+                    # Лист 4: Жалобы
                     pivot_reset = pivot.reset_index()
                     pivot_reset.to_excel(writer, sheet_name='Жалобы по ресторанам', index=False)
-                    ws3 = writer.sheets['Жалобы по ресторанам']
+                    ws4 = writer.sheets['Жалобы по ресторанам']
                     for col_num, value in enumerate(pivot_reset.columns.values):
-                        ws3.write(0, col_num, value, header_fmt)
+                        ws4.write(0, col_num, value, header_fmt)
                     
-                    # Диаграмма для Листа 3 (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+                    # Диаграмма для Листа 4 (ИСПРАВЛЕННАЯ ВЕРСИЯ)
                     if len(pivot_reset) > 0 and len(pivot_reset.columns) > 1:
-                        chart = workbook.add_chart({'type': 'bar stacked'})
-                        
                         cols = [c for c in pivot_reset.columns if c not in ['Ресторан', 'ИТОГО']]
                         
-                        for i, col in enumerate(cols):
-                            col_idx = list(pivot_reset.columns).index(col)
-                            num_rows = len(pivot_reset)
+                        if len(cols) > 0:  # Проверка, что есть категории для диаграммы
+                            chart = workbook.add_chart({'type': 'bar stacked'})
                             
-                            chart.add_series({
-                                'name': str(col),
-                                'categories': ['Жалобы по ресторанам', 1, 0, num_rows, 0],
-                                'values': ['Жалобы по ресторанам', 1, col_idx, num_rows, col_idx],
-                            })
-                        
-                        chart.set_title({'name': 'Структура жалоб по ресторанам'})
-                        chart.set_x_axis({'name': 'Количество жалоб'})
-                        chart.set_y_axis({'name': 'Ресторан'})
-                        chart.set_size({'width': 720, 'height': 500})
-                        ws3.insert_chart('H2', chart)
+                            for i, col in enumerate(cols):
+                                col_idx = list(pivot_reset.columns).index(col)
+                                num_rows = len(pivot_reset)
+                                
+                                chart.add_series({
+                                    'name': str(col),
+                                    'categories': ['Жалобы по ресторанам', 1, 0, num_rows, 0],
+                                    'values': ['Жалобы по ресторанам', 1, col_idx, num_rows, col_idx],
+                                })
+                            
+                            chart.set_title({'name': 'Структура жалоб по ресторанам'})
+                            chart.set_x_axis({'name': 'Количество жалоб'})
+                            chart.set_y_axis({'name': 'Ресторан'})
+                            chart.set_size({'width': 720, 'height': 500})
+                            ws4.insert_chart('H2', chart)
 
-                    # Лист 4: Бот
+                    # Лист 5: Бот
                     if not bot_fails_df.empty:
                         bot_fails_df.to_excel(writer, sheet_name='Ошибки Бота', index=False)
-                        ws4 = writer.sheets['Ошибки Бота']
+                        ws5 = writer.sheets['Ошибки Бота']
                         for col_num, value in enumerate(bot_fails_df.columns.values):
-                            ws4.write(0, col_num, value, header_fmt)
-                        ws4.set_column('A:A', 15)
-                        ws4.set_column('B:B', 20)
-                        ws4.set_column('C:C', 25)
-                        ws4.set_column('D:D', 50)
-                        ws4.set_column('E:E', 20)
+                            ws5.write(0, col_num, value, header_fmt)
+                        ws5.set_column('A:A', 15)
+                        ws5.set_column('B:B', 20)
+                        ws5.set_column('C:C', 25)
+                        ws5.set_column('D:D', 50)
+                        ws5.set_column('E:E', 20)
 
                 output.seek(0)
                 st.download_button(
