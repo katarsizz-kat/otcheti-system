@@ -14,14 +14,12 @@ warnings.filterwarnings('ignore')
 st.set_page_config(page_title="Продажи пицц по размерам", layout="wide", page_icon="🍕")
 
 # ==========================================================
-# ДИНАМИЧЕСКИЕ СТИЛИ (НЕБО ПО ВРЕМЕНИ СУТОК)
+# ДИНАМИЧЕСКИЕ СТИЛИ
 # ==========================================================
 
 def get_sky_gradient():
-    """Возвращает градиент неба в зависимости от времени суток."""
     hour = datetime.now().hour
-    
-    if 5 <= hour < 12:  # Утро - восход
+    if 5 <= hour < 12:
         return {
             "header": "linear-gradient(135deg, #FF8C42 0%, #5DADE2 100%)",
             "block": "linear-gradient(135deg, #FFF5EB 0%, #EBF5FB 100%)",
@@ -29,7 +27,7 @@ def get_sky_gradient():
             "button_text": "#FFFFFF",
             "button_bg": "#FF6B35"
         }
-    elif 12 <= hour < 18:  # День - ясное небо
+    elif 12 <= hour < 18:
         return {
             "header": "linear-gradient(135deg, #3498DB 0%, #EBF5FB 100%)",
             "block": "linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%)",
@@ -37,7 +35,7 @@ def get_sky_gradient():
             "button_text": "#FFFFFF",
             "button_bg": "#2E86C1"
         }
-    elif 18 <= hour < 23:  # Вечер - закат
+    elif 18 <= hour < 23:
         return {
             "header": "linear-gradient(135deg, #2874A6 0%, #F39C12 100%)",
             "block": "linear-gradient(135deg, #FDEBD0 0%, #D4E6F1 100%)",
@@ -45,7 +43,7 @@ def get_sky_gradient():
             "button_text": "#FFFFFF",
             "button_bg": "#D68910"
         }
-    else:  # Ночь
+    else:
         return {
             "header": "linear-gradient(135deg, #1B4F72 0%, #5DADE2 100%)",
             "block": "linear-gradient(135deg, #D6EAF8 0%, #FFFFFF 100%)",
@@ -55,9 +53,7 @@ def get_sky_gradient():
         }
 
 def apply_dynamic_styles():
-    """Применяет динамические стили."""
     sky = get_sky_gradient()
-    
     st.markdown(f"""
     <style>
         .stApp {{
@@ -105,16 +101,10 @@ def apply_dynamic_styles():
             filter: brightness(1.1) !important;
             transform: translateY(-2px) !important;
         }}
-        hr {{
-            border: none;
-            border-top: 2px solid #D6EAF8;
-            margin: 24px 0;
-        }}
     </style>
     """, unsafe_allow_html=True)
 
 def apply_file_uploader_styles():
-    """Применяет стили для блоков загрузки файлов."""
     st.markdown("""
     <style>
         .element-container:has(> .stFileUploader) {
@@ -158,49 +148,49 @@ def apply_file_uploader_styles():
 def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "☀️ Доброе утро!"
-    if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return " Добрый вечер!"
+    if 12 <= hour < 18: return " Добрый день!"
+    if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌙 Доброй ночи!"
 
 # ==========================================================
-# СТАТИЧНЫЙ СПИСОК ПИЦЦ (из примера)
+# СТАТИЧНЫЙ СПИСОК ПИЦЦ С СИНОНИМАМИ
 # ==========================================================
 
 STATIC_PIZZA_LIST = [
     # Рейтинг 6
-    (6, "Большая Бонанза"),
-    (6, "6 сыров"),
-    (6, "8 сыров"),
-    (6, "Любимая папина пицца"),
+    (6, "Большая Бонанза", ["большая бонанза"]),
+    (6, "6 сыров", ["6 сыров", "шесть сыров"]),
+    (6, "8 сыров", ["8 сыров", "восемь сыров", "пицца 8 сыров new", "8 сыров new"]),
+    (6, "Любимая папина пицца", ["любимая папина пицца"]),
     # Рейтинг 5
-    (5, "Мясная"),
-    (5, "4 сыра"),
-    (5, "Итальянская с моцареллой и пепперони"),
-    (5, "Маленькая Италия"),
-    (5, "Баварская"),
-    (5, "Папа Микс"),
-    (5, "Цыпленок Рэнч"),
-    (5, "Альфредо"),
-    (5, "Мексиканская"),
-    (5, "Супер Папа"),
-    (5, "Цыпленок Барбекю"),
+    (5, "Мясная", ["мясная"]),
+    (5, "4 сыра", ["4 сыра", "четыре сыра"]),
+    (5, "Итальянская с моцареллой и пепперони", ["итальянская с моцареллой и пепперони"]),
+    (5, "Маленькая Италия", ["маленькая италия"]),
+    (5, "Баварская", ["баварская"]),
+    (5, "Папа Микс", ["папа микс"]),
+    (5, "Цыпленок Рэнч", ["цыпленок рэнч"]),
+    (5, "Альфредо", ["альфредо"]),
+    (5, "Мексиканская", ["мексиканская"]),
+    (5, "Супер Папа", ["супер папа"]),
+    (5, "Цыпленок Барбекю", ["цыпленок барбекю"]),
     # Рейтинг 4
-    (4, "Чизбургер"),
-    (4, "Цыплёнок Флорентина"),
-    (4, "Мясное барбекю"),
-    (4, "Гавайская"),
-    (4, "Двойная пепперони"),
+    (4, "Чизбургер", ["чизбургер"]),
+    (4, "Цыплёнок Флорентина", ["цыплёнок флорентина", "цыпленок флорентина"]),
+    (4, "Мясное барбекю", ["мясное барбекю"]),
+    (4, "Гавайская", ["гавайская"]),
+    (4, "Двойная пепперони", ["двойная пепперони", "двойная пепперони"]),
     # Рейтинг 3
-    (3, "Пепперони"),
-    (3, "Ветчина и Грибы"),
-    (3, "Чикен Пармеджано"),
+    (3, "Пепперони", ["пепперони"]),
+    (3, "Ветчина и Грибы", ["ветчина и грибы"]),
+    (3, "Чикен Пармеджано", ["чикен пармеджано"]),
     # Рейтинг 2
-    (2, "Вегетарианская"),
-    (2, "Маргарита"),
-    (2, "Капричиоза"),
-    (2, "Цыплёнок Грин"),
+    (2, "Вегетарианская", ["вегетарианская"]),
+    (2, "Маргарита", ["маргарита"]),
+    (2, "Капричиоза", ["капричиоза"]),
+    (2, "Цыплёнок Грин", ["цыплёнок грин", "цыпленок грин"]),
     # Рейтинг 1
-    (1, "Сырная Пицца"),
+    (1, "Сырная Пицца", ["сырная пицца", "сырная"]),
 ]
 
 # ==========================================================
@@ -236,7 +226,7 @@ def map_city(legal_entity):
     return None
 
 def extract_size_from_category(category):
-    """Извлекает размер из категории (например, 'Тесто 23 трад' -> 23)."""
+    """Извлекает размер из категории."""
     category_str = str(category).lower()
     for size in [40, 35, 30, 23, 15]:
         if str(size) in category_str:
@@ -244,23 +234,20 @@ def extract_size_from_category(category):
     return None
 
 def extract_period_from_file(uploaded_file):
-    """Извлекает период из файла (например, '01.07.2026-31.07.2026')."""
+    """Извлекает период из файла."""
     df = pd.read_excel(uploaded_file, header=None, nrows=10)
     
     for idx, row in df.iterrows():
         for val in row.values:
             if pd.notna(val) and 'Период' in str(val):
-                # Ищем даты в строке
                 match = re.search(r'(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})', str(val))
                 if match:
                     start_date = match.group(1)
                     end_date = match.group(2)
-                    # Преобразуем формат
                     start_dt = datetime.strptime(start_date, '%d.%m.%Y')
                     end_dt = datetime.strptime(end_date, '%d.%m.%Y')
                     return f"{start_dt.strftime('%d.%m')}-{end_dt.strftime('%d.%m.%Y')}"
     
-    # Если не нашли период, возвращаем текущий месяц
     now = datetime.now()
     return f"01.{now.strftime('%m')}.{now.year}"
 
@@ -268,7 +255,6 @@ def read_and_parse_file(uploaded_file):
     """Читает и парсит основной файл."""
     df = pd.read_excel(uploaded_file, header=None)
     
-    # Находим строку заголовков
     header_row = None
     for idx, row in df.iterrows():
         vals = [str(v) for v in row.values if pd.notna(v)]
@@ -284,24 +270,33 @@ def read_and_parse_file(uploaded_file):
     df.columns = headers
     df = df.reset_index(drop=True)
     
-    # Удаляем служебные строки
     df = df[~df['Юридическое лицо'].astype(str).str.contains('OLAP|всего|Итого', na=False)]
     df = df.dropna(how='all')
     
-    # Заполняем пропущенные значения
     df['Юридическое лицо'] = df['Юридическое лицо'].ffill()
     df['Категория блюда'] = df['Категория блюда'].ffill()
     
-    # Удаляем половинки и персонал
     df = df[~df['Блюдо'].astype(str).str.contains('\+', na=False)]
     df = df[~df['Блюдо'].astype(str).str.lower().str.contains('персонал', na=False)]
     df = df[df['Блюдо'].notna()]
     df = df[df['Блюдо'].astype(str).str.strip() != '']
     
-    # Конвертируем числовые колонки
     df['Количество блюд'] = pd.to_numeric(df['Количество блюд'], errors='coerce').fillna(0)
     
     return df
+
+def find_pizza_in_list(pizza_name_normalized, static_list):
+    """Находит пиццу в статичном списке по нормализованному названию."""
+    for rating, display_name, synonyms in static_list:
+        for synonym in synonyms:
+            synonym_norm = normalize_text(synonym)
+            # Точное совпадение
+            if pizza_name_normalized == synonym_norm:
+                return display_name
+            # Частичное совпадение (если синоним содержится в названии)
+            if synonym_norm in pizza_name_normalized and len(synonym_norm) > 3:
+                return display_name
+    return None
 
 def aggregate_pizza_data(df):
     """Агрегирует данные по пиццам для каждого города и размера."""
@@ -309,36 +304,30 @@ def aggregate_pizza_data(df):
     df['Город'] = df['Юридическое лицо'].apply(map_city)
     df = df[df['Город'].notna()]
     
-    # Фильтруем только пиццы (категории с тестом)
     df['Категория_lower'] = df['Категория блюда'].astype(str).str.lower()
     df_pizza = df[df['Категория_lower'].str.contains('тесто', na=False)].copy()
     
-    # Извлекаем размер
     df_pizza['Размер'] = df_pizza['Категория блюда'].apply(extract_size_from_category)
     df_pizza = df_pizza[df_pizza['Размер'].isin([23, 30, 35, 40])]
     
-    # Нормализуем названия пицц
     df_pizza['Блюдо_norm'] = df_pizza['Блюдо'].apply(normalize_text)
     
-    # Создаем словарь с данными для каждого города
     result = {}
     for city in ['СПБ', 'Тюмень']:
         city_data = df_pizza[df_pizza['Город'] == city]
         
-        # Создаем таблицу: пицца x размер
         pizza_data = {}
-        for rating, pizza_name in STATIC_PIZZA_LIST:
-            pizza_norm = normalize_text(pizza_name)
+        for rating, display_name, synonyms in STATIC_PIZZA_LIST:
             sizes = {23: 0, 30: 0, 35: 0, 40: 0}
             
-            # Ищем эту пиццу в данных
             for _, row in city_data.iterrows():
-                if row['Блюдо_norm'] == pizza_norm or pizza_norm in row['Блюдо_norm']:
+                found_name = find_pizza_in_list(row['Блюдо_norm'], [(rating, display_name, synonyms)])
+                if found_name == display_name:
                     size = row['Размер']
                     if size in sizes:
                         sizes[size] += int(row['Количество блюд'])
             
-            pizza_data[pizza_name] = {
+            pizza_data[display_name] = {
                 'rating': rating,
                 'sizes': sizes,
                 'total': sum(sizes.values())
@@ -367,14 +356,14 @@ def create_excel_report(data, period_str):
         bottom=Side(style='thin')
     )
     
-    # Строка 1: Период (желтый фон)
+    # Строка 1: Период
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=13)
     header_cell = ws.cell(1, 1, period_str)
     header_cell.font = Font(bold=True, size=16)
     header_cell.alignment = Alignment(horizontal='center', vertical='center')
     header_cell.fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
     
-    # Строка 2: Города (голубой фон)
+    # Строка 2: Города
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=6)
     spb_header = ws.cell(2, 1, "СПб сейчас")
     spb_header.font = Font(bold=True, size=12)
@@ -387,42 +376,32 @@ def create_excel_report(data, period_str):
     tmn_header.alignment = Alignment(horizontal='center', vertical='center')
     tmn_header.fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
     
-    # Строка 3: Заголовки колонок с размерами
-    # СПБ: колонки 1-6 (рейтинг, название, 23, 30, 35, 40)
-    # Тюмень: колонки 8-13 (рейтинг, название, 23, 30, 35, 40)
-    
-    headers_spb = ['', '', '23', '30', '35', '40']
-    headers_tmn = ['', '', '23', '30', '35', '40']
-    
-    for col_idx, header in enumerate(headers_spb, 1):
-        cell = ws.cell(3, col_idx, header)
+    # Строка 3: Заголовки колонок
+    for col_idx in [3, 4, 5, 6, 10, 11, 12, 13]:
+        cell = ws.cell(3, col_idx)
         cell.font = Font(bold=True, size=10)
         cell.border = thin_border
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
-    for col_idx, header in enumerate(headers_tmn, 8):
-        cell = ws.cell(3, col_idx, header)
-        cell.font = Font(bold=True, size=10)
-        cell.border = thin_border
-        cell.alignment = Alignment(horizontal='center', vertical='center')
+    ws.cell(3, 3, '23')
+    ws.cell(3, 4, '30')
+    ws.cell(3, 5, '35')
+    ws.cell(3, 6, '40')
+    ws.cell(3, 10, '23')
+    ws.cell(3, 11, '30')
+    ws.cell(3, 12, '35')
+    ws.cell(3, 13, '40')
     
-    # Заполняем данными
+    # Заполняем данными БЕЗ пустых строк между категориями
     current_row = 4
-    current_rating = None
     
-    for rating, pizza_name in STATIC_PIZZA_LIST:
-        # Добавляем пустую строку между рейтингами
-        if current_rating is not None and current_rating != rating:
-            current_row += 1
-        
-        current_rating = rating
-        
+    for rating, display_name, synonyms in STATIC_PIZZA_LIST:
         # СПБ: колонки 1-6
         ws.cell(current_row, 1, rating).border = thin_border
         ws.cell(current_row, 1).alignment = Alignment(horizontal='center', vertical='center')
-        ws.cell(current_row, 2, pizza_name).border = thin_border
+        ws.cell(current_row, 2, display_name).border = thin_border
         
-        spb_data = data['СПБ'][pizza_name]['sizes']
+        spb_data = data['СПБ'][display_name]['sizes']
         for col_idx, size in enumerate([23, 30, 35, 40], 3):
             cell = ws.cell(current_row, col_idx, spb_data[size])
             cell.border = thin_border
@@ -431,9 +410,9 @@ def create_excel_report(data, period_str):
         # Тюмень: колонки 8-13
         ws.cell(current_row, 8, rating).border = thin_border
         ws.cell(current_row, 8).alignment = Alignment(horizontal='center', vertical='center')
-        ws.cell(current_row, 9, pizza_name).border = thin_border
+        ws.cell(current_row, 9, display_name).border = thin_border
         
-        tmn_data = data['Тюмень'][pizza_name]['sizes']
+        tmn_data = data['Тюмень'][display_name]['sizes']
         for col_idx, size in enumerate([23, 30, 35, 40], 10):
             cell = ws.cell(current_row, col_idx, tmn_data[size])
             cell.border = thin_border
@@ -441,14 +420,13 @@ def create_excel_report(data, period_str):
         
         current_row += 1
     
-    # Итоговая строка с суммами
+    # Итоговая строка
     total_row = current_row + 1
     
-    # СПБ ИТОГО
     ws.cell(total_row, 2, 'ИТОГО').font = Font(bold=True, size=11)
     ws.cell(total_row, 2).border = thin_border
     
-    for col_idx, size in enumerate([23, 30, 35, 40], 3):
+    for col_idx in [3, 4, 5, 6]:
         size_col = get_column_letter(col_idx)
         formula = f"=SUM({size_col}4:{size_col}{total_row-1})"
         cell = ws.cell(total_row, col_idx, formula)
@@ -456,11 +434,10 @@ def create_excel_report(data, period_str):
         cell.border = thin_border
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
-    # Тюмень ИТОГО
     ws.cell(total_row, 9, 'ИТОГО').font = Font(bold=True, size=11)
     ws.cell(total_row, 9).border = thin_border
     
-    for col_idx, size in enumerate([23, 30, 35, 40], 10):
+    for col_idx in [10, 11, 12, 13]:
         size_col = get_column_letter(col_idx)
         formula = f"=SUM({size_col}4:{size_col}{total_row-1})"
         cell = ws.cell(total_row, col_idx, formula)
@@ -468,7 +445,7 @@ def create_excel_report(data, period_str):
         cell.border = thin_border
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
-    # Применяем границы ко всей таблице
+    # Применяем границы
     for row in range(1, total_row + 1):
         for col in range(1, 14):
             cell = ws.cell(row, col)
@@ -519,7 +496,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("###  Загрузка файла")
+st.markdown("### 📂 Загрузка файла")
 file_main = st.file_uploader(
     "Загрузите файл рейтинг_продукт (Excel)",
     type=['xlsx'],
@@ -531,7 +508,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 if file_main:
     st.markdown('<div class="content-block">', unsafe_allow_html=True)
     
-    # Извлекаем период из файла
     try:
         period_str = extract_period_from_file(file_main)
         file_main.seek(0)
@@ -541,43 +517,34 @@ if file_main:
         st.warning(f"⚠️ Не удалось определить период из файла. Используется текущий месяц.")
     
     if st.button("📊 Сгенерировать отчет", type="primary", use_container_width=True):
-        with st.spinner("⏳ Формирую отчет..."):
+        with st.spinner(" Формирую отчет..."):
             try:
-                # Читаем и парсим файл
                 df = read_and_parse_file(file_main)
-                
-                # Агрегируем данные
                 data = aggregate_pizza_data(df)
-                
-                # Создаем Excel
                 wb = create_excel_report(data, period_str)
                 
-                # Сохраняем в BytesIO
                 output = io.BytesIO()
                 wb.save(output)
                 output.seek(0)
                 
                 st.success("✅ Отчет сформирован!")
                 
-                # Показываем превью для СПБ
                 st.subheader("📋 Превью данных (СПБ)")
                 
-                # Создаем DataFrame для отображения
                 preview_data = []
-                for rating, pizza_name in STATIC_PIZZA_LIST:
+                for rating, display_name, synonyms in STATIC_PIZZA_LIST:
                     row = {
                         'Рейтинг': rating,
-                        'Пицца': pizza_name,
+                        'Пицца': display_name,
                     }
                     for size in [23, 30, 35, 40]:
-                        row[f'{size} см'] = data['СПБ'][pizza_name]['sizes'][size]
-                    row['Всего'] = data['СПБ'][pizza_name]['total']
+                        row[f'{size} см'] = data['СПБ'][display_name]['sizes'][size]
+                    row['Всего'] = data['СПБ'][display_name]['total']
                     preview_data.append(row)
                 
                 df_preview = pd.DataFrame(preview_data)
                 st.dataframe(df_preview, use_container_width=True)
                 
-                # Кнопка скачивания
                 st.download_button(
                     label="📥 Скачать отчет Excel",
                     data=output,
