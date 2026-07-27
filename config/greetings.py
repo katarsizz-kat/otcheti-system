@@ -24,27 +24,27 @@ def get_current_greeting():
         return {
             "theme": "day",
             "icon": "☀️",
-            "greeting": "Доброе утро!",
+            "greeting": "Доброго утречка!",
             "subtitle": "Начните день с формирования отчётов"
         }
     elif 12 <= hour < 18:
         return {
             "theme": "day",
-            "icon": "",
-            "greeting": "Добрый день!",
+            "icon": "🌤️",
+            "greeting": "Доброго денёчка!",
             "subtitle": "Продолжайте работу с отчётами"
         }
     elif 18 <= hour < 23:
         return {
             "theme": "evening",
-            "icon": "",
-            "greeting": "Добрый вечер!",
+            "icon": "🌙",
+            "greeting": "Не засидись допоздна)",
             "subtitle": "Подведите итоги дня"
         }
     else:  # 23:00 - 05:00
         return {
             "theme": "night",
-            "icon": "🌜",
-            "greeting": "Доброй ночи!",
+            "icon": "",
+            "greeting": "Пупупум.... а кто это тут не спит?",
             "subtitle": "Ночные отчёты — тоже отчёты"
         }
