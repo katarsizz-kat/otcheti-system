@@ -3,6 +3,8 @@ import pandas as pd
 import io
 import warnings
 from datetime import datetime
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 warnings.filterwarnings("ignore")
 
@@ -207,7 +209,7 @@ POSITIVE_KEYWORDS = {
 def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "☀️ Доброе утро!"
-    if 12 <= hour < 18: return " Добрый день!"
+    if 12 <= hour < 18: return "🌤 Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌜 Доброй ночи!"
 
@@ -243,15 +245,6 @@ def calc_stats(df):
         results.append(row)
     return pd.DataFrame(results)
 
-def add_totals(df, region):
-    subset = df[~df["Ресторан"].str.contains("ТМН", na=False)] if region == "СПб" else df[df["Ресторан"].str.contains("ТМН", na=False)]
-    if len(subset) == 0: return df
-    totals = {"Ресторан": f"Итого {region}:"}
-    for i in range(1, 6): totals[str(i)] = int(subset[str(i)].sum())
-    totals["всего:"] = sum(totals[str(i)] for i in range(1, 6))
-    totals["Средний рейтинг"] = round(sum(i * totals[str(i)] for i in range(1, 6)) / totals["всего:"], 2) if totals["всего:"] > 0 else 0
-    return pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
-
 def calc_summary_fast(df, keywords_dict):
     """Векторизованный анализ отзывов (быстрый)."""
     results = []
@@ -267,6 +260,294 @@ def calc_summary_fast(df, keywords_dict):
     return pd.DataFrame(results)
 
 # ==========================================================
+# ФУНКЦИЯ СОЗДАНИЯ EXCEL С ФОРМУЛАМИ
+# ==========================================================
+
+def create_excel_with_formulas(stats1, stats2, stats3, stats_all, complaints_all, positives_all, spb, tmn):
+    """Создаёт Excel-файл с формулами и форматированием по шаблону."""
+    output = io.BytesIO()
+    
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        wb = writer.book
+        
+        # ==========================================================
+        # ЛИСТ 1: ОЦЕНКИ
+        # ==========================================================
+        ws = wb.create_sheet("Оценки", 0)
+        
+        # Стили
+        header_font = Font(bold=True, size=12, color="FFFFFF")
+        subheader_font = Font(bold=True, size=10)
+        bold_font = Font(bold=True)
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        double_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='double'),
+            bottom=Side(style='double')
+        )
+        center_align = Alignment(horizontal='center', vertical='center')
+        
+        # Цвета заголовков
+        site_fill = PatternFill(start_color="3498DB", end_color="3498DB", fill_type="solid")
+        agg_fill = PatternFill(start_color="F1C40F", end_color="F1C40F", fill_type="solid")
+        geo_fill = PatternFill(start_color="27AE60", end_color="27AE60", fill_type="solid")
+        total_fill = PatternFill(start_color="9B59B6", end_color="9B59B6", fill_type="solid")
+        
+        # Заголовок периода
+        ws.merge_cells('A1:H1')
+        ws['A1'] = "1-5 Апреля"
+        ws['A1'].font = Font(bold=True, size=14)
+        ws['A1'].alignment = center_align
+        
+        # Функция для добавления блока с данными
+        def add_data_block(ws, start_row, title, title_fill, stats_df, spb_list, tmn_list):
+            row = start_row
+            
+            # Заголовок источника
+            ws.merge_cells(f'A{row}:H{row}')
+            ws[f'A{row}'] = title
+            ws[f'A{row}'].font = header_font
+            ws[f'A{row}'].fill = title_fill
+            ws[f'A{row}'].alignment = center_align
+            
+            row += 1
+            ws.merge_cells(f'A{row}:H{row}')
+            ws[f'A{row}'] = "Кол-во поставленных звезд"
+            ws[f'A{row}'].font = subheader_font
+            ws[f'A{row}'].alignment = center_align
+            
+            row += 1
+            # Заголовки столбцов
+            headers = ["СПБ", "1", "2", "3", "4", "5", "всего:", "Средний рейтинг"]
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=row, column=col, value=header)
+                cell.font = bold_font
+                cell.alignment = center_align
+                cell.border = thin_border
+            
+            # Данные по СПб
+            row += 1
+            spb_start_row = row
+            for rest in spb_list:
+                rest_data = stats_df[stats_df["Ресторан"] == rest]
+                if rest_data.empty:
+                    continue
+                rest_data = rest_data.iloc[0]
+                ws.cell(row=row, column=1, value=rest)
+                for i in range(1, 6):
+                    ws.cell(row=row, column=i+1, value=int(rest_data[str(i)]))
+                # Формулы
+                ws.cell(row=row, column=7, value=f"=SUM(B{row}:F{row})")
+                ws.cell(row=row, column=8, value=f'=IF(G{row}=0,0,SUMPRODUCT(B{row}:F{row},{{1,2,3,4,5}})/G{row})')
+                ws.cell(row=row, column=8).number_format = '0.00'
+                
+                for col in range(1, 9):
+                    ws.cell(row=row, column=col).border = thin_border
+                    ws.cell(row=row, column=col).alignment = center_align
+                row += 1
+            
+            spb_end_row = row - 1
+            
+            # Итого СПб
+            ws.cell(row=row, column=1, value="Итого СПб:")
+            ws.cell(row=row, column=1).font = bold_font
+            for i in range(2, 7):
+                col_letter = get_column_letter(i)
+                ws.cell(row=row, column=i, value=f"=SUM({col_letter}{spb_start_row}:{col_letter}{spb_end_row})")
+            ws.cell(row=row, column=7, value=f"=SUM(G{spb_start_row}:G{spb_end_row})")
+            ws.cell(row=row, column=8, value=f'=IF(G{row}=0,0,SUMPRODUCT(B{row}:F{row},{{1,2,3,4,5}})/G{row})')
+            ws.cell(row=row, column=8).number_format = '0.00'
+            
+            for col in range(1, 9):
+                ws.cell(row=row, column=col).font = bold_font
+                ws.cell(row=row, column=col).border = double_border
+                ws.cell(row=row, column=col).alignment = center_align
+            
+            row += 2
+            
+            # Заголовки для Тюмени
+            headers_tmn = ["Тюмень", "1", "2", "3", "4", "5", "всего:", "Средний рейтинг"]
+            for col, header in enumerate(headers_tmn, 1):
+                cell = ws.cell(row=row, column=col, value=header)
+                cell.font = bold_font
+                cell.alignment = center_align
+                cell.border = thin_border
+            
+            row += 1
+            tmn_start_row = row
+            for rest in tmn_list:
+                rest_data = stats_df[stats_df["Ресторан"] == rest]
+                if rest_data.empty:
+                    continue
+                rest_data = rest_data.iloc[0]
+                ws.cell(row=row, column=1, value=rest)
+                for i in range(1, 6):
+                    ws.cell(row=row, column=i+1, value=int(rest_data[str(i)]))
+                ws.cell(row=row, column=7, value=f"=SUM(B{row}:F{row})")
+                ws.cell(row=row, column=8, value=f'=IF(G{row}=0,0,SUMPRODUCT(B{row}:F{row},{{1,2,3,4,5}})/G{row})')
+                ws.cell(row=row, column=8).number_format = '0.00'
+                
+                for col in range(1, 9):
+                    ws.cell(row=row, column=col).border = thin_border
+                    ws.cell(row=row, column=col).alignment = center_align
+                row += 1
+            
+            tmn_end_row = row - 1
+            
+            # Итого Тюмень
+            ws.cell(row=row, column=1, value="Итого Тюмень:")
+            ws.cell(row=row, column=1).font = bold_font
+            for i in range(2, 7):
+                col_letter = get_column_letter(i)
+                ws.cell(row=row, column=i, value=f"=SUM({col_letter}{tmn_start_row}:{col_letter}{tmn_end_row})")
+            ws.cell(row=row, column=7, value=f"=SUM(G{tmn_start_row}:G{tmn_end_row})")
+            ws.cell(row=row, column=8, value=f'=IF(G{row}=0,0,SUMPRODUCT(B{row}:F{row},{{1,2,3,4,5}})/G{row})')
+            ws.cell(row=row, column=8).number_format = '0.00'
+            
+            for col in range(1, 9):
+                ws.cell(row=row, column=col).font = bold_font
+                ws.cell(row=row, column=col).border = double_border
+                ws.cell(row=row, column=col).alignment = center_align
+            
+            return row + 2
+        
+        # Добавляем блоки
+        current_row = add_data_block(ws, 3, "Сайт/приложение", site_fill, stats1, spb, tmn)
+        current_row = add_data_block(ws, current_row, "Агрегаторы", agg_fill, stats2, spb, tmn)
+        current_row = add_data_block(ws, current_row, "Геосервисы (Я.Карты, 2ГИС, Гугл карты)", geo_fill, stats3, spb, tmn)
+        current_row = add_data_block(ws, current_row, "Общий (сайт+агрегаторы+геосервисы)", total_fill, stats_all, spb, tmn)
+        
+        # Настройка ширины столбцов
+        ws.column_dimensions['A'].width = 20
+        for col in range(2, 9):
+            ws.column_dimensions[get_column_letter(col)].width = 12
+        
+        # ==========================================================
+        # ЛИСТ 2: АНАЛИЗ ОТЗЫВОВ
+        # ==========================================================
+        ws2 = wb.create_sheet("Анализ отзывов", 1)
+        
+        # Заголовок
+        ws2.merge_cells('A1:G1')
+        ws2['A1'] = "Сводная по жалобам"
+        ws2['A1'].font = Font(bold=True, size=14)
+        ws2['A1'].alignment = center_align
+        
+        # --- СПб ---
+        row = 3
+        ws2.merge_cells(f'A{row}:G{row}')
+        ws2[f'A{row}'] = "1-26 Апреля"
+        ws2[f'A{row}'].font = Font(bold=True, size=12)
+        ws2[f'A{row}'].alignment = center_align
+        
+        row += 1
+        headers_complaints = ["Ресторан", "Жалоба на продукт", "Ошибки приготовления", 
+                             "Перепутанные/недоложенные позиции", "Жалобы на сервис", "Опоздание", "Всего:"]
+        for col, header in enumerate(headers_complaints, 1):
+            cell = ws2.cell(row=row, column=col, value=header)
+            cell.font = bold_font
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = thin_border
+        
+        row += 1
+        start_row_comp = row
+        for rest in spb:
+            rest_data = complaints_all[complaints_all["Ресторан"] == rest]
+            if rest_data.empty:
+                continue
+            rest_data = rest_data.iloc[0]
+            ws2.cell(row=row, column=1, value=rest)
+            col = 2
+            for category in COMPLAINT_KEYWORDS.keys():
+                ws2.cell(row=row, column=col, value=int(rest_data[category]))
+                col += 1
+            ws2.cell(row=row, column=7, value=f"=SUM(B{row}:F{row})")
+            
+            for col in range(1, 8):
+                ws2.cell(row=row, column=col).border = thin_border
+                ws2.cell(row=row, column=col).alignment = center_align
+            row += 1
+        
+        # Итого СПб
+        ws2.cell(row=row, column=1, value="Всего:")
+        ws2.cell(row=row, column=1).font = bold_font
+        for i in range(2, 7):
+            col_letter = get_column_letter(i)
+            ws2.cell(row=row, column=i, value=f"=SUM({col_letter}{start_row_comp}:{col_letter}{row-1})")
+        ws2.cell(row=row, column=7, value=f"=SUM(G{start_row_comp}:G{row-1})")
+        
+        for col in range(1, 8):
+            ws2.cell(row=row, column=col).font = bold_font
+            ws2.cell(row=row, column=col).border = double_border
+            ws2.cell(row=row, column=col).alignment = center_align
+        
+        # --- Тюмень ---
+        row += 3
+        ws2.merge_cells(f'A{row}:G{row}')
+        ws2[f'A{row}'] = "Тюмень"
+        ws2[f'A{row}'].font = Font(bold=True, size=12)
+        ws2[f'A{row}'].alignment = center_align
+        
+        row += 1
+        ws2.merge_cells(f'A{row}:G{row}')
+        ws2[f'A{row}'] = "1-26 Апреля"
+        ws2[f'A{row}'].font = Font(bold=True, size=12)
+        ws2[f'A{row}'].alignment = center_align
+        
+        row += 1
+        for col, header in enumerate(headers_complaints, 1):
+            cell = ws2.cell(row=row, column=col, value=header)
+            cell.font = bold_font
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = thin_border
+        
+        row += 1
+        start_row_tmn = row
+        for rest in tmn:
+            rest_data = complaints_all[complaints_all["Ресторан"] == rest]
+            if rest_data.empty:
+                continue
+            rest_data = rest_data.iloc[0]
+            ws2.cell(row=row, column=1, value=rest)
+            col = 2
+            for category in COMPLAINT_KEYWORDS.keys():
+                ws2.cell(row=row, column=col, value=int(rest_data[category]))
+                col += 1
+            ws2.cell(row=row, column=7, value=f"=SUM(B{row}:F{row})")
+            
+            for col in range(1, 8):
+                ws2.cell(row=row, column=col).border = thin_border
+                ws2.cell(row=row, column=col).alignment = center_align
+            row += 1
+        
+        # Итого Тюмень
+        ws2.cell(row=row, column=1, value="Всего:")
+        ws2.cell(row=row, column=1).font = bold_font
+        for i in range(2, 7):
+            col_letter = get_column_letter(i)
+            ws2.cell(row=row, column=i, value=f"=SUM({col_letter}{start_row_tmn}:{col_letter}{row-1})")
+        ws2.cell(row=row, column=7, value=f"=SUM(G{start_row_tmn}:G{row-1})")
+        
+        for col in range(1, 8):
+            ws2.cell(row=row, column=col).font = bold_font
+            ws2.cell(row=row, column=col).border = double_border
+            ws2.cell(row=row, column=col).alignment = center_align
+        
+        # Настройка ширины столбцов
+        ws2.column_dimensions['A'].width = 20
+        for col in range(2, 8):
+            ws2.column_dimensions[get_column_letter(col)].width = 18
+    
+    output.seek(0)
+    return output
+
+# ==========================================================
 # ПРИМЕНЯЕМ СТИЛИ
 # ==========================================================
 apply_dynamic_styles()
@@ -278,7 +559,7 @@ apply_file_uploader_styles()
 
 st.markdown(f"""
 <div class="header-block">
-    <h1> КР неделя</h1>
+    <h1>📈 КР неделя</h1>
     <p>{greeting_by_time()}</p>
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Еженедельный отчёт по отзывам из трёх источников</p>
 </div>
@@ -328,9 +609,8 @@ if generate_report:
             df2["Рейтинг"] = pd.to_numeric(df2["Оценка"], errors="coerce")
             df2 = df2[["Ресторан", "Рейтинг", "Текст"]].dropna(subset=["Ресторан", "Рейтинг"])
 
-            # --- Геосервисы ---
+            # --- Геосервисы (без фильтрации удалённых) ---
             df3 = pd.read_excel(file3)
-            # Фильтрация удалённых отзывов отключена — берём все отзывы
             
             if "Название филиала" in df3.columns and "Адрес филиала" in df3.columns:
                 df3["Ресторан"] = df3.apply(
@@ -348,8 +628,8 @@ if generate_report:
 
             # --- Общие данные ---
             df_all = pd.concat([df1, df2, df3], ignore_index=True)
-            spb = [r for r in df_all["Ресторан"].unique() if "ТМН" not in str(r)]
-            tmn = [r for r in df_all["Ресторан"].unique() if "ТМН" in str(r)]
+            spb = sorted([r for r in df_all["Ресторан"].unique() if "ТМН" not in str(r)])
+            tmn = sorted([r for r in df_all["Ресторан"].unique() if "ТМН" in str(r)])
 
             stats1 = calc_stats(df1)
             stats2 = calc_stats(df2)
@@ -360,35 +640,15 @@ if generate_report:
             complaints_all = calc_summary_fast(df_all, COMPLAINT_KEYWORDS)
             positives_all = calc_summary_fast(df_all, POSITIVE_KEYWORDS)
 
-            # --- Сохранение Excel ---
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                row_pos = 0
-                for name, df_stat in [("Сайт/приложение", stats1), ("Агрегаторы", stats2), ("Геосервисы", stats3), ("Общий итог", stats_all)]:
-                    pd.DataFrame([[name] + [None]*7]).to_excel(writer, sheet_name="Оценки", index=False, header=False, startrow=row_pos)
-                    row_pos += 2
-                    df_spb = add_totals(df_stat[df_stat["Ресторан"].isin(spb)], "СПб")
-                    df_tmn = add_totals(df_stat[df_stat["Ресторан"].isin(tmn)], "Тюмень")
-                    df_combined = pd.concat([df_spb, pd.DataFrame([[None]*8]), df_tmn])
-                    df_combined.to_excel(writer, sheet_name="Оценки", index=False, startrow=row_pos)
-                    row_pos += len(df_combined) + 3
-
-                row_pos = 0
-                for name, df_comp in [
-                    ("Сводная по жалобам (СПб)", complaints_all[complaints_all["Ресторан"].isin(spb)]), 
-                    ("Сводная по жалобам (Тюмень)", complaints_all[complaints_all["Ресторан"].isin(tmn)]),
-                    ("Сводная по положительным моментам (СПб)", positives_all[positives_all["Ресторан"].isin(spb)]),
-                    ("Сводная по положительным моментам (Тюмень)", positives_all[positives_all["Ресторан"].isin(tmn)])
-                ]:
-                    pd.DataFrame([[name] + [None]*6]).to_excel(writer, sheet_name="Анализ отзывов", index=False, header=False, startrow=row_pos)
-                    row_pos += 2
-                    df_comp.to_excel(writer, sheet_name="Анализ отзывов", index=False, startrow=row_pos)
-                    row_pos += len(df_comp) + 3
-
-            output.seek(0)
+            # --- Создание Excel с формулами ---
+            output = create_excel_with_formulas(
+                stats1, stats2, stats3, stats_all,
+                complaints_all, positives_all, spb, tmn
+            )
+            
             st.success("✅ Отчёт успешно сформирован!")
             st.download_button(
-                "📥 Скачать Excel", output,
+                " Скачать Excel", output,
                 file_name="КР_неделя_отчет.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
