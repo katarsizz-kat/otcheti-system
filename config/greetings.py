@@ -1,53 +1,50 @@
-"""Определение времени суток и приветствий."""
-from datetime import datetime
+"""Приветствия и определение времени суток."""
+from datetime import datetime, timezone, timedelta
 
 
-def get_current_greeting() -> dict:
+# Московский часовой пояс (UTC+3)
+MOSCOW_TZ = timezone(timedelta(hours=3))
+
+
+def get_current_hour():
+    """Возвращает текущий час по московскому времени."""
+    now = datetime.now(MOSCOW_TZ)
+    return now.hour
+
+
+def get_current_greeting():
     """
-    Возвращает приветствие в зависимости от времени суток.
+    Возвращает приветствие и тему в зависимости от времени суток.
     
-    Returns:
-        dict с ключами: icon, greeting, theme, hour
+    Время определяется по московскому часовому поясу (UTC+3).
     """
-    hour = datetime.now().hour
+    hour = get_current_hour()
     
-    greetings = {
-        "morning": {
+    if 5 <= hour < 12:
+        return {
+            "theme": "day",
             "icon": "☀️",
-            "greeting": "Доброго утречка!",
+            "greeting": "Доброе утро!",
+            "subtitle": "Начните день с формирования отчётов"
+        }
+    elif 12 <= hour < 18:
+        return {
             "theme": "day",
-            "range": (5, 12),
-        },
-        "day": {
-            "icon": "🌤",
-            "greeting": "Доброго денёчка!",
-            "theme": "day",
-            "range": (12, 18),
-        },
-        "evening": {
-            "icon": "🌇",
-            "greeting": "Не засидись допоздна 😊",
+            "icon": "",
+            "greeting": "Добрый день!",
+            "subtitle": "Продолжайте работу с отчётами"
+        }
+    elif 18 <= hour < 23:
+        return {
             "theme": "evening",
-            "range": (18, 23),
-        },
-        "night": {
-            "icon": "🌙",
-            "greeting": " Пупупум... а кто это тут не спит? ",
+            "icon": "",
+            "greeting": "Добрый вечер!",
+            "subtitle": "Подведите итоги дня"
+        }
+    else:  # 23:00 - 05:00
+        return {
             "theme": "night",
-            "range": (23, 5),
-        },
-    }
-    
-    for key, data in greetings.items():
-        start, end = data["range"]
-        if start < end:
-            if start <= hour < end:
-                return {"icon": data["icon"], "greeting": data["greeting"], 
-                        "theme": data["theme"], "hour": hour}
-        else:  # ночной диапазон (23-5)
-            if hour >= start or hour < end:
-                return {"icon": data["icon"], "greeting": data["greeting"], 
-                        "theme": data["theme"], "hour": hour}
-    
-    # fallback
-    return {"icon": "", "greeting": "Добрый день!", "theme": "day", "hour": hour}
+            "icon": "🌜",
+            "greeting": "Доброй ночи!",
+            "subtitle": "Ночные отчёты — тоже отчёты"
+        }
