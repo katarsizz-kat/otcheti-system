@@ -243,7 +243,7 @@ def main():
         else:
             st.success("Критических сбоев бота не обнаружено (или формат логов отличается).")
 
-    # ==========================================
+        # ==========================================
     # ВКЛАДКА 4: ЭКСПОРТ В EXCEL
     # ==========================================
     with tab4:
@@ -267,22 +267,35 @@ def main():
                             ws1.write(0, col_num, value, header_fmt)
                     
                     # Лист 2: Жалобы
-                    pivot.reset_index().to_excel(writer, sheet_name='Жалобы по ресторанам', index=False)
+                    pivot_reset = pivot.reset_index()
+                    pivot_reset.to_excel(writer, sheet_name='Жалобы по ресторанам', index=False)
                     ws2 = writer.sheets['Жалобы по ресторанам']
-                    for col_num, value in enumerate(pivot.reset_index().columns.values):
+                    for col_num, value in enumerate(pivot_reset.columns.values):
                         ws2.write(0, col_num, value, header_fmt)
                         
-                    # Диаграмма для Листа 2
-                    if len(pivot) > 0:
+                    # Диаграмма для Листа 2 (ИСПРАВЛЕНО)
+                    if len(pivot_reset) > 0 and len(pivot_reset.columns) > 1:
                         chart = workbook.add_chart({'type': 'bar stacked'})
-                        cols = [c for c in pivot.columns if c != 'ИТОГО']
+                        
+                        # Получаем названия колонок (кроме 'Ресторан' и 'ИТОГО')
+                        cols = [c for c in pivot_reset.columns if c not in ['Ресторан', 'ИТОГО']]
+                        
+                        # Строим диаграмму
                         for i, col in enumerate(cols):
+                            col_idx = list(pivot_reset.columns).index(col)
+                            num_rows = len(pivot_reset)
+                            
+                            # Правильный формат ссылок для xlsxwriter
                             chart.add_series({
                                 'name': col,
-                                'categories': ['Жалобы по ресторанам', 1, 0, len(pivot), 0],
-                                'values': ['Жалобы по ресторанам', 1, i+1, len(pivot), i+1],
+                                'categories': ['Жалобы по ресторанам', 1, 0, num_rows, 0],  # Ресторан
+                                'values': ['Жалобы по ресторанам', 1, col_idx, num_rows, col_idx],
                             })
+                        
                         chart.set_title({'name': 'Структура жалоб по ресторанам'})
+                        chart.set_x_axis({'name': 'Количество жалоб'})
+                        chart.set_y_axis({'name': 'Ресторан'})
+                        chart.set_size({'width': 720, 'height': 500})
                         ws2.insert_chart('H2', chart)
 
                     # Лист 3: Бот
@@ -291,7 +304,7 @@ def main():
                         ws3 = writer.sheets['Ошибки Бота']
                         for col_num, value in enumerate(bot_fails_df.columns.values):
                             ws3.write(0, col_num, value, header_fmt)
-                        ws3.set_column('D:D', 50) # Ширина столбца с сутью
+                        ws3.set_column('D:D', 50)  # Ширина столбца с сутью
 
                 output.seek(0)
                 st.download_button(
@@ -301,6 +314,3 @@ def main():
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
                 st.balloons()
-
-if __name__ == "__main__":
-    main()
