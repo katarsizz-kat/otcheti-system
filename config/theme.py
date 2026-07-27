@@ -1,17 +1,17 @@
 """Цветовые темы приложения."""
 
 THEMES = {
-    "day": {
-    "bg_main": "#2980B9",  # Было: "#F8F9FA" — теперь насыщенный голубой
-    "bg_sidebar": "#3498DB",  # Было: "#FFFFFF"
-    "header_bg": "linear-gradient(135deg, #2980B9 0%, #3498DB 100%)",
+   "day": {
+    "bg_main": "linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%)",  # Небо с облаками
+    "bg_sidebar": "#87CEEB",
+    "header_bg": "linear-gradient(135deg, #5DADE2 0%, #85C1E9 100%)",
     "header_text": "#FFFFFF",
-    "text_primary": "#FFFFFF",  # Белый текст на голубом фоне
+    "text_primary": "#FFFFFF",
     "text_secondary": "#ECF0F1",
-    "card_bg": "rgba(255,255,255,0.15)",  # Полупрозрачные карточки
-    "card_border": "rgba(255,255,255,0.3)",
+    "card_bg": "rgba(255,255,255,0.2)",
+    "card_border": "rgba(255,255,255,0.4)",
     "accent": "#F1C40F",
-    "button_bg": "#1ABC9C",
+    "button_bg": "#2980B9",  # Более тёмный синий для контраста
     "button_text": "#FFFFFF",
 },
     "evening": {
