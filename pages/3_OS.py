@@ -21,50 +21,43 @@ BRAND_COLORS = {
 }
 
 MSK_OFFSET = timedelta(hours=3)
-WORK_START = 11  # 11:00 МСК
-WORK_END = 23    # 23:00 МСК
+
+# Фиксированный порядок ресторанов Тюмени
+TYUMEN_ORDER = ['Тюмень №2 – Орджоникидзе', 'Тюмень №3 – Мельникайте']
 
 # --- ФУНКЦИИ ОБРАБОТКИ ДАННЫХ ---
 
-def parse_chat_times(chat_text, ticket_created_at):
-    """
-    Извлекает время первого ответа ЖИВОГО оператора после создания тикета.
-    ticket_created_at - время создания тикета из колонки 'Дата отзыва'
-    """
-    if pd.isna(chat_text) or pd.isna(ticket_created_at):
-        return None
+def extract_restaurant_number(restaurant_name):
+    """Извлекает номер ресторана для сортировки."""
+    if pd.isna(restaurant_name):
+        return 9999
     
-    # Паттерн для поиска строк с ролями и временем
-    # Формат: "Роль (2026-07-26 20:22:25): текст"
-    role_pattern = re.compile(
-        r'^([А-Яа-яA-Za-zЁё\s\d\-\(\)]+?)\s*\((\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\):',
-        re.MULTILINE
-    )
+    # Ищем номер в названии
+    match = re.search(r'№\s*(\d+)', str(restaurant_name))
+    if match:
+        return int(match.group(1))
+    return 9999
+
+
+def sort_restaurants(df, city_column='Город', restaurant_column='Ресторан'):
+    """Сортирует рестораны по возрастанию номера."""
+    df_sorted = df.copy()
+    df_sorted['_sort_key'] = df_sorted[restaurant_column].apply(extract_restaurant_number)
     
-    matches = role_pattern.findall(str(chat_text))
-    if not matches:
-        return None
+    # Для Тюмени — фиксированный порядок
+    def get_sort_value(row):
+        if row[city_column] == 'Тюмень':
+            try:
+                return TYUMEN_ORDER.index(row[restaurant_column])
+            except ValueError:
+                return 9999
+        else:
+            return row['_sort_key']
     
-    # Роли, которые НЕ являются живыми операторами
-    non_operator_roles = ['Бот', 'Системный пользователь', 'Системный']
-    
-    for role, time_str in matches:
-        role_clean = role.strip()
-        
-        # Пропускаем не-операторов
-        if any(non_op in role_clean for non_op in non_operator_roles):
-            continue
-        
-        try:
-            msg_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-        except:
-            continue
-        
-        # Ответ должен быть ПОСЛЕ создания тикета
-        if msg_time > ticket_created_at:
-            return msg_time
-    
-    return None
+    df_sorted['_sort_value'] = df_sorted.apply(get_sort_value, axis=1)
+    df_sorted = df_sorted.sort_values('_sort_value')
+    df_sorted = df_sorted.drop(['_sort_key', '_sort_value'], axis=1)
+    return df_sorted
 
 
 def categorize_complaint(text, reason):
@@ -99,12 +92,10 @@ def analyze_bot_fails(df):
         ticket_id = row.get('Номер обращения', '')
         date = row.get('Дата отзыва', '')
         
-        # Если бот тупил ИЛИ клиент сразу просит оператора
         is_bot_fail = any(k in text for k in fail_keywords_bot)
         is_demand = any(k in text for k in client_demand)
         
         if is_bot_fail or is_demand:
-            # Краткая суть (первые 100 символов сообщения клиента)
             client_msgs = re.findall(r'Клиент.*?:\s*(.*?)(?:\n|Бот|$)', str(row.get('Первичное сообщение', '')), re.DOTALL)
             summary = client_msgs[0].strip()[:100] if client_msgs else "Нет текста"
             
@@ -116,6 +107,44 @@ def analyze_bot_fails(df):
                 'Тип ошибки бота': 'Требовал оператора' if is_demand else 'Бот не понял'
             })
     return pd.DataFrame(bot_fails)
+
+
+def get_hour_interval(hour):
+    """Возвращает строковое представление часового интервала."""
+    intervals = [
+        (0, 2, '00:00-02:00'),
+        (2, 8, '02:00-08:00'),
+        (8, 9, '08:00'),
+        (9, 10, '09:00'),
+        (10, 11, '10:00'),
+        (11, 12, '11:00'),
+        (12, 16, '12:00-16:00'),
+        (16, 17, '16:00'),
+        (17, 18, '17:00'),
+        (18, 19, '18:00'),
+        (19, 20, '19:00'),
+        (20, 21, '20:00'),
+        (21, 22, '21:00'),
+        (22, 23, '22:00'),
+        (23, 24, '23:00-00:00')
+    ]
+    
+    for start, end, label in intervals:
+        if start <= hour < end:
+            return label
+    return 'Другое'
+
+
+def get_interval_hours(interval_label):
+    """Возвращает количество часов в интервале."""
+    if '-' in interval_label:
+        parts = interval_label.split('-')
+        start = int(parts[0].split(':')[0])
+        end = int(parts[1].split(':')[0])
+        if end == 0:  # 23:00-00:00
+            return 1
+        return end - start
+    return 1
 
 
 # --- UI СТРАНИЦЫ ---
@@ -177,105 +206,98 @@ def main():
 
     # Вкладки
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 SLA и Операторы",
+        "📊 Статистика операторов",
         "🍕 Жалобы и Рестораны",
         "🤖 Анализ Чат-бота",
         "📥 Экспорт в Excel"
     ])
 
     # ==========================================
-    # ВКЛАДКА 1: SLA И ОПЕРАТОРЫ
+    # ВКЛАДКА 1: СТАТИСТИКА ОПЕРАТОРОВ
     # ==========================================
     with tab1:
-        st.subheader("Скорость ответа и загрузка операторов")
-        st.caption(
-            "⏱ Учитывается только рабочее время (11:00 - 23:00 МСК). "
-            "Вы можете исключить тикеты из расчета, если задержка произошла не по вине ОС."
-        )
+        st.subheader("Загрузка операторов и распределение по часам")
+        st.caption("⏱ Учитываются только живые операторы (исключён 'Системный пользователь'). Время переведено в МСК (+3 часа).")
         
-        # Расчет SLA
-        sla_data = []
-        for idx, row in df_filtered.iterrows():
-            ticket_time = row.get('Дата отзыва')
-            if pd.isna(ticket_time):
-                continue
+        # Исключаем системного пользователя
+        df_operators = df_filtered[df_filtered['Исполнитель'] != 'Системный пользователь'].copy()
+        df_operators = df_operators[df_operators['Исполнитель'].notna()]
+        
+        if not df_operators.empty:
+            # Добавляем МСК время
+            df_operators['Дата_МСК'] = df_operators['Дата отзыва'] + MSK_OFFSET
+            df_operators['Дата_только'] = df_operators['Дата_МСК'].dt.date
+            df_operators['Час_МСК'] = df_operators['Дата_МСК'].dt.hour
             
-            operator_time = parse_chat_times(
-                row.get('Первичное сообщение'),
-                ticket_time
+            # Таблица 1: Статистика по операторам
+            st.markdown("##### 📋 Статистика по операторам")
+            
+            operator_stats = []
+            for operator in df_operators['Исполнитель'].unique():
+                op_df = df_operators[df_operators['Исполнитель'] == operator]
+                total_tickets = len(op_df)
+                unique_days = op_df['Дата_только'].nunique()
+                avg_per_day = total_tickets / unique_days if unique_days > 0 else 0
+                
+                operator_stats.append({
+                    'Оператор': operator,
+                    'Всего обращений': total_tickets,
+                    'Рабочих дней': unique_days,
+                    'Среднее в день': round(avg_per_day, 2)
+                })
+            
+            df_operator_stats = pd.DataFrame(operator_stats)
+            df_operator_stats = df_operator_stats.sort_values('Всего обращений', ascending=False)
+            
+            st.dataframe(df_operator_stats, use_container_width=True, hide_index=True)
+            
+            # Проверка совместной работы операторов
+            st.markdown("##### 👥 Совместная работа операторов")
+            st.caption("Дни, когда обращения обрабатывали несколько операторов одновременно")
+            
+            day_operators = df_operators.groupby('Дата_только')['Исполнитель'].apply(lambda x: list(set(x))).reset_index()
+            day_operators['Количество операторов'] = day_operators['Исполнитель'].apply(len)
+            multi_op_days = day_operators[day_operators['Количество операторов'] > 1]
+            
+            if not multi_op_days.empty:
+                multi_op_display = multi_op_days.copy()
+                multi_op_display['Операторы'] = multi_op_display['Исполнитель'].apply(lambda x: ', '.join(sorted(x)))
+                multi_op_display = multi_op_display[['Дата_только', 'Количество операторов', 'Операторы']]
+                multi_op_display = multi_op_display.sort_values('Дата_только', ascending=False)
+                st.dataframe(multi_op_display, use_container_width=True, hide_index=True)
+            else:
+                st.info("Каждый день обращения обрабатывал только один оператор.")
+            
+            # Таблица 2: Распределение по часовым интервалам
+            st.markdown("##### 🕐 Распределение обращений по часам (МСК)")
+            
+            df_operators['Часовой интервал'] = df_operators['Час_МСК'].apply(get_hour_interval)
+            
+            # Порядок интервалов
+            interval_order = [
+                '00:00-02:00', '02:00-08:00', '08:00', '09:00', '10:00', '11:00',
+                '12:00-16:00', '16:00', '17:00', '18:00', '19:00', '20:00',
+                '21:00', '22:00', '23:00-00:00'
+            ]
+            
+            hour_stats = df_operators.groupby('Часовой интервал').size().reset_index(name='Обращений')
+            hour_stats['Обращений в час'] = hour_stats.apply(
+                lambda row: round(row['Обращений'] / get_interval_hours(row['Часовой интервал']), 2),
+                axis=1
             )
             
-            if operator_time:
-                # Проверяем, что тикет создан в рабочее время (МСК)
-                ticket_hour_msk = (ticket_time + MSK_OFFSET).hour
-                
-                if WORK_START <= ticket_hour_msk < WORK_END:
-                    diff_seconds = (operator_time - ticket_time).total_seconds()
-                    diff_mins = diff_seconds / 60
-                    
-                    # Флаг подозрительного времени (< 1 минуты)
-                    is_suspicious = diff_mins < 1
-                    
-                    sla_data.append({
-                        '№ Тикета': row.get('Номер обращения'),
-                        'Ресторан': row.get('Ресторан', ''),
-                        'Исполнитель': row.get('Исполнитель'),
-                        'Время создания': ticket_time.strftime('%H:%M:%S'),
-                        'Время ответа': operator_time.strftime('%H:%M:%S'),
-                        'Время ответа (мин)': round(diff_mins, 1),
-                        'Превышение 30 мин': diff_mins > 30,
-                        '⚠️ Подозрительный': is_suspicious,
-                        'Исключить из SLA': is_suspicious  # автоисключение аномалий
-                    })
-        
-        df_sla = pd.DataFrame(sla_data)
-        
-        if not df_sla.empty:
-            # Интерактивная таблица для исключений
-            st.markdown("##### Таблица времени ответа (отметьте галочками тикеты для исключения)")
-            edited_sla = st.data_editor(
-                df_sla,
-                column_config={
-                    "Исключить из SLA": st.column_config.CheckboxColumn(
-                        "Исключить?",
-                        help="Отметьте, если задержка не по вине оператора",
-                        default=False
-                    ),
-                    "Время ответа (мин)": st.column_config.NumberColumn(format="%.1f")
-                },
-                disabled=["№ Тикета", "Ресторан", "Исполнитель", "Время создания",
-                          "Время ответа", "Время ответа (мин)", "Превышение 30 мин", "⚠️ Подозрительный"],
-                hide_index=True,
-                use_container_width=True
-            )
+            # Сортируем по порядку интервалов
+            hour_stats['_sort'] = hour_stats['Часовой интервал'].apply(lambda x: interval_order.index(x) if x in interval_order else 999)
+            hour_stats = hour_stats.sort_values('_sort').drop('_sort', axis=1)
             
-            # Пересчет метрик с учетом исключений
-            valid_sla = edited_sla[~edited_sla['Исключить из SLA']]
+            st.dataframe(hour_stats, use_container_width=True, hide_index=True)
             
-            col1, col2, col3, col4 = st.columns(4)
-            avg_time = valid_sla['Время ответа (мин)'].mean() if len(valid_sla) > 0 else 0
-            sla_breach = (valid_sla['Превышение 30 мин'].sum() / len(valid_sla) * 100) if len(valid_sla) > 0 else 0
-            
-            col1.metric("Среднее время ответа", f"{avg_time:.1f} мин")
-            col2.metric("Тикетов > 30 мин", f"{sla_breach:.1f}%",
-                        delta=f"{int(valid_sla['Превышение 30 мин'].sum())} шт.")
-            col3.metric("Исключено из SLA", f"{int(edited_sla['Исключить из SLA'].sum())} шт.")
-            col4.metric("Подозрительных", f"{int(edited_sla['⚠️ Подозрительный'].sum())} шт.")
-            
-            st.markdown("##### Загрузка по операторам")
-            if 'Исполнитель' in valid_sla.columns:
-                op_stats = valid_sla.groupby('Исполнитель').agg(
-                    Тикетов=('№ Тикета', 'count'),
-                    Среднее_время=('Время ответа (мин)', 'mean')
-                ).round(1).sort_values(by='Тикетов', ascending=False)
-                st.bar_chart(op_stats['Тикетов'])
-                
-                st.dataframe(op_stats, use_container_width=True)
+            # График по часам
+            st.markdown("##### 📈 Визуализация нагрузки по часам")
+            chart_data = hour_stats.set_index('Часовой интервал')[['Обращений в час']]
+            st.bar_chart(chart_data)
         else:
-            st.warning(
-                "Не удалось распарсить время ответа из логов. "
-                "Проверьте формат столбца 'Первичное сообщение'."
-            )
+            st.warning("Нет данных по операторам (все тикеты обработаны системным пользователем или не распределены).")
 
     # ==========================================
     # ВКЛАДКА 2: ЖАЛОБЫ И РЕСТОРАНЫ
@@ -309,7 +331,11 @@ def main():
                 fill_value=0
             )
             pivot['ИТОГО'] = pivot.sum(axis=1)
-            pivot = pivot.sort_values(by='ИТОГО', ascending=False)
+            
+            # Сортировка по возрастанию номера ресторана
+            pivot = sort_restaurants(pivot.reset_index(), 'Город' if 'Город' in pivot.columns else 'Ресторан', 'Ресторан')
+            pivot = pivot.set_index('Ресторан')
+            
             st.dataframe(pivot, use_container_width=True)
 
     # ==========================================
@@ -343,7 +369,7 @@ def main():
     with tab4:
         st.subheader("Генерация сводного Excel-отчета")
         st.info(
-            "Отчет будет содержать 3 листа: SLA по операторам, "
+            "Отчет будет содержать 4 листа: Статистика операторов, Часовая нагрузка, "
             "Жалобы по ресторанам, Ошибки бота. С диаграммами!"
         )
         
@@ -359,39 +385,54 @@ def main():
                         'font_color': 'white', 'border': 1
                     })
                     
-                    # Лист 1: SLA
-                    if not df_sla.empty:
-                        df_sla.to_excel(writer, sheet_name='SLA Операторов', index=False)
-                        ws1 = writer.sheets['SLA Операторов']
-                        for col_num, value in enumerate(df_sla.columns.values):
+                    # Лист 1: Статистика операторов
+                    if not df_operators.empty:
+                        df_operator_stats.to_excel(writer, sheet_name='Статистика операторов', index=False)
+                        ws1 = writer.sheets['Статистика операторов']
+                        for col_num, value in enumerate(df_operator_stats.columns.values):
                             ws1.write(0, col_num, value, header_fmt)
-                        ws1.set_column('A:A', 15)
-                        ws1.set_column('B:B', 25)
-                        ws1.set_column('C:C', 25)
-                        ws1.set_column('D:D', 15)
-                        ws1.set_column('E:E', 15)
-                        ws1.set_column('F:F', 18)
+                        ws1.set_column('A:A', 30)
+                        ws1.set_column('B:D', 18)
                     
-                    # Лист 2: Жалобы
+                    # Лист 2: Часовая нагрузка
+                    if not df_operators.empty:
+                        hour_stats.to_excel(writer, sheet_name='Часовая нагрузка', index=False)
+                        ws2 = writer.sheets['Часовая нагрузка']
+                        for col_num, value in enumerate(hour_stats.columns.values):
+                            ws2.write(0, col_num, value, header_fmt)
+                        ws2.set_column('A:A', 15)
+                        ws2.set_column('B:C', 18)
+                        
+                        # Диаграмма по часам
+                        chart = workbook.add_chart({'type': 'column'})
+                        chart.add_series({
+                            'name': 'Обращений в час',
+                            'categories': ['Часовая нагрузка', 1, 0, len(hour_stats), 0],
+                            'values': ['Часовая нагрузка', 1, 2, len(hour_stats), 2],
+                        })
+                        chart.set_title({'name': 'Нагрузка по часам (МСК)'})
+                        chart.set_x_axis({'name': 'Часовой интервал'})
+                        chart.set_y_axis({'name': 'Обращений в час'})
+                        chart.set_size({'width': 720, 'height': 400})
+                        ws2.insert_chart('E2', chart)
+                    
+                    # Лист 3: Жалобы
                     pivot_reset = pivot.reset_index()
                     pivot_reset.to_excel(writer, sheet_name='Жалобы по ресторанам', index=False)
-                    ws2 = writer.sheets['Жалобы по ресторанам']
+                    ws3 = writer.sheets['Жалобы по ресторанам']
                     for col_num, value in enumerate(pivot_reset.columns.values):
-                        ws2.write(0, col_num, value, header_fmt)
+                        ws3.write(0, col_num, value, header_fmt)
                     
-                    # Диаграмма для Листа 2 (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+                    # Диаграмма для Листа 3 (ИСПРАВЛЕННАЯ ВЕРСИЯ)
                     if len(pivot_reset) > 0 and len(pivot_reset.columns) > 1:
                         chart = workbook.add_chart({'type': 'bar stacked'})
                         
-                        # Получаем названия колонок (кроме 'Ресторан' и 'ИТОГО')
                         cols = [c for c in pivot_reset.columns if c not in ['Ресторан', 'ИТОГО']]
                         
-                        # Строим диаграмму
                         for i, col in enumerate(cols):
                             col_idx = list(pivot_reset.columns).index(col)
                             num_rows = len(pivot_reset)
                             
-                            # Правильный формат ссылок для xlsxwriter
                             chart.add_series({
                                 'name': str(col),
                                 'categories': ['Жалобы по ресторанам', 1, 0, num_rows, 0],
@@ -402,19 +443,19 @@ def main():
                         chart.set_x_axis({'name': 'Количество жалоб'})
                         chart.set_y_axis({'name': 'Ресторан'})
                         chart.set_size({'width': 720, 'height': 500})
-                        ws2.insert_chart('H2', chart)
+                        ws3.insert_chart('H2', chart)
 
-                    # Лист 3: Бот
+                    # Лист 4: Бот
                     if not bot_fails_df.empty:
                         bot_fails_df.to_excel(writer, sheet_name='Ошибки Бота', index=False)
-                        ws3 = writer.sheets['Ошибки Бота']
+                        ws4 = writer.sheets['Ошибки Бота']
                         for col_num, value in enumerate(bot_fails_df.columns.values):
-                            ws3.write(0, col_num, value, header_fmt)
-                        ws3.set_column('A:A', 15)
-                        ws3.set_column('B:B', 20)
-                        ws3.set_column('C:C', 25)
-                        ws3.set_column('D:D', 50)  # Ширина столбца с сутью
-                        ws3.set_column('E:E', 20)
+                            ws4.write(0, col_num, value, header_fmt)
+                        ws4.set_column('A:A', 15)
+                        ws4.set_column('B:B', 20)
+                        ws4.set_column('C:C', 25)
+                        ws4.set_column('D:D', 50)
+                        ws4.set_column('E:E', 20)
 
                 output.seek(0)
                 st.download_button(
