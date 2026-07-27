@@ -51,7 +51,11 @@ def _add_text(slide, left, top, width, height, text, font_name, font_size, color
     return txBox
 
 def _format_cell(cell, text, font_name, font_size, font_color, bg_color=None, bold=False, align=PP_ALIGN.CENTER):
+    # Преобразуем NaN и None в пустую строку
+    if pd.isna(text) or text is None:
+        text = ""
     cell.text = str(text)
+    
     for paragraph in cell.text_frame.paragraphs:
         paragraph.font.name = font_name
         paragraph.font.size = Pt(font_size)
@@ -84,7 +88,6 @@ def generate_flexible_presentation(
     Генерирует презентацию с гибкой структурой на основе загруженных файлов.
     """
     prs = Presentation()
-    # ✅ ИСПРАВЛЕНИЕ: задаем размеры слайда напрямую
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
     
@@ -152,29 +155,38 @@ def generate_flexible_presentation(
             # Стандартный слайд — показываем данные из первого файла
             if file_list:
                 first_file = file_list[0]
-                first_sheet_name = list(all_dataframes[first_file].keys())[0]
-                df = all_dataframes[first_file][first_sheet_name]
+                sheets_dict = all_dataframes[first_file]
                 
-                # Показываем первые 10 строк
-                rows = min(len(df.head(10)) + 1, 11)
-                cols = len(df.columns)
+                # Берем первый непустой лист
+                first_sheet_name = None
+                df = None
+                for sheet_name, sheet_df in sheets_dict.items():
+                    if not sheet_df.empty:
+                        first_sheet_name = sheet_name
+                        df = sheet_df
+                        break
                 
-                if cols > 0 and rows > 1:
-                    table_shape = slide.shapes.add_table(rows, cols, Inches(0.5), Inches(1.5), 
-                                                        Inches(12), Inches(4.5))
-                    table = table_shape.table
+                if df is not None and not df.empty:
+                    # Показываем первые 10 строк
+                    rows = min(len(df.head(10)) + 1, 11)
+                    cols = len(df.columns)
                     
-                    # Заголовки колонок
-                    for col_idx, col_name in enumerate(df.columns):
-                        _format_cell(table.cell(0, col_idx), str(col_name), 
-                                   PJFonts.HEADLINE, 14, PJColors.WHITE, secondary_color, bold=True)
-                    
-                    # Данные
-                    for row_idx, row in df.head(10).iterrows():
-                        bg = PJColors.DOUGH_BEIGE if row_idx % 2 == 0 else PJColors.WHITE
-                        for col_idx, value in enumerate(row):
-                            _format_cell(table.cell(row_idx + 1, col_idx), str(value),
-                                       PJFonts.BODY, 12, PJColors.BLACK, bg)
+                    if cols > 0 and rows > 1:
+                        table_shape = slide.shapes.add_table(rows, cols, Inches(0.5), Inches(1.5), 
+                                                            Inches(12), Inches(4.5))
+                        table = table_shape.table
+                        
+                        # Заголовки колонок
+                        for col_idx, col_name in enumerate(df.columns):
+                            _format_cell(table.cell(0, col_idx), str(col_name), 
+                                       PJFonts.HEADLINE, 14, PJColors.WHITE, secondary_color, bold=True)
+                        
+                        # Данные
+                        for row_idx, row in df.head(10).iterrows():
+                            bg = PJColors.DOUGH_BEIGE if row_idx % 2 == 0 else PJColors.WHITE
+                            for col_idx, value in enumerate(row):
+                                _format_cell(table.cell(row_idx + 1, col_idx), str(value),
+                                           PJFonts.BODY, 12, PJColors.BLACK, bg)
         
         # Номер слайда
         _add_text(slide, Inches(12), Inches(7), Inches(1), Inches(0.5),
