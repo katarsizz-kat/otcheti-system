@@ -75,7 +75,7 @@ def _format_cell(cell, text, font_name, font_size, font_color, bg_color=None, bo
         tcPr.append(ln)
 
 # ==========================================
-# 🍕 ГЛАВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ
+#  ГЛАВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ
 # ==========================================
 def generate_flexible_presentation(
     all_dataframes: Dict[str, Dict[str, pd.DataFrame]], 
@@ -158,35 +158,50 @@ def generate_flexible_presentation(
                 sheets_dict = all_dataframes[first_file]
                 
                 # Берем первый непустой лист
-                first_sheet_name = None
                 df = None
                 for sheet_name, sheet_df in sheets_dict.items():
                     if not sheet_df.empty:
-                        first_sheet_name = sheet_name
                         df = sheet_df
                         break
                 
                 if df is not None and not df.empty:
-                    # Показываем первые 10 строк
-                    rows = min(len(df.head(10)) + 1, 11)
-                    cols = len(df.columns)
+                    # Очищаем DataFrame: убираем полностью пустые строки и колонки
+                    df_clean = df.dropna(how='all', axis=0).dropna(how='all', axis=1)
                     
-                    if cols > 0 and rows > 1:
+                    # Заполняем NaN пустыми строками
+                    df_clean = df_clean.fillna('')
+                    
+                    # Берем только первые 10 строк с данными
+                    df_display = df_clean.head(10)
+                    
+                    # Проверяем, что есть данные для отображения
+                    if len(df_display) > 0 and len(df_display.columns) > 0:
+                        rows = len(df_display) + 1  # +1 для заголовка
+                        cols = len(df_display.columns)
+                        
+                        # Создаем таблицу
                         table_shape = slide.shapes.add_table(rows, cols, Inches(0.5), Inches(1.5), 
                                                             Inches(12), Inches(4.5))
                         table = table_shape.table
                         
                         # Заголовки колонок
-                        for col_idx, col_name in enumerate(df.columns):
+                        for col_idx, col_name in enumerate(df_display.columns):
                             _format_cell(table.cell(0, col_idx), str(col_name), 
                                        PJFonts.HEADLINE, 14, PJColors.WHITE, secondary_color, bold=True)
                         
                         # Данные
-                        for row_idx, row in df.head(10).iterrows():
+                        for row_idx, row in df_display.iterrows():
                             bg = PJColors.DOUGH_BEIGE if row_idx % 2 == 0 else PJColors.WHITE
                             for col_idx, value in enumerate(row):
-                                _format_cell(table.cell(row_idx + 1, col_idx), str(value),
-                                           PJFonts.BODY, 12, PJColors.BLACK, bg)
+                                # Проверяем, что ячейка существует
+                                if col_idx < cols:
+                                    _format_cell(table.cell(row_idx + 1, col_idx), str(value),
+                                               PJFonts.BODY, 12, PJColors.BLACK, bg)
+                    else:
+                        # Если данных нет, показываем сообщение
+                        _add_text(slide, Inches(1), Inches(2), Inches(11), Inches(3),
+                                 "Нет данных для отображения на этом слайде",
+                                 PJFonts.BODY, 24, PJColors.OLIVE_GREEN, align=PP_ALIGN.CENTER)
         
         # Номер слайда
         _add_text(slide, Inches(12), Inches(7), Inches(1), Inches(0.5),
