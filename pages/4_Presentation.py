@@ -1,16 +1,12 @@
 import streamlit as st
-import pandas as pd
 import os
-import time
+import sys
 
-# Импортируем функцию генерации (убедись, что путь правильный)
-# from utils.pptx_gen import create_presentation 
-# Или откуда ты её импортируешь, например:
-from components import create_presentation 
+# Добавляем корень проекта в путь, если нужно (чтобы видеть utils и config)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# ==========================================
-# 🎨 НАСТРОЙКИ СТРАНИЦЫ
-# ==========================================
+from utils.pptx_builder import generate_kr_presentation
+
 st.set_page_config(page_title="Презентация КР", page_icon="🍕", layout="wide")
 
 st.markdown("""
@@ -18,51 +14,22 @@ st.markdown("""
         🍕 ГЕНЕРАЦИЯ ПРЕЗЕНТАЦИИ
     </h1>
     <p style='text-align: center; color: #03592D; font-family: Roboto Condensed; font-size: 20px;'>
-        Когда есть вкус, есть эмоции. Формируем красивый отчёт в фирменном стиле.
+        Когда есть вкус, есть эмоции. Формируем отчёт в фирменном стиле.
     </p>
 """, unsafe_allow_html=True)
 
 st.divider()
 
-# ==========================================
-# 📂 ПОЛУЧЕНИЕ ДАННЫХ
-# ==========================================
-# Проверяем, есть ли уже обработанные данные в session_state (если ты их туда сохраняешь на стр. 2)
-# Если нет, даем возможность загрузить файлы заново.
-
+# Получаем данные из session_state (если они туда сохраняются на странице 2_KR_week)
 df_ratings = st.session_state.get('df_ratings', None)
 df_reviews = st.session_state.get('df_reviews', None)
 
 if df_ratings is None or df_reviews is None:
-    st.warning("⚠️ Данные не найдены. Загрузите исходные файлы Excel для формирования презентации.")
+    st.warning("⚠️ Данные не найдены. Перейдите на страницу 'КР Неделя/Месяц', загрузите файлы и обработайте их, либо загрузите их здесь.")
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        file_site = st.file_uploader("Сайт", type=['xlsx'])
-    with col2:
-        file_agg = st.file_uploader("Агрегаторы", type=['xlsx'])
-    with col3:
-        file_geo = st.file_uploader("Геосервисы", type=['xlsx'])
-        
-    if file_site and file_agg and file_geo:
-        if st.button("🔄 Обработать данные для презентации", type="primary"):
-            with st.spinner("Анализируем вкусы и настроения..."):
-                # ⚠️ ЗДЕСЬ ТВОЯ ЛОГИКА ОБРАБОТКИ ФАЙЛОВ
-                # Тебе нужно вызвать ту же функцию, что и на 2-й странице,
-                # которая возвращает df_ratings и df_reviews
-                
-                # Пример-заглушка:
-                # df_ratings, df_reviews = process_kr_files(file_site, file_agg, file_geo)
-                
-                # Сохраняем в session_state, чтобы не грузить файлы снова
-                st.session_state['df_ratings'] = df_ratings
-                st.session_state['df_reviews'] = df_reviews
-                st.rerun()
+    # Здесь можно добавить дублирующие file_uploader'ы, если нужно
     st.stop()
 
-# ==========================================
-# 📊 ПРЕДПРОСМОТР И ГЕНЕРАЦИЯ
-# ==========================================
 st.success("✅ Данные успешно загружены и готовы к экспорту!")
 
 col_left, col_right = st.columns([2, 1])
@@ -73,23 +40,23 @@ with col_left:
 
 with col_right:
     st.subheader("⚙️ Параметры")
-    report_period = st.text_input("Период отчёта (например: Неделя 12-18 Авг)", value="Текущая неделя")
+    report_period = st.text_input("Период отчёта", value="Неделя 12-18 Авг")
     
     st.markdown("---")
     
     if st.button("🍕 Сгенерировать PowerPoint", type="primary", use_container_width=True):
         with st.spinner("Готовим презентацию... Добавляем лучшие ингредиенты!"):
-            output_filename = f"Клиентский_рейтинг_Презентация_{report_period.replace(' ', '_')}.pptx"
+            safe_period = "".join(c for c in report_period if c.isalnum() or c in (' ', '_')).rstrip()
+            output_filename = f"КР_Презентация_{safe_period}.pptx"
             
-            # Вызываем функцию генерации
-            pptx_path = create_presentation(
+            # Вызываем изолированную функцию
+            pptx_path = generate_kr_presentation(
                 df_ratings=df_ratings, 
                 df_reviews=df_reviews, 
                 period_text=report_period,
                 output_path=output_filename
             )
             
-            # Даём кнопку на скачивание
             with open(pptx_path, "rb") as file:
                 st.download_button(
                     label="💾 Скачать презентацию (PPTX)",
@@ -99,7 +66,6 @@ with col_right:
                     use_container_width=True
                 )
             
-            # Удаляем временный файл с сервера
             if os.path.exists(pptx_path):
                 os.remove(pptx_path)
                 
