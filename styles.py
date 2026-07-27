@@ -48,9 +48,9 @@ def apply_theme(theme: str, holiday_effects: list = None):
 
         "h1, h2, h3, h4, h5, h6, p, label, div[data-testid='stMarkdownContainer'] p { color: " + colors['text_primary'] + " !important; }"
 
-        "button[data-testid='stBaseButton-secondary'] { background: linear-gradient(135deg, #1ABC9C 0%, #16A085 100%) !important; border: none !important; border-radius: 16px !important; padding: 24px 40px !important; margin-bottom: 24px !important; color: #FFFFFF !important; font-size: 32px !important; font-weight: 700 !important; text-align: center !important; white-space: pre-line !important; line-height: 1.6 !important; animation: pulse 2s ease-in-out infinite !important; cursor: pointer !important; width: 50% !important; max-width: 600px !important; margin-left: auto !important; margin-right: auto !important; display: block !important; }"
-"button[data-testid='stBaseButton-secondary']:hover { transform: scale(1.02) !important; box-shadow: 0 8px 24px rgba(26, 188, 156, 0.4) !important; }"
-
+        "button[data-testid='stBaseButton-secondary'] { background: linear-gradient(135deg, #2980B9 0%, #1F618D 100%) !important; border: none !important; border-radius: 16px !important; padding: 24px 40px !important; margin-bottom: 24px !important; color: #FFFFFF !important; font-size: 32px !important; font-weight: 700 !important; text-align: center !important; white-space: pre-line !important; line-height: 1.6 !important; animation: pulse 2s ease-in-out infinite !important; cursor: pointer !important; width: 50% !important; max-width: 600px !important; margin-left: auto !important; margin-right: auto !important; display: block !important; }"
+        "button[data-testid='stBaseButton-secondary']:hover { transform: scale(1.02) !important; box-shadow: 0 8px 24px rgba(41, 128, 185, 0.4) !important; }"
+        
         "@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }"
         "@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }"
         "@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }"
