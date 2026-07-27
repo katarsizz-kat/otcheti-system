@@ -2,87 +2,85 @@ import streamlit as st
 import pandas as pd
 import os
 import sys
+from typing import List, Dict
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.pptx_builder import generate_kr_presentation
+from utils.pptx_builder import generate_flexible_presentation
 
 st.set_page_config(page_title="Презентация КР", page_icon="🍕", layout="wide")
 
 st.markdown("""
     <h1 style='text-align: center; color: #E12D26; font-family: Oswald;'>
-        🍕 ГЕНЕРАЦИЯ ПРЕЗЕНТАЦИИ
+        🍕 КОНСТРУКТОР ПРЕЗЕНТАЦИЙ
     </h1>
     <p style='text-align: center; color: #03592D; font-family: Roboto Condensed; font-size: 20px;'>
-        Когда есть вкус, есть эмоции. Формируем отчёт в фирменном стиле.
+        Загрузите файлы и опишите структуру — мы соберём идеальную презентацию!
     </p>
 """, unsafe_allow_html=True)
 
 st.divider()
 
-# Проверяем session_state
-df_ratings = st.session_state.get('df_ratings', None)
-df_reviews = st.session_state.get('df_reviews', None)
+# ==========================================
+#  БЛОК 1: ЗАГРУЗКА ФАЙЛОВ
+# ==========================================
+st.subheader("📁 1. Загрузка данных")
 
-if df_ratings is None or df_reviews is None:
-    st.warning("⚠️ Данные не найдены. Загрузите файлы здесь или обработайте их на странице 'КР Неделя'.")
+# Инициализация session_state для хранения файлов
+if 'uploaded_files' not in st.session_state:
+    st.session_state.uploaded_files = []
+
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    uploaded_file = st.file_uploader(
+        "Загрузите Excel-файл", 
+        type=['xlsx'], 
+        accept_multiple_files=False,
+        key=f"file_{len(st.session_state.uploaded_files)}"
+    )
+
+with col2:
+    if st.button("➕ Добавить файл", type="secondary", use_container_width=True):
+        if uploaded_file is not None:
+            st.session_state.uploaded_files.append(uploaded_file)
+            st.success(f"✅ Файл {uploaded_file.name} добавлен!")
+        else:
+            st.warning("⚠️ Сначала выберите файл!")
+
+# Отображение загруженных файлов
+if st.session_state.uploaded_files:
+    st.markdown(f"** Загружено файлов: {len(st.session_state.uploaded_files)}**")
     
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        file_site = st.file_uploader("📊 Сайт", type=['xlsx'], key="site_pptx")
-    with col2:
-        file_agg = st.file_uploader("📊 Агрегаторы", type=['xlsx'], key="agg_pptx")
-    with col3:
-        file_geo = st.file_uploader("📊 Геосервисы", type=['xlsx'], key="geo_pptx")
+    # Показываем список с возможностью удаления
+    files_to_remove = []
+    for idx, file in enumerate(st.session_state.uploaded_files):
+        col_a, col_b, col_c = st.columns([6, 2, 1])
+        with col_a:
+            st.text(f"{idx + 1}. {file.name}")
+        with col_b:
+            st.text(f"📊 {round(file.size / 1024, 1)} KB")
+        with col_c:
+            if st.button("🗑️", key=f"remove_{idx}"):
+                files_to_remove.append(idx)
     
-    if file_site and file_agg and file_geo:
-        if st.button("🔄 Обработать данные для презентации", type="primary"):
-            with st.spinner("Анализируем вкусы и настроения..."):
-                # ⚠️ ЗДЕСЬ НУЖНО ВЫЗВАТЬ ТУ ЖЕ ФУНКЦИЮ ОБРАБОТКИ, ЧТО И НА СТРАНИЦЕ 2
-                # Например:
-                # df_ratings, df_reviews = process_kr_files(file_site, file_agg, file_geo)
-                
-                # Временно заглушка - замени на свою функцию
-                st.error("❌ Нужно добавить функцию обработки файлов. См. инструкцию ниже.")
-                st.stop()
-    st.stop()
-
-# Если данные есть - показываем интерфейс генерации
-st.success("✅ Данные успешно загружены и готовы к экспорту!")
-
-col_left, col_right = st.columns([2, 1])
-
-with col_left:
-    st.subheader("📈 Краткая сводка")
-    st.dataframe(df_ratings.head(), use_container_width=True)
-
-with col_right:
-    st.subheader("⚙️ Параметры")
-    report_period = st.text_input("Период отчёта", value="Неделя 12-18 Авг")
+    # Удаляем файлы, если нужно
+    if files_to_remove:
+        for idx in sorted(files_to_remove, reverse=True):
+            st.session_state.uploaded_files.pop(idx)
+        st.rerun()
     
-    st.markdown("---")
-    
-    if st.button("🍕 Сгенерировать PowerPoint", type="primary", use_container_width=True):
-        with st.spinner("Готовим презентацию... Добавляем лучшие ингредиенты!"):
-            safe_period = "".join(c for c in report_period if c.isalnum() or c in (' ', '_')).rstrip()
-            output_filename = f"КР_Презентация_{safe_period}.pptx"
-            
-            pptx_path = generate_kr_presentation(
-                df_ratings=df_ratings, 
-                df_reviews=df_reviews, 
-                period_text=report_period,
-                output_path=output_filename
-            )
-            
-            with open(pptx_path, "rb") as file:
-                st.download_button(
-                    label="💾 Скачать презентацию (PPTX)",
-                    data=file,
-                    file_name=output_filename,
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    use_container_width=True
-                )
-            
-            if os.path.exists(pptx_path):
-                os.remove(pptx_path)
-                
-            st.balloons()
+    # Кнопка очистки всех
+    if st.button("️ Очистить все файлы", type="secondary"):
+        st.session_state.uploaded_files = []
+        st.rerun()
+
+# ==========================================
+# 📝 БЛОК 2: СТРУКТУРА ПРЕЗЕНТАЦИИ
+# ==========================================
+st.divider()
+st.subheader(" 2. Структура презентации")
+
+st.markdown("""
+**Опишите, какие слайды нужны** (каждый слайд с новой строки):
+
+Пример:
