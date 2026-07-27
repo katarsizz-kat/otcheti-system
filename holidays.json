@@ -1,0 +1,2528 @@
+{
+  "01-01": {
+    "title": "Новый год",
+    "emoji": "🎆",
+    "message": "С Новым годом! Пусть этот год принесёт счастье, здоровье и исполнение желаний!",
+    "theme": "new_year",
+    "effects": ["snow", "confetti"],
+    "button": {"enabled": true, "text": "🎁 Открыть подарок", "action": "new_year_gift"},
+    "popup": {"enabled": true, "title": "🎉 Поздравляем!", "text": "Спасибо, что пользуетесь нашим приложением! Пусть Новый год будет счастливым!"},
+    "animation": {"enabled": true, "type": "fireworks"},
+    "sound": {"enabled": false, "file": "new_year.mp3"},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино поздравляет вас с Новым годом!"},
+    "secret": {"enabled": true, "title": "🎅 Пасхалка", "text": "Вы нашли секретное новогоднее поздравление!"}
+  },
+  "01-02": {
+    "title": "День научной фантастики",
+    "emoji": "🚀",
+    "message": "Погрузитесь в мир будущего!",
+    "theme": "scifi",
+    "effects": ["stars"],
+    "button": {"enabled": true, "text": "🚀 Отправиться в космос", "action": "space_travel"},
+    "popup": {"enabled": true, "title": "🌌 Добро пожаловать в будущее!", "text": "Сегодня день мечтателей и изобретателей!"},
+    "animation": {"enabled": true, "type": "stars"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино мечтает о звёздах!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "01-03": {
+    "title": "День соломинки для коктейля",
+    "emoji": "",
+    "message": "Освежающий день!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🥤 Получить рецепт коктейля", "action": "cocktail_recipe"},
+    "popup": {"enabled": true, "title": "🍹 Время коктейля!", "text": "Побалуйте себя вкусным напитком!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино любит фруктовые коктейли!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "01-04": {
+    "title": "День просмотра фильмов",
+    "emoji": "",
+    "message": "Отличный повод посмотреть любимый фильм!",
+    "effects": []
+  },
+  "01-05": {
+    "title": "День пиццы",
+    "emoji": "",
+    "message": "Сегодня день пиццы! Наслаждайтесь!",
+    "effects": ["falling_pizza"]
+  },
+  "01-06": {
+    "title": "День горячего шоколада",
+    "emoji": "☕",
+    "message": "Согрейтесь чашкой горячего шоколада!",
+    "effects": []
+  },
+  "01-07": {
+    "title": "Рождество Христово",
+    "emoji": "⭐",
+    "message": "С Рождеством! Мира, добра и благодати вашему дому!",
+    "theme": "christmas",
+    "effects": ["snow"],
+    "button": {"enabled": true, "text": "⭐ Рождественское поздравление", "action": "christmas_greeting"},
+    "popup": {"enabled": true, "title": "⭐ С Рождеством!", "text": "Пусть этот светлый праздник принесёт радость в ваш дом!"},
+    "animation": {"enabled": true, "type": "stars"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино желает вам светлого Рождества!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "01-08": {
+    "title": "День видеоигр",
+    "emoji": "🎮",
+    "message": "Время поиграть в любимую игру!",
+    "effects": []
+  },
+  "01-09": {
+    "title": "День галстука",
+    "emoji": "",
+    "message": "Сегодня день элегантности!",
+    "effects": []
+  },
+  "01-10": {
+    "title": "День уборки",
+    "emoji": "🏠",
+    "message": "Отличный день для наведения порядка!",
+    "effects": []
+  },
+  "01-11": {
+    "title": "День блинов",
+    "emoji": "🥞",
+    "message": "Время печь блины!",
+    "effects": []
+  },
+  "01-12": {
+    "title": "День фотографии",
+    "emoji": "📷",
+    "message": "Запечатлейте моменты!",
+    "effects": []
+  },
+  "01-13": {
+    "title": "День караоке",
+    "emoji": "🎤",
+    "message": "Пойте от души!",
+    "effects": []
+  },
+  "01-14": {
+    "title": "День театра",
+    "emoji": "🎭",
+    "message": "Наслаждайтесь искусством!",
+    "effects": []
+  },
+  "01-15": {
+    "title": "День сыра",
+    "emoji": "",
+    "message": "Сырный день! Наслаждайтесь!",
+    "effects": []
+  },
+  "01-16": {
+    "title": "День лимонада",
+    "emoji": "",
+    "message": "Освежающий день!",
+    "effects": []
+  },
+  "01-17": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "01-18": {
+    "title": "День рисования",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "01-19": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "01-20": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "01-21": {
+    "title": "День супа",
+    "emoji": "🥘",
+    "message": "Согревающий день!",
+    "effects": []
+  },
+  "01-22": {
+    "title": "День селфи",
+    "emoji": "📸",
+    "message": "Сфотографируйтесь!",
+    "effects": []
+  },
+  "01-23": {
+    "title": "День цирка",
+    "emoji": "",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "01-24": {
+    "title": "День шоколада",
+    "emoji": "🍫",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "01-25": {
+    "title": "День студента",
+    "emoji": "📚",
+    "message": "С Днём студента!",
+    "effects": []
+  },
+  "01-26": {
+    "title": "День тако",
+    "emoji": "",
+    "message": "Мексиканский день!",
+    "effects": []
+  },
+  "01-27": {
+    "title": "День настольных игр",
+    "emoji": "🎲",
+    "message": "Играйте с друзьями!",
+    "effects": []
+  },
+  "01-28": {
+    "title": "День порядка",
+    "emoji": "📋",
+    "message": "Организуйте всё!",
+    "effects": []
+  },
+  "01-29": {
+    "title": "День фокусов",
+    "emoji": "🎩",
+    "message": "Удивляйте!",
+    "effects": []
+  },
+  "01-30": {
+    "title": "День бургеров",
+    "emoji": "",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "01-31": {
+    "title": "День вечеринки",
+    "emoji": "🎉",
+    "message": "Празднуйте!",
+    "effects": ["confetti"]
+  },
+    "02-01": {
+    "title": "День свободы",
+    "emoji": "🕊️",
+    "message": "Свобода — это счастье!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🕊️ Загадать желание", "action": "make_wish"},
+    "popup": {"enabled": true, "title": "✨ Ваше желание принято!", "text": "Пусть оно обязательно сбудется!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино желает вам свободы и счастья!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "02-02": {
+    "title": "День сурка",
+    "emoji": "🦫",
+    "message": "Сурок предсказывает погоду!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": " Узнать прогноз", "action": "weather_prediction"},
+    "popup": {"enabled": true, "title": "🌤️ Сурок говорит...", "text": "Весна будет ранней в этом году!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино верит сурку!"},
+    "secret": {"enabled": true, "title": "🦫 Секрет сурка", "text": "Сурок на самом деле любит пиццу!"}
+  },
+  "02-03": {
+    "title": "День золотой рыбки",
+    "emoji": "🐠",
+    "message": "Загадайте желание!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": " Загадать 3 желания", "action": "three_wishes"},
+    "popup": {"enabled": true, "title": "✨ Золотая рыбка слушает...", "text": "Ваши желания записаны в волшебную книгу!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино загадал: хочу пиццу!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "02-04": {
+    "title": "День картофеля фри",
+    "emoji": "🍟",
+    "message": "Хрустящий день!",
+    "effects": []
+  },
+  "02-05": {
+    "title": "День печенья с предсказаниями",
+    "emoji": "",
+    "message": "Узнайте своё будущее!",
+    "effects": []
+  },
+  "02-06": {
+    "title": "День шоколадных конфет",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "02-07": {
+    "title": "День караоке",
+    "emoji": "🎤",
+    "message": "Пойте!",
+    "effects": []
+  },
+  "02-08": {
+    "title": "День чтения",
+    "emoji": "📖",
+    "message": "Читайте книги!",
+    "effects": []
+  },
+  "02-09": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Сегодня Международный день пиццы!",
+    "theme": "pizza_day",
+    "effects": ["falling_pizza"],
+    "button": {"enabled": true, "text": " Заказать пиццу", "action": "order_pizza"},
+    "popup": {"enabled": true, "title": "🍕 День пиццы!", "text": "Побалуйте себя вкусной пиццей!"},
+    "animation": {"enabled": true, "type": "pizza_rain"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит пиццу!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "02-10": {
+    "title": "День вязания",
+    "emoji": "🧶",
+    "message": "Творческий день!",
+    "effects": []
+  },
+  "02-11": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "02-12": {
+    "title": "День музыки",
+    "emoji": "",
+    "message": "Слушайте музыку!",
+    "effects": []
+  },
+  "02-13": {
+    "title": "День подарков",
+    "emoji": "🎁",
+    "message": "Дарите радость!",
+    "effects": []
+  },
+  "02-14": {
+    "title": "День святого Валентина",
+    "emoji": "",
+    "message": "С Днём святого Валентина! Любви и тепла!",
+    "theme": "valentines",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "💌 Получить валентинку", "action": "valentines_card"},
+    "popup": {"enabled": true, "title": "💕 С Днём любви!", "text": "Пусть ваше сердце всегда будет наполнено любовью!"},
+    "animation": {"enabled": true, "type": "hearts"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино желает вам любви и счастья!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "02-15": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "02-16": {
+    "title": "День панкейков",
+    "emoji": "🥞",
+    "message": "Вкусный завтрак!",
+    "effects": []
+  },
+  "02-17": {
+    "title": "День буррито",
+    "emoji": "🌯",
+    "message": "Мексиканский день!",
+    "effects": []
+  },
+  "02-18": {
+    "title": "День попкорна",
+    "emoji": "🍿",
+    "message": "Киновечер!",
+    "effects": []
+  },
+  "02-19": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий праздник!",
+    "effects": []
+  },
+  "02-20": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "02-21": {
+    "title": "День вареников",
+    "emoji": "",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "02-22": {
+    "title": "Масленица",
+    "emoji": "🥞",
+    "message": "С Масленицей! Весёлых блинов и весеннего настроения!",
+    "theme": "maslenitsa",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🥞 Рецепты блинов", "action": "pancake_recipes"},
+    "popup": {"enabled": true, "title": "🥞 С Масленицей!", "text": "Пусть этот праздник принесёт радость и вкусные блины!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит блины с вареньем!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "02-23": {
+    "title": "День защитника Отечества",
+    "emoji": "🎖️",
+    "message": "С Днём защитника Отечества! Силы, мужества и побед!",
+    "theme": "defenders_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🎖️ Поздравление", "action": "defenders_greeting"},
+    "popup": {"enabled": true, "title": "️ С праздником!", "text": "Спасибо за вашу службу и защиту!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино уважает защитников!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "02-24": {
+    "title": "День чизбургера",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "02-25": {
+    "title": "День плова",
+    "emoji": "🍛",
+    "message": "Восточный день!",
+    "effects": []
+  },
+  "02-26": {
+    "title": "День галет",
+    "emoji": "🍪",
+    "message": "Хрустящий день!",
+    "effects": []
+  },
+  "02-27": {
+    "title": "День клоунов",
+    "emoji": "🤡",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "02-28": {
+    "title": "День комедии",
+    "emoji": "",
+    "message": "Смейтесь!",
+    "effects": []
+  },
+  "03-01": {
+    "title": "День объятий",
+    "emoji": "🤗",
+    "message": "Обнимите близких!",
+    "theme": "default",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🤗 Получить виртуальное объятие", "action": "virtual_hug"},
+    "popup": {"enabled": true, "title": " Обнимашки!", "text": "Дино обнимает вас! Стало теплее?"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит обниматься!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "03-02": {
+    "title": "День чтения вслух",
+    "emoji": "📖",
+    "message": "Читайте с удовольствием!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "📖 Получить цитату дня", "action": "daily_quote"},
+    "popup": {"enabled": true, "title": "📚 Мудрость дня", "text": "Книги — это корабли мысли, странствующие по волнам времени."},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит, когда ему читают!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "03-03": {
+    "title": "День защиты дикой природы",
+    "emoji": "",
+    "message": "Берегите природу!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🌿 Узнать факт о природе", "action": "nature_fact"},
+    "popup": {"enabled": true, "title": "🌍 Интересный факт", "text": "Знаете ли вы, что динозавры жили на Земле 165 миллионов лет?"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино — часть дикой природы!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "03-04": {
+    "title": "День фотографий",
+    "emoji": "📸",
+    "message": "Запечатлейте моменты!",
+    "effects": []
+  },
+  "03-05": {
+    "title": "День пиццы",
+    "emoji": "",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "03-06": {
+    "title": "День джаза",
+    "emoji": "🎷",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "03-07": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "03-08": {
+    "title": "Международный женский день",
+    "emoji": "💐",
+    "message": "С 8 Марта! Весны, красоты и вдохновения!",
+    "theme": "womens_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "💐 Получить поздравление", "action": "womens_day_greeting"},
+    "popup": {"enabled": true, "title": " С 8 Марта!", "text": "Пусть каждый день приносит радость и цветы!"},
+    "animation": {"enabled": true, "type": "flowers"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино желает вам прекрасного весеннего дня!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "03-09": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "03-10": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "03-11": {
+    "title": "День конфет",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "03-12": {
+    "title": "День тюльпанов",
+    "emoji": "🌷",
+    "message": "Весенний день!",
+    "effects": []
+  },
+  "03-13": {
+    "title": "День пельменей",
+    "emoji": "🥟",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "03-14": {
+    "title": "День пирога",
+    "emoji": "🥧",
+    "message": "Выпекайте!",
+    "effects": []
+  },
+  "03-15": {
+    "title": "День гамбургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "03-16": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "03-17": {
+    "title": "День Святого Патрика",
+    "emoji": "☘️",
+    "message": "С Днём Святого Патрика!",
+    "effects": []
+  },
+  "03-18": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "03-19": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "03-20": {
+    "title": "День весны",
+    "emoji": "🌼",
+    "message": "Весеннее равноденствие!",
+    "effects": []
+  },
+  "03-21": {
+    "title": "День поэзии",
+    "emoji": "📝",
+    "message": "Читайте стихи!",
+    "effects": []
+  },
+  "03-22": {
+    "title": "День воды",
+    "emoji": "",
+    "message": "Берегите воду!",
+    "effects": []
+  },
+  "03-23": {
+    "title": "День видеоигр",
+    "emoji": "🎮",
+    "message": "Играйте!",
+    "effects": []
+  },
+  "03-24": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "03-25": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "03-26": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "03-27": {
+    "title": "День театра",
+    "emoji": "🎭",
+    "message": "Наслаждайтесь искусством!",
+    "effects": []
+  },
+  "03-28": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "03-29": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "03-30": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "03-31": {
+    "title": "День радуги",
+    "emoji": "",
+    "message": "Яркий день!",
+    "effects": []
+  },
+  "04-01": {
+    "title": "День смеха",
+    "emoji": "😄",
+    "message": "Смейтесь от души!",
+    "theme": "april_fools",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "😄 Получить шутку", "action": "get_joke"},
+    "popup": {"enabled": true, "title": "😂 Шутка дня", "text": "Почему динозавр не играет в прятки? Потому что его всегда видно издалека!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино шутит: я не большой, я просто хорошо кушаю!"},
+    "secret": {"enabled": true, "title": "🎭 Пасхалка", "text": "Вы нашли секретную шутку от Дино!"}
+  },
+  "04-02": {
+    "title": "Международный день детской книги",
+    "emoji": "📚",
+    "message": "Читайте детям сказки!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "📚 Получить сказку", "action": "get_fairy_tale"},
+    "popup": {"enabled": true, "title": "📖 Сказка на ночь", "text": "Жил-был динозавр, который очень любил отчёты..."},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит сказки про себя!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "04-03": {
+    "title": "День поцелуя собаки",
+    "emoji": "",
+    "message": "Поцелуйте своего питомца!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🐶 Получить фото щенка", "action": "puppy_photo"},
+    "popup": {"enabled": true, "title": "🐾 Милота!", "text": "Представьте самого милого щенка в мире!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино тоже любит, когда его гладят!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "04-04": {
+    "title": "День пельменей",
+    "emoji": "🥟",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "04-05": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "04-06": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "04-07": {
+    "title": "День цветов",
+    "emoji": "🌸",
+    "message": "Весенний день!",
+    "effects": []
+  },
+  "04-08": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "04-09": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "04-10": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "04-11": {
+    "title": "День сыра",
+    "emoji": "",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "04-12": {
+    "title": "День космонавтики",
+    "emoji": "🚀",
+    "message": "С Днём космонавтики!",
+    "effects": ["confetti"]
+  },
+  "04-13": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "04-14": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "04-15": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "04-16": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "04-17": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "04-18": {
+    "title": "День блинов",
+    "emoji": "",
+    "message": "Вкусный завтрак!",
+    "effects": []
+  },
+  "04-19": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "04-20": {
+    "title": "День игр",
+    "emoji": "🎲",
+    "message": "Играйте!",
+    "effects": []
+  },
+  "04-21": {
+    "title": "День тюльпанов",
+    "emoji": "🌷",
+    "message": "Весенний день!",
+    "effects": []
+  },
+  "04-22": {
+    "title": "День Земли",
+    "emoji": "🌍",
+    "message": "Берегите планету!",
+    "effects": []
+  },
+  "04-23": {
+    "title": "День книги",
+    "emoji": "📖",
+    "message": "Читайте!",
+    "effects": []
+  },
+  "04-24": {
+    "title": "День шоколада",
+    "emoji": "🍫",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "04-25": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "04-26": {
+    "title": "День музыки",
+    "emoji": "",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "04-27": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "04-28": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "04-29": {
+    "title": "День танцев",
+    "emoji": "",
+    "message": "Танцуйте!",
+    "effects": []
+  },
+  "04-30": {
+    "title": "День вечеринки",
+    "emoji": "🎉",
+    "message": "Празднуйте!",
+    "effects": ["confetti"]
+  },
+  "05-01": {
+    "title": "Праздник Весны и Труда",
+    "emoji": "",
+    "message": "С Праздником Весны и Труда!",
+    "theme": "spring",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🌷 Получить цветок", "action": "get_flower"},
+    "popup": {"enabled": true, "title": "🌸 Весна пришла!", "text": "Пусть в вашей жизни всегда цветут цветы!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит весну!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "05-02": {
+    "title": "День Гарри Поттера",
+    "emoji": "⚡",
+    "message": "Да пребудет с вами магия!",
+    "theme": "magic",
+    "effects": ["stars"],
+    "button": {"enabled": true, "text": "⚡ Узнать свой факультет", "action": "hogwarts_house"},
+    "popup": {"enabled": true, "title": "🏰 Хогвартс ждёт!", "text": "Вы — Гриффиндор! Храбрость и отвага!"},
+    "animation": {"enabled": true, "type": "stars"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино — слизеринец (он же зелёный)!"},
+    "secret": {"enabled": true, "title": "⚡ Секретное заклинание", "text": "Экспекто Патронум! Ваш патронус — динозавр!"}
+  },
+  "05-03": {
+    "title": "День солнца",
+    "emoji": "☀️",
+    "message": "Наслаждайтесь солнцем!",
+    "theme": "summer",
+    "effects": [],
+    "button": {"enabled": true, "text": "☀️ Получить солнечный факт", "action": "sun_fact"},
+    "popup": {"enabled": true, "title": "🌞 Знаете ли вы?", "text": "Солнце — это звезда, и оно состоит из водорода и гелия!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит греться на солнышке!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "05-04": {
+    "title": "День Звёздных войн",
+    "emoji": "⭐",
+    "message": "Да пребудет с вами Сила!",
+    "effects": []
+  },
+  "05-05": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "05-06": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "05-07": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "05-08": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "05-09": {
+    "title": "День Победы",
+    "emoji": "🎖️",
+    "message": "С Днём Победы! Мира и процветания!",
+    "theme": "victory_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🎖️ Поздравление", "action": "victory_greeting"},
+    "popup": {"enabled": true, "title": "🎖️ С Днём Победы!", "text": "Помним, гордимся, благодарим!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино чтит память героев!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "05-10": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "05-11": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "05-12": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "05-13": {
+    "title": "День пиццы",
+    "emoji": "",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "05-14": {
+    "title": "День блинов",
+    "emoji": "🥞",
+    "message": "Вкусный завтрак!",
+    "effects": []
+  },
+  "05-15": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "05-16": {
+    "title": "День искусства",
+    "emoji": "",
+    "message": "Творите!",
+    "effects": []
+  },
+  "05-17": {
+    "title": "День радуги",
+    "emoji": "🌈",
+    "message": "Яркий день!",
+    "effects": []
+  },
+  "05-18": {
+    "title": "День музеев",
+    "emoji": "🏛️",
+    "message": "Посетите музей!",
+    "effects": []
+  },
+  "05-19": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "05-20": {
+    "title": "День любви",
+    "emoji": "💕",
+    "message": "Любите!",
+    "effects": []
+  },
+  "05-21": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "05-22": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "05-23": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "05-24": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "05-25": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "05-26": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "05-27": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "05-28": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "05-29": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "05-30": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "05-31": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-01": {
+    "title": "День защиты детей",
+    "emoji": "🎈",
+    "message": "Дети — наше будущее!",
+    "theme": "childrens_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🎈 Получить воздушный шарик", "action": "get_balloon"},
+    "popup": {"enabled": true, "title": "🎉 Ура!", "text": "Держите виртуальный воздушный шарик!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит играть с детьми!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "06-02": {
+    "title": "День маринованного огурца",
+    "emoji": "🥒",
+    "message": "Хрустящий день!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🥒 Получить рецепт засолки", "action": "pickle_recipe"},
+    "popup": {"enabled": true, "title": "🥒 Секрет хрустящих огурцов", "text": "Добавьте лист хрена и укроп!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино предпочитает пиццу огурцам!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "06-03": {
+    "title": "День рождения велосипеда",
+    "emoji": "🚲",
+    "message": "Катайтесь на велосипеде!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🚲 Получить маршрут", "action": "bike_route"},
+    "popup": {"enabled": true, "title": "🗺️ Веломаршрут", "text": "Прокатитесь по парку — это полезно для здоровья!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино мечтает о велосипеде!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "06-04": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "06-05": {
+    "title": "День экологии",
+    "emoji": "🌳",
+    "message": "Берегите природу!",
+    "effects": []
+  },
+  "06-06": {
+    "title": "День Пушкина",
+    "emoji": "📖",
+    "message": "Читайте классику!",
+    "effects": []
+  },
+  "06-07": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-08": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-09": {
+    "title": "День сыра",
+    "emoji": "",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "06-10": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "06-11": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "06-12": {
+    "title": "День России",
+    "emoji": "🇷🇺",
+    "message": "С Днём России! Процветания и единства!",
+    "theme": "russia_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🇷 Поздравление", "action": "russia_greeting"},
+    "popup": {"enabled": true, "title": "🇷🇺 С Днём России!", "text": "Гордимся нашей страной!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино гордится Россией!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "06-13": {
+    "title": "День пиццы",
+    "emoji": "",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "06-14": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "06-15": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "06-16": {
+    "title": "День искусства",
+    "emoji": "",
+    "message": "Творите!",
+    "effects": []
+  },
+  "06-17": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-18": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-19": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "06-20": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "06-21": {
+    "title": "День лета",
+    "emoji": "🌞",
+    "message": "Летнее солнцестояние!",
+    "effects": []
+  },
+  "06-22": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "06-23": {
+    "title": "День пиццы",
+    "emoji": "",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "06-24": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "06-25": {
+    "title": "День сыра",
+    "emoji": "",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "06-26": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "06-27": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-28": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "06-29": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "06-30": {
+    "title": "День вечеринки",
+    "emoji": "🎉",
+    "message": "Празднуйте!",
+    "effects": ["confetti"]
+  },
+  "07-01": {
+    "title": "День архитектуры",
+    "emoji": "🏛️",
+    "message": "Восхищайтесь зданиями!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🏛️ Узнать факт об архитектуре", "action": "architecture_fact"},
+    "popup": {"enabled": true, "title": "🏗️ Интересный факт", "text": "Самое высокое здание в мире — Бурдж-Халифа (828 метров)!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино хотел бы жить в замке!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "07-02": {
+    "title": "День НЛО",
+    "emoji": "",
+    "message": "Верите в пришельцев?",
+    "theme": "scifi",
+    "effects": ["stars"],
+    "button": {"enabled": true, "text": "👽 Увидеть НЛО", "action": "see_ufo"},
+    "popup": {"enabled": true, "title": "🛸 НЛО замечено!", "text": "Оно летит прямо к вам! Шучу, это просто самолёт."},
+    "animation": {"enabled": true, "type": "stars"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино верит в инопланетян!"},
+    "secret": {"enabled": true, "title": "👽 Секретное послание", "text": "Пришельцы уже здесь, они просто хорошо прячутся!"}
+  },
+  "07-03": {
+    "title": "День шоколада без упаковки",
+    "emoji": "🍫",
+    "message": "Сладкий день!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": " Получить рецепт десерта", "action": "dessert_recipe"},
+    "popup": {"enabled": true, "title": "🍰 Рецепт дня", "text": "Растопите шоколад, добавьте сливки — готово!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино обожает шоколад!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "07-04": {
+    "title": "День бургеров",
+    "emoji": "",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "07-05": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "07-06": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-07": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-08": {
+    "title": "День сыра",
+    "emoji": "",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "07-09": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "07-10": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "07-11": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "07-12": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "07-13": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-14": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-15": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "07-16": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "07-17": {
+    "title": "День мороженого",
+    "emoji": "",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "07-18": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "07-19": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "07-20": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "07-21": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "07-22": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-23": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-24": {
+    "title": "День цирка",
+    "emoji": "",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "07-25": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "07-26": {
+    "title": "День печенья",
+    "emoji": "",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "07-27": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "07-28": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-29": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "07-30": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "07-31": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "08-01": {
+    "title": "День подруг",
+    "emoji": "‍♀️",
+    "message": "Цените дружбу!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "‍♀️ Написать подруге", "action": "text_friend"},
+    "popup": {"enabled": true, "title": "💌 Сообщение отправлено!", "text": "Позвоните подруге и скажите, что скучаете!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино ценит своих друзей!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "08-02": {
+    "title": "День ВДВ",
+    "emoji": "🪂",
+    "message": "С Днём ВДВ! Никто, кроме нас!",
+    "theme": "military",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🪂 Совершить прыжок", "action": "parachute_jump"},
+    "popup": {"enabled": true, "title": "🪂 Прыжок!", "text": "Виртуальный прыжок с парашютом выполнен! Высота 4000 метров!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино мечтает прыгнуть с парашютом!"},
+    "secret": {"enabled": true, "title": "🪂 Секрет десантника", "text": "Настоящий десантник всегда приземляется на ноги... как динозавр!"}
+  },
+  "08-03": {
+    "title": "День арбуза",
+    "emoji": "🍉",
+    "message": "Сочный день!",
+    "theme": "summer",
+    "effects": [],
+    "button": {"enabled": true, "text": "🍉 Выбрать арбуз", "action": "choose_watermelon"},
+    "popup": {"enabled": true, "title": "🍉 Секрет выбора", "text": "Стучите по арбузу — звонкий звук означает спелость!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит арбузы больше пиццы... почти!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "08-04": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-05": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-06": {
+    "title": "День сыра",
+    "emoji": "",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "08-07": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "08-08": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "08-09": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "08-10": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "08-11": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "08-12": {
+    "title": "День искусства",
+    "emoji": "",
+    "message": "Творите!",
+    "effects": []
+  },
+  "08-13": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-14": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-15": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "08-16": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "08-17": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "08-18": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "08-19": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "08-20": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "08-21": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "08-22": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-23": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-24": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "08-25": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "08-26": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "08-27": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "08-28": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-29": {
+    "title": "День торта",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "08-30": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "08-31": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "09-01": {
+    "title": "День знаний",
+    "emoji": "📚",
+    "message": "С Днём знаний! Успехов в учёбе и новых открытий!",
+    "theme": "knowledge_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "📚 Получить совет", "action": "study_tip"},
+    "popup": {"enabled": true, "title": "🎓 Совет дня", "text": "Учитесь с удовольствием — и знания придут сами!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит учиться!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "09-02": {
+    "title": "День пожарной охраны",
+    "emoji": "🚒",
+    "message": "Спасибо пожарным!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🚒 Узнать правила безопасности", "action": "safety_rules"},
+    "popup": {"enabled": true, "title": "🔥 Важно!", "text": "Никогда не играйте с огнём и знайте номер 101!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино знает: безопасность прежде всего!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "09-03": {
+    "title": "День солидарности в борьбе с терроризмом",
+    "emoji": "🕊️",
+    "message": "Мира и безопасности!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "️ Загадать мир", "action": "wish_peace"},
+    "popup": {"enabled": true, "title": "🕊️ Мир во всём мире", "text": "Пусть каждый день будет мирным!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино за мир!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "09-04": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "09-05": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-06": {
+    "title": "День торта",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-07": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "09-08": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "09-09": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "09-10": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "09-11": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "09-12": {
+    "title": "День печенья",
+    "emoji": "",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "09-13": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "09-14": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-15": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-16": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "09-17": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "09-18": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "09-19": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "09-20": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "09-21": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "09-22": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "09-23": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-24": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-25": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "09-26": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "09-27": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "09-28": {
+    "title": "День музыки",
+    "emoji": "",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "09-29": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "09-30": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-01": {
+    "title": "День кофе",
+    "emoji": "☕",
+    "message": "Выпейте чашечку кофе!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": " Получить рецепт кофе", "action": "coffee_recipe"},
+    "popup": {"enabled": true, "title": "☕ Капучино дня", "text": "Взбейте молоко с эспрессо — идеально!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино пьёт кофе... с молоком!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "10-02": {
+    "title": "День улыбки",
+    "emoji": "😊",
+    "message": "Улыбнитесь миру!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "😊 Получить комплимент", "action": "get_compliment"},
+    "popup": {"enabled": true, "title": "😊 Вы прекрасны!", "text": "Ваша улыбка освещает мир!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино улыбается вам!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "10-03": {
+    "title": "День техподдержки",
+    "emoji": "💻",
+    "message": "Спасибо IT-специалистам!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "💻 Получить IT-совет", "action": "it_tip"},
+    "popup": {"enabled": true, "title": "💻 Лайфхак", "text": "Перезагрузка решает 90% проблем!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино любит, когда всё работает!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "10-04": {
+    "title": "День животных",
+    "emoji": "🐶",
+    "message": "Любите животных!",
+    "effects": []
+  },
+  "10-05": {
+    "title": "День учителя",
+    "emoji": "👩‍🏫",
+    "message": "С Днём учителя!",
+    "effects": ["confetti"]
+  },
+  "10-06": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-07": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-08": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "10-09": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "10-10": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "10-11": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "10-12": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "10-13": {
+    "title": "День печенья",
+    "emoji": "",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "10-14": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "10-15": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-16": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-17": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "10-18": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "10-19": {
+    "title": "День мороженого",
+    "emoji": "",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "10-20": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "10-21": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "10-22": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "10-23": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "10-24": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-25": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-26": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "10-27": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "10-28": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "10-29": {
+    "title": "День музыки",
+    "emoji": "",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "10-30": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "10-31": {
+    "title": "Хэллоуин",
+    "emoji": "🎃",
+    "message": "С Хэллоуином! Страшных и весёлых приключений!",
+    "theme": "halloween",
+    "effects": ["pumpkins"],
+    "button": {"enabled": true, "text": "🎃 Получить предсказание", "action": "halloween_prediction"},
+    "popup": {"enabled": true, "title": "🎃 Happy Halloween!", "text": "Пусть этот вечер будет полным сюрпризов!"},
+    "animation": {"enabled": true, "type": "pumpkins"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино наряжается привидением!"},
+    "secret": {"enabled": true, "title": "👻 Пасхалка", "text": "Вы нашли секретное хэллоуинское поздравление!"}
+  },
+ "11-01": {
+    "title": "День вегана",
+    "emoji": "🥗",
+    "message": "Попробуйте растительную еду!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🥗 Получить рецепт", "action": "vegan_recipe"},
+    "popup": {"enabled": true, "title": "🥦 Веганский салат", "text": "Смешайте овощи, добавьте оливковое масло — вкусно!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": " Дино был веганом... он ел растения!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "11-02": {
+    "title": "День поминовения",
+    "emoji": "🕯️",
+    "message": "Помним и чтим!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🕯️ Зажечь свечу", "action": "light_candle"},
+    "popup": {"enabled": true, "title": "🕯️ Свеча зажжена", "text": "Помним тех, кто ушёл..."},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино помнит..."},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "11-03": {
+    "title": "День сэндвича",
+    "emoji": "🥪",
+    "message": "Вкусный день!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "🥪 Получить рецепт", "action": "sandwich_recipe"},
+    "popup": {"enabled": true, "title": "🥪 Идеальный сэндвич", "text": "Хлеб, сыр, ветчина, овощи — готово!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино предпочитает пиццу, но сэндвич тоже хорош!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "11-04": {
+    "title": "День народного единства",
+    "emoji": "",
+    "message": "С Днём народного единства! Мира и согласия!",
+    "theme": "unity_day",
+    "effects": ["confetti"],
+    "button": {"enabled": true, "text": "🤝 Поздравление", "action": "unity_greeting"},
+    "popup": {"enabled": true, "title": "🤝 С праздником!", "text": "Вместе мы сила!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино за единство!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "11-05": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-06": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "11-07": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "11-08": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "11-09": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "11-10": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "11-11": {
+    "title": "День печенья",
+    "emoji": "",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "11-12": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "11-13": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-14": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-15": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "11-16": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "11-17": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "11-18": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "11-19": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "11-20": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "11-21": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "11-22": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-23": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-24": {
+    "title": "День цирка",
+    "emoji": "🎪",
+    "message": "Весёлый день!",
+    "effects": []
+  },
+  "11-25": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "11-26": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "11-27": {
+    "title": "День музыки",
+    "emoji": "",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "11-28": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-29": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "11-30": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "12-01": {
+    "title": "День борьбы со СПИДом",
+    "emoji": "️",
+    "message": "Поддержим тех, кто борется!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "️ Узнать факты", "action": "aids_facts"},
+    "popup": {"enabled": true, "title": "🎗️ Важно знать", "text": "СПИД предотвратим. Будьте здоровы!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино за здоровье!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "12-02": {
+    "title": "День компьютерной грамотности",
+    "emoji": "💻",
+    "message": "Учитесь новому!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "💻 Получить совет", "action": "computer_tip"},
+    "popup": {"enabled": true, "title": " Цифровая грамотность", "text": "Изучайте новые технологии каждый день!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино осваивает компьютер!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "12-03": {
+    "title": "День инвалидов",
+    "emoji": "♿",
+    "message": "Равные возможности для всех!",
+    "theme": "default",
+    "effects": [],
+    "button": {"enabled": true, "text": "♿ Узнать о доступности", "action": "accessibility_info"},
+    "popup": {"enabled": true, "title": "♿ Доступная среда", "text": "Каждый человек заслуживает равных возможностей!"},
+    "animation": {"enabled": false, "type": ""},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино за равенство!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "12-04": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "12-05": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-06": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-07": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "12-08": {
+    "title": "День кино",
+    "emoji": "",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "12-09": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "12-10": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "12-11": {
+    "title": "День пиццы",
+    "emoji": "",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "12-12": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "12-13": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "12-14": {
+    "title": "День пончиков",
+    "emoji": "",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-15": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-16": {
+    "title": "День сыра",
+    "emoji": "🧀",
+    "message": "Сырный день!",
+    "effects": []
+  },
+  "12-17": {
+    "title": "День кино",
+    "emoji": "🎬",
+    "message": "Смотрите фильмы!",
+    "effects": []
+  },
+  "12-18": {
+    "title": "День бургеров",
+    "emoji": "🍔",
+    "message": "Вкусный день!",
+    "effects": []
+  },
+  "12-19": {
+    "title": "День мороженого",
+    "emoji": "🍦",
+    "message": "Холодный и вкусный день!",
+    "effects": []
+  },
+  "12-20": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "12-21": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "12-22": {
+    "title": "День искусства",
+    "emoji": "🎨",
+    "message": "Творите!",
+    "effects": []
+  },
+  "12-23": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-24": {
+    "title": "Сочельник",
+    "emoji": "🎄",
+    "message": "Сочельник! Готовьтесь к празднику!",
+    "effects": ["snow"]
+  },
+  "12-25": {
+    "title": "Рождество",
+    "emoji": "⭐",
+    "message": "С Рождеством! Мира и добра!",
+    "theme": "christmas",
+    "effects": ["snow"],
+    "button": {"enabled": true, "text": "⭐ Рождественское поздравление", "action": "christmas_greeting"},
+    "popup": {"enabled": true, "title": "⭐ С Рождеством!", "text": "Пусть этот светлый праздник принесёт радость!"},
+    "animation": {"enabled": true, "type": "stars"},
+    "sound": {"enabled": false, "file": ""},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино желает светлого Рождества!"},
+    "secret": {"enabled": false, "title": "", "text": ""}
+  },
+  "12-26": {
+    "title": "День торта",
+    "emoji": "🍰",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-27": {
+    "title": "День пиццы",
+    "emoji": "🍕",
+    "message": "Пиццевый день!",
+    "effects": ["falling_pizza"]
+  },
+  "12-28": {
+    "title": "День печенья",
+    "emoji": "🍪",
+    "message": "Время для печенья!",
+    "effects": []
+  },
+  "12-29": {
+    "title": "День музыки",
+    "emoji": "🎵",
+    "message": "Музыкальный день!",
+    "effects": []
+  },
+  "12-30": {
+    "title": "День пончиков",
+    "emoji": "🍩",
+    "message": "Сладкий день!",
+    "effects": []
+  },
+  "12-31": {
+    "title": "Новый год",
+    "emoji": "🎄",
+    "message": "С наступающим Новым годом! Пусть этот год принесёт счастье, здоровье, удачу и исполнение самых заветных желаний!",
+    "theme": "new_year",
+    "effects": ["snow", "confetti"],
+    "button": {"enabled": true, "text": "🎁 Открыть подарок", "action": "new_year_gift"},
+    "popup": {"enabled": true, "title": " С Новым годом!", "text": "Спасибо, что пользуетесь приложением! Пусть новый год будет ярким и успешным!"},
+    "animation": {"enabled": true, "type": "fireworks"},
+    "sound": {"enabled": false, "file": "new_year.mp3"},
+    "mascot": {"enabled": true, "type": "dino", "text": "🦖 Дино поздравляет вас с Новым годом!"},
+    "secret": {"enabled": true, "title": "🎅 Пасхалка", "text": "Вы нашли секретное новогоднее поздравление!"}
+  }
+}
