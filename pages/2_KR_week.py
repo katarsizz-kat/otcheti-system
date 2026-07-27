@@ -207,9 +207,9 @@ POSITIVE_KEYWORDS = {
 def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "☀️ Доброе утро!"
-    if 12 <= hour < 18: return "🌤 Добрый день!"
+    if 12 <= hour < 18: return " Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
-    return " Доброй ночи!"
+    return "🌜 Доброй ночи!"
 
 def map_restaurant_file1(val):
     if pd.isna(val): return None
@@ -278,24 +278,24 @@ apply_file_uploader_styles()
 
 st.markdown(f"""
 <div class="header-block">
-    <h1>📈 КР неделя</h1>
+    <h1> КР неделя</h1>
     <p>{greeting_by_time()}</p>
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Еженедельный отчёт по отзывам из трёх источников</p>
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("### 📂 Загрузка файлов")
+st.markdown("###  Загрузка файлов")
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("#### 📱 Сайт / приложение")
     file1 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="site", label_visibility="collapsed")
 with col2:
-    st.markdown("#### 🛵 Агрегаторы")
+    st.markdown("####  Агрегаторы")
     file2 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="agg", label_visibility="collapsed")
 with col3:
-    st.markdown("####  Геосервисы")
+    st.markdown("#### 🗺 Геосервисы")
     file3 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="geo", label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -330,8 +330,7 @@ if generate_report:
 
             # --- Геосервисы ---
             df3 = pd.read_excel(file3)
-            if "Статус отзыва" in df3.columns:
-                df3 = df3[df3["Статус отзыва"] != "Удален"].copy()
+            # Фильтрация удалённых отзывов отключена — берём все отзывы
             
             if "Название филиала" in df3.columns and "Адрес филиала" in df3.columns:
                 df3["Ресторан"] = df3.apply(
@@ -389,13 +388,13 @@ if generate_report:
             output.seek(0)
             st.success("✅ Отчёт успешно сформирован!")
             st.download_button(
-                " Скачать Excel", output,
+                "📥 Скачать Excel", output,
                 file_name="КР_неделя_отчет.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
             st.markdown('<div class="content-block">', unsafe_allow_html=True)
-            st.subheader(" Превью: Общий итог")
+            st.subheader("📊 Превью: Общий итог")
             st.dataframe(stats_all, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
