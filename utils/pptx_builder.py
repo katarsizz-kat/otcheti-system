@@ -71,7 +71,7 @@ def _format_cell(cell, text, font_name, font_size, font_color, bg_color=None, bo
         tcPr.append(ln)
 
 # ==========================================
-#  ГЛАВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ
+# 🍕 ГЛАВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ
 # ==========================================
 def generate_flexible_presentation(
     all_dataframes: Dict[str, Dict[str, pd.DataFrame]], 
@@ -84,8 +84,9 @@ def generate_flexible_presentation(
     Генерирует презентацию с гибкой структурой на основе загруженных файлов.
     """
     prs = Presentation()
-    prs.slide.width = Inches(13.333)
-    prs.slide.height = Inches(7.5)
+    # ✅ ИСПРАВЛЕНИЕ: задаем размеры слайда напрямую
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
     
     # Выбираем цвета темы
     if "Оливковая" in theme:
