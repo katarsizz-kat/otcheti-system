@@ -1,19 +1,35 @@
 """Цветовые темы приложения."""
 
 THEMES = {
-   "day": {
-    "bg_main": "linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%)",  # Небо с облаками
-    "bg_sidebar": "#87CEEB",
-    "header_bg": "linear-gradient(135deg, #5DADE2 0%, #85C1E9 100%)",
-    "header_text": "#FFFFFF",
-    "text_primary": "#FFFFFF",
-    "text_secondary": "#ECF0F1",
-    "card_bg": "rgba(255,255,255,0.2)",
-    "card_border": "rgba(255,255,255,0.4)",
-    "accent": "#F1C40F",
-    "button_bg": "#2980B9",  # Более тёмный синий для контраста
-    "button_text": "#FFFFFF",
-},
+    # Утро - мягкий розово-голубой (рассвет)
+    "morning": {
+        "bg_main": "linear-gradient(135deg, #FADBD8 0%, #AED6F1 100%)",
+        "bg_sidebar": "#FADBD8",
+        "header_bg": "linear-gradient(135deg, #F1948A 0%, #85C1E9 100%)",
+        "header_text": "#FFFFFF",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "#ECF0F1",
+        "card_bg": "rgba(255,255,255,0.25)",
+        "card_border": "rgba(255,255,255,0.5)",
+        "accent": "#F1C40F",
+        "button_bg": "#E74C3C",
+        "button_text": "#FFFFFF",
+    },
+    # День - насыщенный голубой (ясное небо)
+    "day": {
+        "bg_main": "linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%)",
+        "bg_sidebar": "#87CEEB",
+        "header_bg": "linear-gradient(135deg, #5DADE2 0%, #85C1E9 100%)",
+        "header_text": "#FFFFFF",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "#ECF0F1",
+        "card_bg": "rgba(255,255,255,0.2)",
+        "card_border": "rgba(255,255,255,0.4)",
+        "accent": "#F1C40F",
+        "button_bg": "#2980B9",
+        "button_text": "#FFFFFF",
+    },
+    # Вечер - оранжево-синий (закат)
     "evening": {
         "bg_main": "linear-gradient(135deg, #2C3E50 0%, #E67E22 100%)",
         "bg_sidebar": "#2C3E50",
@@ -27,6 +43,7 @@ THEMES = {
         "button_bg": "#E67E22",
         "button_text": "#FFFFFF",
     },
+    # Ночь - тёмно-синий со звёздами
     "night": {
         "bg_main": "linear-gradient(135deg, #0F2027 0%, #203A43 50%, #2C5364 100%)",
         "bg_sidebar": "#0F2027",
@@ -40,6 +57,7 @@ THEMES = {
         "button_bg": "#3498DB",
         "button_text": "#FFFFFF",
     },
+    # Праздничные темы
     "new_year": {
         "bg_main": "linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%)",
         "bg_sidebar": "#1a2a6c",
