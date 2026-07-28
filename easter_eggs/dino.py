@@ -40,9 +40,9 @@ def render_dino_modal():
     
     text = get_mascot_text("dino")
     
-    # Модальное окно с размытым фоном
+    # Модальное окно с размытым фоном и встроенной кнопкой закрытия
     st.markdown(f"""
-    <div style="
+    <div id="dino-modal-overlay" style="
         position: fixed;
         top: 0;
         left: 0;
@@ -68,8 +68,29 @@ def render_dino_modal():
             animation: slideUp 0.5s ease-out;
             position: relative;
         ">
+            <button id="dino-close-btn" style="
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                width: 36px;
+                height: 36px;
+                background: #f0f0f0;
+                border: none;
+                border-radius: 50%;
+                font-size: 20px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #333;
+                transition: all 0.2s ease;
+                z-index: 1001;
+            " onmouseover="this.style.background='#e0e0e0'; this.style.transform='scale(1.1)'" 
+              onmouseout="this.style.background='#f0f0f0'; this.style.transform='scale(1)'">
+                ✖
+            </button>
             <div style="font-size: 120px; margin-bottom: 20px; animation: dinoWave 1.5s ease-in-out infinite; display: inline-block; transform-origin: bottom center; filter: hue-rotate(90deg) saturate(1.5);">
-                🦖
+                
             </div>
             <p style="font-size: 18px; color: #2C3E50; margin: 0 0 20px 0; line-height: 1.4;">
                 {text}
@@ -93,27 +114,18 @@ def render_dino_modal():
             75% {{ transform: rotate(15deg) translateY(-5px); }}
         }}
     </style>
-    """, unsafe_allow_html=True)
     
-    # Кнопка закрытия внутри модального окна
-    st.markdown("""
-    <div style="
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 1001;
-        margin-top: 180px;
-    ">
-    </div>
+    <script>
+        document.getElementById('dino-close-btn').addEventListener('click', function() {{
+            var overlay = document.getElementById('dino-modal-overlay');
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(function() {{
+                overlay.style.display = 'none';
+            }}, 300);
+        }});
+    </script>
     """, unsafe_allow_html=True)
-    
-    # Видимая кнопка закрытия
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button("✖ Закрыть", key="close_dino_modal", use_container_width=True):
-            st.session_state.easter_egg_activated = False
-            st.rerun()
 
 
 def render_secret_button():
