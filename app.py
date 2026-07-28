@@ -1,5 +1,6 @@
 """Главная страница приложения."""
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ВАЖНО: set_page_config должен быть ПЕРВЫМ вызовом streamlit!
 st.set_page_config(page_title="Система отчётов", page_icon="", layout="wide")
@@ -36,7 +37,30 @@ apply_theme(greeting_data["theme"], holiday_effects)
 # === ИНИЦИАЛИЗАЦИЯ ПАСХАЛКИ ===
 init_easter_egg()
 
-# === МОДАЛЬНОЕ ОКНО С ДИНОЗАВРОМ (В НАЧАЛЕ, ЧТОБЫ БЫЛО ПОВЕРХ ВСЕГО) ===
+# === ОБРАБОТКА СООБЩЕНИЙ ОТ JAVASCRIPT ===
+# Этот скрипт слушает сообщения от iframe и обновляет session_state
+components.html("""
+<script>
+    window.addEventListener('message', function(event) {
+        if (event.data.type === 'easter_egg_activate') {
+            // Создаём невидимый элемент для активации
+            var btn = document.createElement('button');
+            btn.id = 'activate-easter-egg';
+            btn.style.display = 'none';
+            document.body.appendChild(btn);
+            btn.click();
+        }
+    });
+</script>
+""", height=0, width=0)
+
+# Скрытая кнопка для активации через JavaScript
+if st.button("", key="js_activate_easter"):
+    st.session_state.easter_egg_activated = True
+    st.balloons()
+    st.rerun()
+
+# === МОДАЛЬНОЕ ОКНО С ДИНОЗАВРОМ ===
 render_dino_modal()
 
 # === ВЕРХНЯЯ ПАНЕЛЬ ===
@@ -67,5 +91,5 @@ render_upcoming_holidays_section(upcoming_holidays)
 # === ПОДВАЛ ===
 render_footer()
 
-# === ПРОЗРАЧНАЯ КНОПКА ВЫЗОВА ДИНО ===
+# === НЕВИДИМАЯ КНОПКА ВЫЗОВА ДИНО ===
 render_secret_button()
