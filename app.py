@@ -60,6 +60,6 @@ render_upcoming_holidays_section(upcoming_holidays)
 # === ПОДВАЛ ===
 render_footer()
 
-# ВМЕСТО НИХ добавьте в САМЫЙ КОНЕЦ файла (после render_footer()):
+# В самом конце файла
 from easter_eggs.dino import render_dino_easter_egg
-render_dino_easter_egg()
+render_dino_easter_egg()  
