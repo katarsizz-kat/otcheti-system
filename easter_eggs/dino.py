@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром - модальное окно с размытым фоном."""
+"""Пасхалка с динозавром - модальное окно с автоскрытием."""
 import streamlit as st
 import streamlit.components.v1 as components
 from config.mascots import get_mascot_text
@@ -40,24 +40,29 @@ def render_dino_modal():
     
     text = get_mascot_text("dino")
     
-    # Модальное окно с размытым фоном и встроенной кнопкой закрытия
-    st.markdown(f"""
-    <div id="dino-modal-overlay" style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        z-index: 1000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        animation: fadeIn 0.3s ease-out;
-    ">
-        <div style="
+    # Модальное окно с размытым фоном и автоскрытием
+    components.html(f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {{ margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }}
+        #overlay {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease-out;
+        }}
+        #modal {{
             background: white;
             border-radius: 24px;
             padding: 40px;
@@ -67,38 +72,42 @@ def render_dino_modal():
             text-align: center;
             animation: slideUp 0.5s ease-out;
             position: relative;
-        ">
-            <button id="dino-close-btn" style="
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                width: 36px;
-                height: 36px;
-                background: #f0f0f0;
-                border: none;
-                border-radius: 50%;
-                font-size: 20px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #333;
-                transition: all 0.2s ease;
-                z-index: 1001;
-            " onmouseover="this.style.background='#e0e0e0'; this.style.transform='scale(1.1)'" 
-              onmouseout="this.style.background='#f0f0f0'; this.style.transform='scale(1)'">
-                ✖
-            </button>
-            <div style="font-size: 120px; margin-bottom: 20px; animation: dinoWave 1.5s ease-in-out infinite; display: inline-block; transform-origin: bottom center; filter: hue-rotate(90deg) saturate(1.5);">
-                
-            </div>
-            <p style="font-size: 18px; color: #2C3E50; margin: 0 0 20px 0; line-height: 1.4;">
-                {text}
-            </p>
-        </div>
-    </div>
-    
-    <style>
+        }}
+        #dino {{
+            font-size: 120px;
+            margin-bottom: 20px;
+            animation: dinoWave 1.5s ease-in-out infinite;
+            display: inline-block;
+            transform-origin: bottom center;
+            filter: hue-rotate(90deg) saturate(1.5);
+        }}
+        #text {{
+            font-size: 18px;
+            color: #2C3E50;
+            margin: 0 0 20px 0;
+            line-height: 1.4;
+        }}
+        #close-btn {{
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            transition: all 0.2s ease;
+        }}
+        #close-btn:hover {{
+            background: #e0e0e0;
+            transform: scale(1.1);
+        }}
         @keyframes fadeIn {{
             from {{ opacity: 0; }}
             to {{ opacity: 1; }}
@@ -114,18 +123,35 @@ def render_dino_modal():
             75% {{ transform: rotate(15deg) translateY(-5px); }}
         }}
     </style>
-    
-    <script>
-        document.getElementById('dino-close-btn').addEventListener('click', function() {{
-            var overlay = document.getElementById('dino-modal-overlay');
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.3s ease';
+    </head>
+    <body>
+        <div id="overlay">
+            <div id="modal">
+                <button id="close-btn" onclick="closeModal()">✖</button>
+                <div id="dino">🦖</div>
+                <p id="text">{text}</p>
+            </div>
+        </div>
+        <script>
+            // Автозакрытие через 10 секунд
             setTimeout(function() {{
-                overlay.style.display = 'none';
-            }}, 300);
-        }});
-    </script>
-    """, unsafe_allow_html=True)
+                closeModal();
+            }}, 10000);
+            
+            function closeModal() {{
+                var overlay = document.getElementById('overlay');
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.3s ease';
+                setTimeout(function() {{
+                    overlay.style.display = 'none';
+                    // Отправляем сообщение родительскому окну для сброса session_state
+                    window.parent.postMessage({{type: 'easter_egg_close'}}, '*');
+                }}, 300);
+            }}
+        </script>
+    </body>
+    </html>
+    """, height=0, width=0)
 
 
 def render_secret_button():
