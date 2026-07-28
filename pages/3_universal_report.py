@@ -10,7 +10,11 @@ from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
+st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="")
+
+# ==========================================================
+# СТИЛИ
+# ==========================================================
 
 def apply_styles():
     st.markdown("""
@@ -60,6 +64,10 @@ def apply_styles():
         }
     </style>
     """, unsafe_allow_html=True)
+
+# ==========================================================
+# ФУНКЦИИ
+# ==========================================================
 
 def normalize_text(text):
     if not isinstance(text, str): return ""
@@ -139,27 +147,27 @@ def create_excel(data, period_str, rules):
     ws = wb.create_sheet("Отчёт")
     border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
     
-    yellow_fill = PatternFill(patternType='solid', fgColor='FFFF00')
-    blue_fill = PatternFill(patternType='solid', fgColor='00BFFF')
-    
+    # Период - ИСПРАВЛЕНО
     ws.merge_cells('A1:H1')
     c = ws.cell(1, 1, period_str)
     c.font = Font(bold=True, size=16)
     c.alignment = Alignment(horizontal='center')
-    c.fill = yellow_fill
+    c.fill = PatternFill(patternType='solid', fgColor='FFFF00', bgColor='FFFF00')
     
+    # Города - ИСПРАВЛЕНО
     ws.merge_cells('A2:D2')
     c = ws.cell(2, 1, "СПб сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
+    c.fill = PatternFill(patternType='solid', fgColor='00BFFF', bgColor='00BFFF')
     
     ws.merge_cells('E2:H2')
     c = ws.cell(2, 5, "Тюмень сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
+    c.fill = PatternFill(patternType='solid', fgColor='00BFFF', bgColor='00BFFF')
     
+    # Заголовки
     for col, header in [(1, 'Наименование'), (2, 'Количество'), (3, 'Сумма, ₽'),
                         (5, 'Наименование'), (6, 'Количество'), (7, 'Сумма, ₽')]:
         c = ws.cell(3, col, header)
@@ -167,6 +175,7 @@ def create_excel(data, period_str, rules):
         c.border = border
         c.alignment = Alignment(horizontal='center')
     
+    # Данные
     row = 4
     for rule in rules:
         ws.cell(row, 1, rule).border = border
@@ -182,6 +191,7 @@ def create_excel(data, period_str, rules):
         ws.cell(row, 7).number_format = '#,##0.00'
         row += 1
     
+    # Итого
     total_row = row + 1
     for col in [1, 5]:
         c = ws.cell(total_row, col, 'ИТОГО')
@@ -200,6 +210,7 @@ def create_excel(data, period_str, rules):
         c.border = border
         c.number_format = '#,##0.00'
     
+    # Ширина колонок
     ws.column_dimensions['A'].width = 40
     ws.column_dimensions['B'].width = 12
     ws.column_dimensions['C'].width = 15
@@ -210,11 +221,15 @@ def create_excel(data, period_str, rules):
     
     return wb
 
+# ==========================================================
+# ИНТЕРФЕЙС
+# ==========================================================
+
 apply_styles()
 
 st.markdown("""
 <div class="header-block">
-    <h1>📊 Универсальный отчёт</h1>
+    <h1> Универсальный отчёт</h1>
     <p>Гибкий отчёт с настраиваемым списком позиций</p>
 </div>
 """, unsafe_allow_html=True)
@@ -236,8 +251,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ПОЛЕ ДЛЯ ВВОДА ПОЗИЦИЙ
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
-st.markdown("### ️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
+st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b><br>Позиции суммируются, если название является частью названия в выгрузке.</p>", unsafe_allow_html=True)
 
 default_rules = """Картофель из печи 150 гр
@@ -259,23 +275,25 @@ rules_text = st.text_area(
 )
 st.markdown('</div>', unsafe_allow_html=True)
 
+# ЗАГРУЗКА ФАЙЛА
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
 st.markdown("### 📂 Загрузка файла")
 file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
 st.markdown('</div>', unsafe_allow_html=True)
 
+# ГЕНЕРАЦИЯ ОТЧЁТА
 if file_main:
     st.markdown('<div class="content-block">', unsafe_allow_html=True)
     
     try:
         period_str = extract_period(file_main)
         file_main.seek(0)
-        st.info(f" Период: **{period_str}**")
+        st.info(f"📅 Период: **{period_str}**")
     except:
         period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
         st.warning("⚠️ Не удалось определить период")
     
-    if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
+    if st.button(" Сгенерировать отчёт", type="primary", use_container_width=True):
         with st.spinner("⏳ Формирую отчёт..."):
             try:
                 df = read_file(file_main)
@@ -293,7 +311,7 @@ if file_main:
                     
                     st.success("✅ Отчёт сформирован!")
                     
-                    st.subheader(" Превью (СПБ)")
+                    st.subheader("📋 Превью (СПБ)")
                     preview = pd.DataFrame([
                         {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
                         for rule in rules
@@ -308,7 +326,7 @@ if file_main:
                         use_container_width=True
                     )
             except Exception as e:
-                st.error(f" Ошибка: {str(e)}")
+                st.error(f"❌ Ошибка: {str(e)}")
     st.markdown('</div>', unsafe_allow_html=True)
 else:
     st.info("👆 Загрузите файл для начала работы")
