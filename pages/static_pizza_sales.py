@@ -1,3 +1,6 @@
+st.write("🔥 ТЕСТ — если вы видите это, файл работает!")
+
+
 # pages/static_pizza_sales.py
 import streamlit as st
 import pandas as pd
