@@ -5,6 +5,7 @@ from config.mascots import get_mascot_text
 
 def render_dino_easter_egg():
     """Рендерит кнопку и модальное окно с динозавром."""
+    
     if "easter_egg_activated" not in st.session_state:
         st.session_state.easter_egg_activated = False
     
@@ -37,29 +38,80 @@ def render_dino_easter_egg():
         const btn = document.createElement('div');
         btn.id = 'dino-btn';
         btn.innerHTML = '🦖';
-        btn.style.cssText = 'position: fixed !important; bottom: 20px !important; right: 20px !important; width: 50px !important; height: 50px !important; font-size: 32px !important; display: flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; opacity: 0.15 !important; z-index: 999999 !important; background: transparent !important; border: none !important; transition: opacity 0.3s, transform 0.3s !important;';
+        btn.style.position = 'fixed';
+        btn.style.bottom = '20px';
+        btn.style.right = '20px';
+        btn.style.width = '50px';
+        btn.style.height = '50px';
+        btn.style.fontSize = '32px';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.style.cursor = 'pointer';
+        btn.style.opacity = '0.15';
+        btn.style.zIndex = '999999';
+        btn.style.background = 'transparent';
+        btn.style.border = 'none';
+        btn.style.transition = 'opacity 0.3s, transform 0.3s';
         
-        btn.onmouseover = function() {{ btn.style.opacity = '0.8'; btn.style.transform = 'scale(1.2)'; }};
-        btn.onmouseout = function() {{ btn.style.opacity = '0.15'; btn.style.transform = 'scale(1)'; }};
+        btn.onmouseover = function() {{
+            btn.style.opacity = '0.8';
+            btn.style.transform = 'scale(1.2)';
+        }};
+        btn.onmouseout = function() {{
+            btn.style.opacity = '0.15';
+            btn.style.transform = 'scale(1)';
+        }};
+        
         btn.onclick = function() {{
             const url = new URL(window.location);
             url.searchParams.set('activate_dino', '1');
             window.location.href = url.toString();
         }};
+        
         document.body.appendChild(btn);
         
-        // Если активировано - создаем модальное окно
+        // Если активировано - показываем модальное окно
         if (isActivated) {{
             const overlay = document.createElement('div');
             overlay.id = 'dino-overlay';
-            overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 1000000 !important; display: flex !important; justify-content: center !important; align-items: center !important;';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.zIndex = '1000000';
+            overlay.style.display = 'flex';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
             
             const card = document.createElement('div');
-            card.style.cssText = 'background: white; border-radius: 24px; padding: 40px; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;';
+            card.style.background = 'white';
+            card.style.borderRadius = '24px';
+            card.style.padding = '40px';
+            card.style.maxWidth = '400px';
+            card.style.boxShadow = '0 20px 60px rgba(0,0,0,0.3)';
+            card.style.textAlign = 'center';
+            card.style.position = 'relative';
             
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '✖';
-            closeBtn.style.cssText = 'position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #666;';
+            closeBtn.style.position = 'absolute';
+            closeBtn.style.top = '15px';
+            closeBtn.style.right = '15px';
+            closeBtn.style.width = '36px';
+            closeBtn.style.height = '36px';
+            closeBtn.style.background = 'rgba(0,0,0,0.1)';
+            closeBtn.style.border = 'none';
+            closeBtn.style.borderRadius = '50%';
+            closeBtn.style.fontSize = '20px';
+            closeBtn.style.cursor = 'pointer';
+            closeBtn.style.display = 'flex';
+            closeBtn.style.alignItems = 'center';
+            closeBtn.style.justifyContent = 'center';
+            closeBtn.style.color = '#666';
+            
             closeBtn.onclick = function() {{
                 const url = new URL(window.location);
                 url.searchParams.set('close_dino', '1');
@@ -68,11 +120,15 @@ def render_dino_easter_egg():
             
             const dinoEmoji = document.createElement('div');
             dinoEmoji.innerHTML = '🦖';
-            dinoEmoji.style.cssText = 'font-size: 120px; margin-bottom: 20px;';
+            dinoEmoji.style.fontSize = '120px';
+            dinoEmoji.style.marginBottom = '20px';
             
             const textP = document.createElement('p');
             textP.innerHTML = '{text}';
-            textP.style.cssText = 'font-size: 18px; color: #2C3E50; margin: 0; line-height: 1.4;';
+            textP.style.fontSize = '18px';
+            textP.style.color = '#2C3E50';
+            textP.style.margin = '0';
+            textP.style.lineHeight = '1.4';
             
             card.appendChild(closeBtn);
             card.appendChild(dinoEmoji);
