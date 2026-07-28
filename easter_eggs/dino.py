@@ -36,8 +36,6 @@ def render_dino_modal():
         width: 100vw;
         height: 100vh;
         background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
         z-index: 99999;
         display: flex;
         justify-content: center;
@@ -98,20 +96,8 @@ def render_dino_modal():
             50% {{ transform: rotate(0deg) translateY(0); }}
             75% {{ transform: rotate(15deg) translateY(-5px); }}
         }}
-        /* Скрываем чекбокс закрытия, но делаем его кликабельным поверх крестика */
+        /* Скрываем чекбокс закрытия полностью */
         div[data-testid="stCheckbox"] > label:has(input[key="close_dino_checkbox"]) {{
-            position: fixed !important;
-            top: 15px !important;
-            right: 15px !important;
-            width: 36px !important;
-            height: 36px !important;
-            opacity: 0 !important;
-            cursor: pointer !important;
-            z-index: 100000 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }}
-        div[data-testid="stCheckbox"] > label:has(input[key="close_dino_checkbox"]) > div {{
             display: none !important;
         }}
     </style>
@@ -119,9 +105,6 @@ def render_dino_modal():
     <script>
         // Функция для программного нажатия на скрытый чекбокс Streamlit
         function triggerClose() {{
-            // Находим label, внутри которого лежит input с нужным key (через атрибут data-testid или порядок)
-            // Более надежный способ: найти input по имени ключа в data-testid или просто кликнуть по координатам, 
-            // но проще всего найти элемент по части ID, который генерирует Streamlit.
             var checkboxes = document.querySelectorAll('input[type="checkbox"]');
             for (var i = 0; i < checkboxes.length; i++) {{
                 if (checkboxes[i].id.includes('close_dino_checkbox')) {{
@@ -139,12 +122,12 @@ def render_dino_modal():
                 overlay.style.transition = 'opacity 0.3s ease';
                 setTimeout(function() {{
                     overlay.style.display = 'none';
-                    triggerClose(); // Сбрасываем состояние Streamlit
+                    triggerClose();
                 }}, 300);
             }}
         }}, 10000);
         
-        // Закрытие по клику на крестик (делегирование события, так как элемент может перерисовываться)
+        // Закрытие по клику на крестик
         document.addEventListener('click', function(e) {{
             if (e.target.id === 'dino-close-btn' || e.target.closest('#dino-close-btn')) {{
                 var overlay = document.getElementById('dino-overlay');
@@ -153,7 +136,7 @@ def render_dino_modal():
                     overlay.style.transition = 'opacity 0.3s ease';
                     setTimeout(function() {{
                         overlay.style.display = 'none';
-                        triggerClose(); // Сбрасываем состояние Streamlit
+                        triggerClose();
                     }}, 300);
                 }}
             }}
@@ -173,27 +156,28 @@ def render_secret_button():
         position: fixed;
         bottom: 20px;
         right: 20px;
-        width: 30px;
-        height: 30px;
+        width: 50px;
+        height: 50px;
         cursor: pointer;
-        opacity: 0.2;
-        transition: opacity 0.3s ease;
+        opacity: 0.15;
+        transition: all 0.3s ease;
         z-index: 9998;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 32px;
         user-select: none;
         background: transparent;
         border: none;
-    " onmouseover="this.style.opacity='0.7'" 
-      onmouseout="this.style.opacity='0.2'"
+        filter: grayscale(0.3);
+    " onmouseover="this.style.opacity='0.6'; this.style.transform='scale(1.1)'" 
+      onmouseout="this.style.opacity='0.15'; this.style.transform='scale(1)'"
       onclick="document.querySelector('input[key=\"activate_dino_checkbox\"]').click()">
         🦖
     </div>
     """, unsafe_allow_html=True)
     
-    # Скрытый checkbox для активации
+    # Скрытый checkbox для активации - размещаем в самом низу
     activate = st.checkbox("", key="activate_dino_checkbox", label_visibility="collapsed")
     
     if activate:
@@ -201,23 +185,22 @@ def render_secret_button():
         st.balloons()
         st.rerun()
     
-    # Стили для скрытия checkbox активации
+    # Стили для полного скрытия checkbox активации
     st.markdown("""
     <style>
         div[data-testid="stCheckbox"] > label:has(input[key="activate_dino_checkbox"]) {
+            display: none !important;
+        }
+        /* Убираем любые отступы у контейнера чекбокса */
+        div[data-testid="stCheckbox"]:has(input[key="activate_dino_checkbox"]) {
             position: fixed !important;
             bottom: 20px !important;
             right: 20px !important;
-            width: 30px !important;
-            height: 30px !important;
-            opacity: 0 !important;
-            cursor: pointer !important;
-            z-index: 9999 !important;
+            width: 50px !important;
+            height: 50px !important;
             margin: 0 !important;
             padding: 0 !important;
-        }
-        div[data-testid="stCheckbox"] > label:has(input[key="activate_dino_checkbox"]) > div {
-            display: none !important;
+            z-index: 9999 !important;
         }
     </style>
     """, unsafe_allow_html=True)
