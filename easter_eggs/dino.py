@@ -22,58 +22,121 @@ def render_dino_easter_egg():
     text = get_mascot_text("dino")
     is_activated = st.session_state.easter_egg_activated
     
-    # Используем components.html вместо st.markdown - он не создаёт контейнер в потоке
-    from streamlit.components.v1 import html
-    
-    html(f"""
-    <div id="dino-container" style="position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: visible; z-index: 99999;">
-        <div id="dino-easter-egg-btn" style="
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
-            opacity: 0.15;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            user-select: none;
-            background: transparent;
-            border: none;
-        " onmouseover="this.style.opacity='0.6'; this.style.transform='scale(1.1)'" 
-           onmouseout="this.style.opacity='0.15'; this.style.transform='scale(1)'">
-            
-        </div>
-    </div>
-    
+    # Используем st.markdown с JavaScript, который создаст элементы в document.body
+    st.markdown(f"""
     <script>
-        const btn = document.getElementById('dino-easter-egg-btn');
+    (function() {{
+        // Удаляем старые элементы если есть
+        const oldBtn = document.getElementById('dino-easter-egg-btn');
+        if (oldBtn) oldBtn.remove();
+        const oldOverlay = document.getElementById('dino-overlay');
+        if (oldOverlay) oldOverlay.remove();
+        
+        const isActivated = {str(is_activated).lower()};
+        
+        // Создаем кнопку внизу справа
+        const btn = document.createElement('div');
+        btn.id = 'dino-easter-egg-btn';
+        btn.innerHTML = '🦖';
+        btn.style.cssText = `
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            top: auto !important;
+            left: auto !important;
+            width: 50px !important;
+            height: 50px !important;
+            cursor: pointer !important;
+            opacity: 0.15 !important;
+            transition: all 0.3s ease !important;
+            z-index: 9998 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 32px !important;
+            user-select: none !important;
+            background: transparent !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        `;
+        
+        btn.onmouseover = function() {{
+            btn.style.opacity = '0.6';
+            btn.style.transform = 'scale(1.1)';
+        }};
+        btn.onmouseout = function() {{
+            btn.style.opacity = '0.15';
+            btn.style.transform = 'scale(1)';
+        }};
+        
         btn.onclick = function() {{
             const url = new URL(window.location);
             url.searchParams.set('activate_dino', '1');
             window.location.href = url.toString();
         }};
-    </script>
-    """, height=0, width=0)
-    
-    if is_activated:
-        html(f"""
-        <div id="dino-overlay" style="
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 99999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        ">
-            <div style="
+        
+        document.body.appendChild(btn);
+        
+        // Если активировано - показываем модальное окно
+        if (isActivated) {{
+            const overlay = document.createElement('div');
+            overlay.id = 'dino-overlay';
+            overlay.style.cssText = `
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: rgba(0, 0, 0, 0.5) !important;
+                z-index: 99999 !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+            `;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.id = 'dino-close-btn';
+            closeBtn.innerHTML = '✖';
+            closeBtn.style.cssText = `
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                width: 36px;
+                height: 36px;
+                background: rgba(0,0,0,0.1);
+                border: none;
+                border-radius: 50%;
+                font-size: 20px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #666;
+            `;
+            closeBtn.onclick = function() {{
+                const url = new URL(window.location);
+                url.searchParams.set('close_dino', '1');
+                window.location.href = url.toString();
+            }};
+            
+            const dinoEmoji = document.createElement('div');
+            dinoEmoji.innerHTML = '🦖';
+            dinoEmoji.style.cssText = `
+                font-size: 120px;
+                margin-bottom: 20px;
+            `;
+            
+            const textP = document.createElement('p');
+            textP.innerHTML = `{text}`;
+            textP.style.cssText = `
+                font-size: 18px;
+                color: #2C3E50;
+                margin: 0;
+            `;
+            
+            const card = document.createElement('div');
+            card.style.cssText = `
                 background: white;
                 border-radius: 24px;
                 padding: 40px;
@@ -81,35 +144,21 @@ def render_dino_easter_egg():
                 box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                 text-align: center;
                 position: relative;
-            ">
-                <button id="dino-close-btn" style="
-                    position: absolute;
-                    top: 15px;
-                    right: 15px;
-                    width: 36px;
-                    height: 36px;
-                    background: rgba(0,0,0,0.1);
-                    border: none;
-                    border-radius: 50%;
-                    font-size: 20px;
-                    cursor: pointer;
-                ">✖</button>
-                <div style="font-size: 120px; margin-bottom: 20px;">🦖</div>
-                <p style="font-size: 18px; color: #2C3E50; margin: 0;">{text}</p>
-            </div>
-        </div>
-        
-        <script>
-            document.getElementById('dino-close-btn').onclick = function() {{
-                const url = new URL(window.location);
-                url.searchParams.set('close_dino', '1');
-                window.location.href = url.toString();
-            }};
+            `;
             
+            card.appendChild(closeBtn);
+            card.appendChild(dinoEmoji);
+            card.appendChild(textP);
+            overlay.appendChild(card);
+            document.body.appendChild(overlay);
+            
+            // Автозакрытие через 10 секунд
             setTimeout(function() {{
                 const url = new URL(window.location);
                 url.searchParams.set('close_dino', '1');
                 window.location.href = url.toString();
             }}, 10000);
-        </script>
-        """, height=0, width=0)
+        }}
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
