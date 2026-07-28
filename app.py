@@ -17,7 +17,7 @@ from components import (
     render_upcoming_holidays_section,
     render_footer,
 )
-from components.easter_egg import (
+from easter_eggs.dino import (
     init_easter_egg,
     render_dino_modal,
     render_secret_button,
