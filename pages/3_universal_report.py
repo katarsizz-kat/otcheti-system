@@ -10,65 +10,37 @@ from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="")
+st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
 
-# ==========================================================
-# СТИЛИ
-# ==========================================================
+# Стили
+st.markdown("""
+<style>
+.stApp { background: #f0f2f6 !important; }
+.header-block {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    color: white;
+}
+.content-block {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.input-box {
+    background: #fff3cd;
+    border: 3px solid #ffc107;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+</style>
+""", unsafe_allow_html=True)
 
-def apply_styles():
-    st.markdown("""
-    <style>
-        .stApp { background: linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%) !important; }
-        .header-block {
-            background: linear-gradient(135deg, #3498DB 0%, #EBF5FB 100%);
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-        }
-        .header-block h1 { margin: 0; color: #FFFFFF; font-size: 36px; }
-        .header-block p { margin-top: 8px; color: #FFFFFF; font-size: 18px; }
-        .content-block {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-        .stButton>button {
-            background: #2E86C1 !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: bold !important;
-        }
-        .input-box {
-            background: #FFF9E6;
-            border: 3px solid #F39C12;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-        }
-        .input-box h3 {
-            color: #D68910;
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-size: 22px;
-        }
-        textarea {
-            font-family: 'Courier New', monospace !important;
-            font-size: 14px !important;
-            border: 2px solid #F39C12 !important;
-            border-radius: 8px !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-# ==========================================================
-# ФУНКЦИИ
-# ==========================================================
-
+# Функции
 def normalize_text(text):
     if not isinstance(text, str): return ""
     replacements = {'a': 'а', 'e': 'е', 'o': 'о', 'p': 'р', 'c': 'с', 'y': 'у', 'x': 'х',
@@ -104,7 +76,8 @@ def read_file(uploaded_file):
     for idx, row in df.iterrows():
         vals = [str(v) for v in row.values if pd.notna(v)]
         if 'Юридическое лицо' in ' '.join(vals) and 'Блюдо' in ' '.join(vals):
-            header_row = idx; break
+            header_row = idx
+            break
     if header_row is None: raise ValueError("Не найдены заголовки!")
     headers = df.iloc[header_row].values
     df = df[header_row + 1:].copy()
@@ -147,25 +120,25 @@ def create_excel(data, period_str, rules):
     ws = wb.create_sheet("Отчёт")
     border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
     
-    # Период - ИСПРАВЛЕНО
+    # Период
     ws.merge_cells('A1:H1')
     c = ws.cell(1, 1, period_str)
     c.font = Font(bold=True, size=16)
     c.alignment = Alignment(horizontal='center')
-    c.fill = PatternFill(patternType='solid', fgColor='FFFF00', bgColor='FFFF00')
+    c.fill = PatternFill(patternType='solid', fgColor='FFFF00')
     
-    # Города - ИСПРАВЛЕНО
+    # Города
     ws.merge_cells('A2:D2')
     c = ws.cell(2, 1, "СПб сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = PatternFill(patternType='solid', fgColor='00BFFF', bgColor='00BFFF')
+    c.fill = PatternFill(patternType='solid', fgColor='00BFFF')
     
     ws.merge_cells('E2:H2')
     c = ws.cell(2, 5, "Тюмень сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = PatternFill(patternType='solid', fgColor='00BFFF', bgColor='00BFFF')
+    c.fill = PatternFill(patternType='solid', fgColor='00BFFF')
     
     # Заголовки
     for col, header in [(1, 'Наименование'), (2, 'Количество'), (3, 'Сумма, ₽'),
@@ -210,7 +183,6 @@ def create_excel(data, period_str, rules):
         c.border = border
         c.number_format = '#,##0.00'
     
-    # Ширина колонок
     ws.column_dimensions['A'].width = 40
     ws.column_dimensions['B'].width = 12
     ws.column_dimensions['C'].width = 15
@@ -221,12 +193,7 @@ def create_excel(data, period_str, rules):
     
     return wb
 
-# ==========================================================
-# ИНТЕРФЕЙС
-# ==========================================================
-
-apply_styles()
-
+# Интерфейс
 st.markdown("""
 <div class="header-block">
     <h1> Универсальный отчёт</h1>
@@ -251,7 +218,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ПОЛЕ ДЛЯ ВВОДА ПОЗИЦИЙ
+# ПОЛЕ ВВОДА - ВСЕГДА ВИДНО
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
 st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b><br>Позиции суммируются, если название является частью названия в выгрузке.</p>", unsafe_allow_html=True)
@@ -277,11 +244,11 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # ЗАГРУЗКА ФАЙЛА
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("### 📂 Загрузка файла")
+st.markdown("###  Загрузка файла")
 file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ГЕНЕРАЦИЯ ОТЧЁТА
+# ГЕНЕРАЦИЯ
 if file_main:
     st.markdown('<div class="content-block">', unsafe_allow_html=True)
     
@@ -293,8 +260,8 @@ if file_main:
         period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
         st.warning("⚠️ Не удалось определить период")
     
-    if st.button(" Сгенерировать отчёт", type="primary", use_container_width=True):
-        with st.spinner("⏳ Формирую отчёт..."):
+    if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
+        with st.spinner(" Формирую отчёт..."):
             try:
                 df = read_file(file_main)
                 rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
@@ -327,6 +294,8 @@ if file_main:
                     )
             except Exception as e:
                 st.error(f"❌ Ошибка: {str(e)}")
+                import traceback
+                st.code(traceback.format_exc())
     st.markdown('</div>', unsafe_allow_html=True)
 else:
     st.info("👆 Загрузите файл для начала работы")
