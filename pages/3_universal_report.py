@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="")
+st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
 
 # Стили
 st.markdown("""
@@ -87,8 +87,8 @@ def read_file(uploaded_file):
     df = df.dropna(how='all')
     df['Юридическое лицо'] = df['Юридическое лицо'].ffill()
     df['Категория блюда'] = df['Категория блюда'].ffill()
-    df = df[~df['Блюдо'].astype(str).str.contains('\+', na=False)]
-    df = df[~df['Блюдо'].astype(str).lower().str.contains('персонал', na=False)]
+    df = df[~df['Блюдо'].astype(str).str.contains(r'\+', na=False)]
+    df = df[~df['Блюдо'].astype(str).str.lower().str.contains('персонал', na=False)]
     df = df[df['Блюдо'].notna()]
     df['Количество блюд'] = pd.to_numeric(df['Количество блюд'], errors='coerce').fillna(0)
     df['Сумма со скидкой, р.'] = pd.to_numeric(df['Сумма со скидкой, р.'], errors='coerce').fillna(0)
@@ -120,7 +120,7 @@ def create_excel(data, period_str, rules):
     ws = wb.create_sheet("Отчёт")
     border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
     
-    # ✅ Цветные заливки с правильным синтаксисом (именованные аргументы)
+    # ✅ Цветные заливки с ПРАВИЛЬНЫМ синтаксисом (именованные аргументы, без пробелов)
     yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
     blue_fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
     
@@ -200,7 +200,7 @@ def create_excel(data, period_str, rules):
 # Интерфейс
 st.markdown("""
 <div class="header-block">
-    <h1>📊 Универсальный отчёт</h1>
+    <h1> Универсальный отчёт</h1>
     <p>Гибкий отчёт с настраиваемым списком позиций</p>
 </div>
 """, unsafe_allow_html=True)
@@ -248,7 +248,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # ЗАГРУЗКА ФАЙЛА
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("### 📂 Загрузка файла")
+st.markdown("###  Загрузка файла")
 file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -264,7 +264,7 @@ if file_main:
         period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
         st.warning("⚠️ Не удалось определить период")
     
-    if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
+    if st.button(" Сгенерировать отчёт", type="primary", use_container_width=True):
         with st.spinner("Формирую отчёт..."):
             try:
                 df = read_file(file_main)
@@ -302,4 +302,4 @@ if file_main:
                 st.code(traceback.format_exc())
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info(" Загрузите файл для начала работы")
+    st.info("👆 Загрузите файл для начала работы")
