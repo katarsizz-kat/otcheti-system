@@ -53,12 +53,13 @@ def render_dino_easter_egg():
             const overlay = document.createElement('div');
             overlay.id = 'dino-global-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1000000; display: flex; justify-content: center; align-items: center;';
-            
-            overlay.innerHTML = '<div style="background: white; border-radius: 24px; padding: 40px; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;">' +
-                '<button id="dino-global-close" style="position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; background: #eee; border: none; border-radius: 50%; font-size: 20px; cursor: pointer;">✖</button>' +
-                '<div style="font-size: 120px; margin-bottom: 20px;"></div>' +
-                '<p style="font-size: 18px; color: #333; margin: 0; line-height: 1.4;">' + '{text}' + '</p>' +
+
+                      overlay.innerHTML = '<div style="background:white; border-radius:24px; padding:40px; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center; position:relative;">' +
+                '<button id="dino-close-fixed" style="position:absolute; top:15px; right:15px; width:36px; height:36px; background:#eee; border:none; border-radius:50%; font-size:20px; cursor:pointer;">✖</button>' +
+                '<div style="font-size:120px; margin-bottom:20px;">🦖</div>' +
+                '<p style="font-size:18px; color:#333; margin:0; line-height:1.4;">{text}</p>' +
                 '</div>';
+   
                 
             document.body.appendChild(overlay);
             
