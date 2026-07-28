@@ -21,7 +21,12 @@ def init_easter_egg():
             if (key === konamiCode[konamiIndex]) {
                 konamiIndex++;
                 if (konamiIndex === konamiCode.length) {
-                    window.parent.postMessage({type: 'easter_egg_activated'}, '*');
+                    // Создаём невидимую кнопку для активации
+                    var btn = document.createElement('button');
+                    btn.id = 'konami-activate-btn';
+                    btn.style.display = 'none';
+                    document.body.appendChild(btn);
+                    btn.click();
                     konamiIndex = 0;
                 }
             } else {
@@ -30,7 +35,7 @@ def init_easter_egg():
         });
     </script>
     """
-    components.html(konami_js, height=0, width=0)
+    components.html(konami_js, height=1, width=1)
 
 
 def render_dino_modal():
@@ -56,7 +61,7 @@ def render_dino_modal():
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            z-index: 1000;
+            z-index: 9999;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -151,7 +156,7 @@ def render_dino_modal():
         </script>
     </body>
     </html>
-    """, height=0, width=0)
+    """, height=400, width=800)
 
 
 def render_secret_button():
@@ -159,25 +164,38 @@ def render_secret_button():
     if "easter_egg_activated" not in st.session_state:
         st.session_state.easter_egg_activated = False
     
-    col1, col2, col3 = st.columns([0.85, 0.1, 0.05])
+    # Создаём очень маленькую прозрачную кнопку
+    col1, col2 = st.columns([0.98, 0.02])
     
-    with col3:
-        if st.button("🦖", key="secret_dino_btn", help="Нажми меня!"):
+    with col2:
+        # Кнопка с эмодзи динозавра, полностью прозрачная
+        if st.button("🦖", key="secret_dino_btn"):
             st.session_state.easter_egg_activated = True
             st.balloons()
             st.rerun()
     
+    # Делаем кнопку максимально незаметной
     st.markdown("""
     <style>
         button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"] {
-            opacity: 0.3 !important;
-            font-size: 16px !important;
-            padding: 4px 8px !important;
+            opacity: 0.15 !important;
+            font-size: 20px !important;
+            padding: 2px 4px !important;
             background: transparent !important;
             border: none !important;
+            box-shadow: none !important;
+            min-width: 24px !important;
+            width: 24px !important;
+            height: 24px !important;
+            line-height: 1 !important;
         }
         button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"]:hover {
-            opacity: 0.8 !important;
+            opacity: 0.6 !important;
+            transform: scale(1.2) !important;
+        }
+        /* Скрываем все лишние элементы кнопки */
+        button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"] span {
+            display: none !important;
         }
     </style>
     """, unsafe_allow_html=True)
