@@ -5,7 +5,7 @@ import re
 import io
 from datetime import datetime
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
@@ -88,7 +88,7 @@ def read_file(uploaded_file):
     df['Юридическое лицо'] = df['Юридическое лицо'].ffill()
     df['Категория блюда'] = df['Категория блюда'].ffill()
     df = df[~df['Блюдо'].astype(str).str.contains('\+', na=False)]
-    df = df[~df['Блюдо'].astype(str).str.lower().str.contains('персонал', na=False)]
+    df = df[~df['Блюдо'].astype(str).lower().str.contains('персонал', na=False)]
     df = df[df['Блюдо'].notna()]
     df['Количество блюд'] = pd.to_numeric(df['Количество блюд'], errors='coerce').fillna(0)
     df['Сумма со скидкой, р.'] = pd.to_numeric(df['Сумма со скидкой, р.'], errors='coerce').fillna(0)
@@ -120,29 +120,22 @@ def create_excel(data, period_str, rules):
     ws = wb.create_sheet("Отчёт")
     border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
     
-    # Создаём fill объекты ПРАВИЛЬНО
-    yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
-    blue_fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
-    
-    # Период
+    # Период (без цветной заливки, только жирный шрифт и выравнивание)
     ws.merge_cells('A1:H1')
     c = ws.cell(1, 1, period_str)
     c.font = Font(bold=True, size=16)
     c.alignment = Alignment(horizontal='center')
-    c.fill = yellow_fill
     
-    # Города
+    # Города (без цветной заливки)
     ws.merge_cells('A2:D2')
     c = ws.cell(2, 1, "СПб сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
     
     ws.merge_cells('E2:H2')
     c = ws.cell(2, 5, "Тюмень сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
     
     # Заголовки
     for col, header in [(1, 'Наименование'), (2, 'Количество'), (3, 'Сумма, ₽'),
@@ -265,7 +258,7 @@ if file_main:
         st.warning("⚠️ Не удалось определить период")
     
     if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
-        with st.spinner(" Формирую отчёт..."):
+        with st.spinner("Формирую отчёт..."):
             try:
                 df = read_file(file_main)
                 rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
@@ -290,7 +283,7 @@ if file_main:
                     st.dataframe(preview, use_container_width=True)
                     
                     st.download_button(
-                        label=" Скачать Excel",
+                        label="📥 Скачать Excel",
                         data=output,
                         file_name=f"Отчёт_{period_str.replace('.', '-')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
