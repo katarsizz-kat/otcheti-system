@@ -3,7 +3,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ВАЖНО: set_page_config должен быть ПЕРВЫМ вызовом streamlit!
-st.set_page_config(page_title="Система отчётов", page_icon="", layout="wide")
+st.set_page_config(page_title="Система отчётов", page_icon="📊", layout="wide")
 
 # Импорты
 from config.greetings import get_current_greeting
@@ -38,12 +38,10 @@ apply_theme(greeting_data["theme"], holiday_effects)
 init_easter_egg()
 
 # === ОБРАБОТКА СООБЩЕНИЙ ОТ JAVASCRIPT ===
-# Этот скрипт слушает сообщения от iframe и обновляет session_state
 components.html("""
 <script>
     window.addEventListener('message', function(event) {
         if (event.data.type === 'easter_egg_activate') {
-            // Создаём невидимый элемент для активации
             var btn = document.createElement('button');
             btn.id = 'activate-easter-egg';
             btn.style.display = 'none';
@@ -75,7 +73,7 @@ render_welcome_block(
 )
 
 # === КАРТОЧКИ ОТЧЁТОВ ===
-st.markdown("### 📋 Доступные отчёты", unsafe_allow_html=True)
+st.markdown("###  Доступные отчёты", unsafe_allow_html=True)
 cols = st.columns(3)
 for idx, report in enumerate(reports):
     with cols[idx % 3]:
