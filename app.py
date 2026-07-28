@@ -40,7 +40,7 @@ render_welcome_block(
 )
 
 # === КАРТОЧКИ ОТЧЁТОВ ===
-st.markdown("###  Доступные отчёты", unsafe_allow_html=True)
+st.markdown("### Доступные отчёты", unsafe_allow_html=True)
 cols = st.columns(3)
 for idx, report in enumerate(reports):
     with cols[idx % 3]:
