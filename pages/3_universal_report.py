@@ -88,7 +88,10 @@ def read_file(uploaded_file):
     df['Юридическое лицо'] = df['Юридическое лицо'].ffill()
     df['Категория блюда'] = df['Категория блюда'].ffill()
     df = df[~df['Блюдо'].astype(str).str.contains(r'\+', na=False)]
-    df = df[~df['Блюдо'].astype(str).str.lower().str.contains('персонал', na=False)]
+    
+    # ✅ ИСПРАВЛЕНИЕ: используем case=False вместо несуществующего .lower() у Series
+    df = df[~df['Блюдо'].astype(str).str.contains('персонал', case=False, na=False)]
+    
     df = df[df['Блюдо'].notna()]
     df['Количество блюд'] = pd.to_numeric(df['Количество блюд'], errors='coerce').fillna(0)
     df['Сумма со скидкой, р.'] = pd.to_numeric(df['Сумма со скидкой, р.'], errors='coerce').fillna(0)
@@ -200,7 +203,7 @@ def create_excel(data, period_str, rules):
 # Интерфейс
 st.markdown("""
 <div class="header-block">
-    <h1> Универсальный отчёт</h1>
+    <h1>📊 Универсальный отчёт</h1>
     <p>Гибкий отчёт с настраиваемым списком позиций</p>
 </div>
 """, unsafe_allow_html=True)
@@ -248,7 +251,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # ЗАГРУЗКА ФАЙЛА
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("###  Загрузка файла")
+st.markdown("### 📂 Загрузка файла")
 file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -264,7 +267,7 @@ if file_main:
         period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
         st.warning("⚠️ Не удалось определить период")
     
-    if st.button(" Сгенерировать отчёт", type="primary", use_container_width=True):
+    if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
         with st.spinner("Формирую отчёт..."):
             try:
                 df = read_file(file_main)
