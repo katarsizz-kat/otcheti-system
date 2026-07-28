@@ -2,6 +2,7 @@
 import streamlit as st
 from config.mascots import get_mascot_text
 
+
 def render_dino_easter_egg():
     """Рендерит кнопку и модальное окно с динозавром."""
     if "easter_egg_activated" not in st.session_state:
@@ -20,19 +21,19 @@ def render_dino_easter_egg():
     text = get_mascot_text("dino")
     is_activated = st.session_state.easter_egg_activated
     
-    # Используем st.markdown + JS для инъекции прямо в document.body главной страницы
+    # Используем st.markdown с JavaScript для создания элементов в document.body
     st.markdown(f"""
-    <style>
-        @keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
-        @keyframes slideUp {{ from {{ opacity: 0; transform: translateY(50px) scale(0.8); }} to {{ opacity: 1; transform: translateY(0) scale(1); }} }}
-    </style>
     <script>
     (function() {{
-        if (document.getElementById('dino-btn')) document.getElementById('dino-btn').remove();
-        if (document.getElementById('dino-overlay')) document.getElementById('dino-overlay').remove();
+        // Удаляем старые элементы
+        const oldBtn = document.getElementById('dino-btn');
+        if (oldBtn) oldBtn.remove();
+        const oldOverlay = document.getElementById('dino-overlay');
+        if (oldOverlay) oldOverlay.remove();
         
         const isActivated = {str(is_activated).lower()};
         
+        // Создаем кнопку
         const btn = document.createElement('div');
         btn.id = 'dino-btn';
         btn.innerHTML = '🦖';
@@ -47,13 +48,14 @@ def render_dino_easter_egg():
         }};
         document.body.appendChild(btn);
         
+        // Если активировано - создаем модальное окно
         if (isActivated) {{
             const overlay = document.createElement('div');
             overlay.id = 'dino-overlay';
-            overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 1000000 !important; display: flex !important; justify-content: center !important; align-items: center !important; animation: fadeIn 0.3s ease-out;';
+            overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(0, 0, 0, 0.5) !important; z-index: 1000000 !important; display: flex !important; justify-content: center !important; align-items: center !important;';
             
             const card = document.createElement('div');
-            card.style.cssText = 'background: white; border-radius: 24px; padding: 40px; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative; animation: slideUp 0.5s ease-out;';
+            card.style.cssText = 'background: white; border-radius: 24px; padding: 40px; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center; position: relative;';
             
             const closeBtn = document.createElement('button');
             closeBtn.innerHTML = '✖';
@@ -66,7 +68,7 @@ def render_dino_easter_egg():
             
             const dinoEmoji = document.createElement('div');
             dinoEmoji.innerHTML = '🦖';
-            dinoEmoji.style.cssText = 'font-size: 120px; margin-bottom: 20px; filter: hue-rotate(90deg) saturate(1.5);';
+            dinoEmoji.style.cssText = 'font-size: 120px; margin-bottom: 20px;';
             
             const textP = document.createElement('p');
             textP.innerHTML = '{text}';
