@@ -15,19 +15,7 @@ def render_dino_modal():
         return
     
     text = get_mascot_text("dino")
-    
-    # Скрытый чекбокс для корректного закрытия через JS
-    close_trigger = st.checkbox(
-        "", 
-        key="close_dino_checkbox", 
-        label_visibility="collapsed"
-    )
-    
-    if close_trigger:
-        st.session_state.easter_egg_activated = False
-        st.rerun()
 
-    # Модальное окно через st.markdown с position: fixed
     st.markdown(f"""
     <div id="dino-overlay" style="
         position: fixed;
@@ -96,24 +84,29 @@ def render_dino_modal():
             50% {{ transform: rotate(0deg) translateY(0); }}
             75% {{ transform: rotate(15deg) translateY(-5px); }}
         }}
-        /* Скрываем чекбокс закрытия полностью */
-        div[data-testid="stCheckbox"] > label:has(input[key="close_dino_checkbox"]) {{
-            display: none !important;
-        }}
     </style>
     
     <script>
-        // Функция для программного нажатия на скрытый чекбокс Streamlit
-        function triggerClose() {{
-            var checkboxes = document.querySelectorAll('input[type="checkbox"]');
-            for (var i = 0; i < checkboxes.length; i++) {{
-                if (checkboxes[i].id.includes('close_dino_checkbox')) {{
-                    checkboxes[i].click();
-                    break;
+        // Закрытие по клику на крестик
+        document.getElementById('dino-close-btn').addEventListener('click', function() {{
+            var overlay = document.getElementById('dino-overlay');
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s ease';
+            setTimeout(function() {{
+                overlay.style.display = 'none';
+                // Используем Streamlit API для закрытия
+                if (window.parent && window.parent.document) {{
+                    var checkboxes = window.parent.document.querySelectorAll('input[type="checkbox"]');
+                    for (var i = 0; i < checkboxes.length; i++) {{
+                        if (checkboxes[i].id && checkboxes[i].id.includes('close_dino')) {{
+                            checkboxes[i].click();
+                            break;
+                        }}
+                    }}
                 }}
-            }}
-        }}
-
+            }}, 300);
+        }});
+        
         // Автозакрытие через 10 секунд
         setTimeout(function() {{
             var overlay = document.getElementById('dino-overlay');
@@ -122,27 +115,26 @@ def render_dino_modal():
                 overlay.style.transition = 'opacity 0.3s ease';
                 setTimeout(function() {{
                     overlay.style.display = 'none';
-                    triggerClose();
+                    if (window.parent && window.parent.document) {{
+                        var checkboxes = window.parent.document.querySelectorAll('input[type="checkbox"]');
+                        for (var i = 0; i < checkboxes.length; i++) {{
+                            if (checkboxes[i].id && checkboxes[i].id.includes('close_dino')) {{
+                                checkboxes[i].click();
+                                break;
+                            }}
+                        }}
+                    }}
                 }}, 300);
             }}
         }}, 10000);
-        
-        // Закрытие по клику на крестик
-        document.addEventListener('click', function(e) {{
-            if (e.target.id === 'dino-close-btn' || e.target.closest('#dino-close-btn')) {{
-                var overlay = document.getElementById('dino-overlay');
-                if (overlay) {{
-                    overlay.style.opacity = '0';
-                    overlay.style.transition = 'opacity 0.3s ease';
-                    setTimeout(function() {{
-                        overlay.style.display = 'none';
-                        triggerClose();
-                    }}, 300);
-                }}
-            }}
-        }});
     </script>
     """, unsafe_allow_html=True)
+    
+    # Скрытый чекбокс только для управления состоянием
+    close_trigger = st.checkbox("", key="close_dino_checkbox", label_visibility="collapsed")
+    if close_trigger:
+        st.session_state.easter_egg_activated = False
+        st.rerun()
 
 
 def render_secret_button():
@@ -150,7 +142,6 @@ def render_secret_button():
     if "easter_egg_activated" not in st.session_state:
         st.session_state.easter_egg_activated = False
     
-    # Прозрачная кнопка через HTML с позиционированием внизу
     st.markdown("""
     <div id="secret-dino-btn" style="
         position: fixed;
@@ -177,30 +168,10 @@ def render_secret_button():
     </div>
     """, unsafe_allow_html=True)
     
-    # Скрытый checkbox для активации - размещаем в самом низу
+    # Скрытый checkbox для активации
     activate = st.checkbox("", key="activate_dino_checkbox", label_visibility="collapsed")
     
     if activate:
         st.session_state.easter_egg_activated = True
         st.balloons()
         st.rerun()
-    
-    # Стили для полного скрытия checkbox активации
-    st.markdown("""
-    <style>
-        div[data-testid="stCheckbox"] > label:has(input[key="activate_dino_checkbox"]) {
-            display: none !important;
-        }
-        /* Убираем любые отступы у контейнера чекбокса */
-        div[data-testid="stCheckbox"]:has(input[key="activate_dino_checkbox"]) {
-            position: fixed !important;
-            bottom: 20px !important;
-            right: 20px !important;
-            width: 50px !important;
-            height: 50px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            z-index: 9999 !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
