@@ -152,20 +152,20 @@ def create_excel(data, period_str, rules):
     c = ws.cell(1, 1, period_str)
     c.font = Font(bold=True, size=16)
     c.alignment = Alignment(horizontal='center')
-    c.fill = PatternFill('FFFF00', 'FFFF00', 'solid')
+    c.fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
     
     # Города
     ws.merge_cells('A2:D2')
     c = ws.cell(2, 1, "СПб сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = PatternFill('00BFFF', '00BFFF', 'solid')
+    c.fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
     
     ws.merge_cells('E2:H2')
     c = ws.cell(2, 5, "Тюмень сейчас")
     c.font = Font(bold=True, size=12)
     c.alignment = Alignment(horizontal='center')
-    c.fill = PatternFill('00BFFF', '00BFFF', 'solid')
+    c.fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
     
     # Заголовки
     for col, header in [(1, 'Наименование'), (2, 'Количество'), (3, 'Сумма, ₽'),
@@ -252,11 +252,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================================
-# 🔥 ПОЛЕ ДЛЯ ВВОДА ПОЗИЦИЙ (ВСЕГДА ВИДНО!)
+# ПОЛЕ ДЛЯ ВВОДА ПОЗИЦИЙ (ВСЕГДА ВИДНО!)
 # ==========================================================
 
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
-st.markdown("### ️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
+st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b><br>Позиции суммируются, если название является частью названия в выгрузке.</p>", unsafe_allow_html=True)
 
 default_rules = """Картофель из печи 150 гр
@@ -329,7 +329,7 @@ if file_main:
                     st.dataframe(preview, use_container_width=True)
                     
                     st.download_button(
-                        label=" Скачать Excel",
+                        label="📥 Скачать Excel",
                         data=output,
                         file_name=f"Отчёт_{period_str.replace('.', '-')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -339,4 +339,4 @@ if file_main:
                 st.error(f"❌ Ошибка: {str(e)}")
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info("👆 Загрузите файл для начала работы")
+    st.info(" Загрузите файл для начала работы")
