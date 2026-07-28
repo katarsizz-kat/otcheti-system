@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="")
+st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
 
 # ==========================================================
 # СТИЛИ
@@ -147,14 +147,14 @@ def create_excel(data, period_str, rules):
     ws = wb.create_sheet("Отчёт")
     border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
     
-    # Период
+    # Период - ИСПРАВЛЕНО
     ws.merge_cells('A1:H1')
     c = ws.cell(1, 1, period_str)
     c.font = Font(bold=True, size=16)
     c.alignment = Alignment(horizontal='center')
     c.fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
     
-    # Города
+    # Города - ИСПРАВЛЕНО
     ws.merge_cells('A2:D2')
     c = ws.cell(2, 1, "СПб сейчас")
     c.font = Font(bold=True, size=12)
@@ -251,10 +251,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ==========================================================
-# ПОЛЕ ДЛЯ ВВОДА ПОЗИЦИЙ (ВСЕГДА ВИДНО!)
-# ==========================================================
-
+# ПОЛЕ ДЛЯ ВВОДА ПОЗИЦИЙ
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
 st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b><br>Позиции суммируются, если название является частью названия в выгрузке.</p>", unsafe_allow_html=True)
@@ -278,19 +275,13 @@ rules_text = st.text_area(
 )
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ==========================================================
 # ЗАГРУЗКА ФАЙЛА
-# ==========================================================
-
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
 st.markdown("### 📂 Загрузка файла")
 file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ==========================================================
 # ГЕНЕРАЦИЯ ОТЧЁТА
-# ==========================================================
-
 if file_main:
     st.markdown('<div class="content-block">', unsafe_allow_html=True)
     
@@ -302,7 +293,7 @@ if file_main:
         period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
         st.warning("⚠️ Не удалось определить период")
     
-    if st.button(" Сгенерировать отчёт", type="primary", use_container_width=True):
+    if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
         with st.spinner("⏳ Формирую отчёт..."):
             try:
                 df = read_file(file_main)
@@ -320,7 +311,6 @@ if file_main:
                     
                     st.success("✅ Отчёт сформирован!")
                     
-                    # Превью
                     st.subheader("📋 Превью (СПБ)")
                     preview = pd.DataFrame([
                         {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
@@ -329,7 +319,7 @@ if file_main:
                     st.dataframe(preview, use_container_width=True)
                     
                     st.download_button(
-                        label="📥 Скачать Excel",
+                        label=" Скачать Excel",
                         data=output,
                         file_name=f"Отчёт_{period_str.replace('.', '-')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -339,4 +329,4 @@ if file_main:
                 st.error(f"❌ Ошибка: {str(e)}")
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info(" Загрузите файл для начала работы")
+    st.info("👆 Загрузите файл для начала работы")
