@@ -5,7 +5,6 @@ import warnings
 from datetime import datetime
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-
 warnings.filterwarnings("ignore")
 
 # ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом streamlit в файле!
@@ -14,11 +13,9 @@ st.set_page_config(page_title="КР месяц", page_icon="📅", layout="wide"
 # ==========================================================
 # ДИНАМИЧЕСКИЕ СТИЛИ (НЕБО ПО ВРЕМЕНИ СУТОК)
 # ==========================================================
-
 def get_sky_gradient():
     """Возвращает градиент неба в зависимости от времени суток."""
     hour = datetime.now().hour
-    
     # Утро (5:00 - 12:00) - восход: оранжевый → голубой
     if 5 <= hour < 12:
         return {
@@ -59,14 +56,12 @@ def get_sky_gradient():
 def apply_dynamic_styles():
     """Применяет динамические стили с учётом времени суток."""
     sky = get_sky_gradient()
-    
     st.markdown(f"""
     <style>
         /* Основной фон приложения */
         .stApp {{
             background: {sky['block']} !important;
         }}
-        
         /* Заголовок */
         .header-block {{
             background: {sky['header']};
@@ -89,7 +84,6 @@ def apply_dynamic_styles():
             color: {sky['text']};
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }}
-        
         /* Блоки с контентом */
         .content-block {{
             background: rgba(255, 255, 255, 0.95);
@@ -99,7 +93,6 @@ def apply_dynamic_styles():
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             border: 1px solid #D6EAF8;
         }}
-        
         /* Кнопки */
         .stButton>button {{
             background: {sky['button_bg']} !important;
@@ -114,13 +107,11 @@ def apply_dynamic_styles():
             filter: brightness(1.1) !important;
             transform: translateY(-2px) !important;
         }}
-        
         /* Поля ввода и селекторы */
         .stSelectbox > div > div, .stNumberInput > div > div > input {{
             border: 1px solid #D6EAF8 !important;
             border-radius: 8px !important;
         }}
-        
         /* Загрузчики файлов */
         .stFileUploader {{
             background: #F8F9F9;
@@ -128,7 +119,6 @@ def apply_dynamic_styles():
             border-radius: 10px;
             border: 2px dashed #D6EAF8;
         }}
-        
         hr {{
             border: none;
             border-top: 2px solid #D6EAF8;
@@ -140,18 +130,14 @@ def apply_dynamic_styles():
 # ==========================================================
 # НАСТРОЙКИ
 # ==========================================================
-
 SPB_ORDER = [
     "Транспортный", "Димитрова", "Шмидта", "Пулковская", "Благодатная",
     "Энтузиастов", "Серебристый", "Мурино", "Ветеранов", "Туристская",
     "Наука", "Ленинский",
 ]
-
 TMN_ORDER = ["Орджоникидзе", "Мельникайте"]
 ALL_RESTAURANTS = SPB_ORDER + TMN_ORDER
-
 DISPLAY_MAP_SITE = {"Шмидта": "Соверен"}
-
 RESTAURANT_MAP_FILE1 = {
     "Санкт-Петербург №1": "Транспортный", "Санкт-Петербург №2": "Димитрова",
     "Санкт-Петербург №4": "Шмидта", "Санкт-Петербург №5": "Пулковская",
@@ -161,7 +147,6 @@ RESTAURANT_MAP_FILE1 = {
     "Санкт-Петербург №18": "Наука", "Санкт-Петербург №20": "Ленинский",
     "Тюмень №2 – Орджоникидзе": "Орджоникидзе", "Тюмень №3 – Мельникайте": "Мельникайте",
 }
-
 ADDRESS_MAP = {
     "транспортный": "Транспортный", "димитрова": "Димитрова", "шмидта": "Шмидта",
     "13-я линия": "Шмидта", "васильевск": "Шмидта", "пулковская": "Пулковская",
@@ -170,15 +155,13 @@ ADDRESS_MAP = {
     "туристская": "Туристская", "науки": "Наука", "ленинский": "Ленинский",
     "орджоникидзе": "Орджоникидзе", "мельникайте": "Мельникайте",
 }
-
 COMPLAINT_KEYWORDS = {
     "Жалоба на продукт": r"сух|холодн|остыл|невкусн|плох|ужас|отврат|прогоркл|испорч|стар|жестк|резин|волос|металл|гряз|воняет|гнил|сырой",
     "Ошибки приготовления": r"пережар|недожар|сыро|сгорел|пригорел|пересолен|недосолен|мало соли|много соли|непропеч",
     "Перепутанные/недоложенные позиции": r"не положили|не доложили|забыли|не было|не дали|перепутали|не тот|вместо|заменя|замен|не хватает|недоложили|недодали|не пришло|не привезли",
     "Жалобы на сервис": r"хам|груб|невежлив|неприятн|игнор|сбросил|отказал|не ответил|не помог|не решил|проблем|жалоб|администратор",
-    "Опоздание": r"опозда|опоздал|опоздание|долго|задерж|задержк|не вовремя|не успел|час|полчаса|30 минут|40 минут|50 минут|1 час|1\.5 часа|полтора часа",
+    "Опоздание": r"опозда|опоздал|опоздание|долго|задерж|задержк|не вовремя|не успел|час|полчаса|30 минут|40 минут|50 минут|1 час|1.5 часа|полтора часа",
 }
-
 POSITIVE_KEYWORDS = {
     "Вкус": r"вкусн|отличн|превосходн|восхитит|бомб|огонь|пушк|шедевр|идеальн|сочн",
     "Быстрая доставка": r"быстр|оперативн|вовремя|минут|горяч|с пылу с жару|молниеносн",
@@ -188,29 +171,29 @@ POSITIVE_KEYWORDS = {
 }
 
 # ==========================================================
-# СТИЛИ EXCEL
+# СТИЛИ EXCEL (ИСПРАВЛЕНО - убраны лишние пробелы)
 # ==========================================================
-
 THIN_BORDER = Border(
     left=Side(style='thin'), right=Side(style='thin'),
     top=Side(style='thin'), bottom=Side(style='thin')
 )
-
 TITLE_FONT = Font(name="Calibri", size=14, bold=True)
 GROUP_FONT = Font(name="Calibri", size=12, bold=True)
 SUBHEADER_FONT = Font(name="Calibri", size=10, bold=True)
 DATA_FONT = Font(name="Calibri", size=10)
 TOTAL_FONT = Font(name="Calibri", size=10, bold=True)
 
+# ✅ ИСПРАВЛЕНО: убраны пробелы внутри кавычек
 GREEN_FILL = PatternFill(fill_type="solid", start_color="D9EAD3", end_color="D9EAD3")
 YELLOW_FILL = PatternFill(fill_type="solid", start_color="FFF2CC", end_color="FFF2CC")
+
+# ✅ ИСПРАВЛЕНО: убраны пробелы внутри кавычек
 CENTER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
 LEFT_ALIGN = Alignment(horizontal="left", vertical="center")
 
 # ==========================================================
 # ФУНКЦИИ ОБРАБОТКИ
 # ==========================================================
-
 def parse_price(val):
     if pd.isna(val): return None
     s = str(val).replace(",", "").replace(" ", "").strip()
@@ -230,7 +213,7 @@ def map_restaurant_address(val):
 
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return "☀️ Доброе утро!"
+    if 5 <= hour < 12: return "️ Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌜 Доброй ночи!"
@@ -285,7 +268,6 @@ def add_summary_totals(df, region, keywords):
 # ==========================================================
 # ЗАПИСЬ EXCEL С ФОРМУЛАМИ
 # ==========================================================
-
 def write_headers(ws, row, region, start_col, has_low_reviews):
     headers = [region] + [str(i) for i in range(1, 6)] + ["всего:", "Средний рейтинг"]
     if has_low_reviews:
@@ -300,29 +282,24 @@ def write_headers(ws, row, region, start_col, has_low_reviews):
 def write_restaurant_row(ws, row, restaurant, start_col, df, has_low_reviews=False, low_count=None, use_display_name=True):
     row_data = df[df["Ресторан"] == restaurant]
     if row_data.empty: return row
-    
     row_data = row_data.iloc[0]
     display_name = DISPLAY_MAP_SITE.get(restaurant, restaurant) if use_display_name else restaurant
-    
     cell = ws.cell(row=row, column=start_col, value=display_name)
     cell.font = DATA_FONT
     cell.alignment = LEFT_ALIGN
     cell.border = THIN_BORDER
-    
     for i, col_name in enumerate(["1", "2", "3", "4", "5"]):
         col_idx = start_col + 1 + i
         cell = ws.cell(row=row, column=col_idx, value=int(row_data[col_name]))
         cell.font = DATA_FONT
         cell.alignment = CENTER_ALIGN
         cell.border = THIN_BORDER
-    
     col_b = get_column_letter(start_col + 1)
     col_f = get_column_letter(start_col + 5)
     cell = ws.cell(row=row, column=start_col + 6, value=f"=SUM({col_b}{row}:{col_f}{row})")
     cell.font = DATA_FONT
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
-    
     col_c = get_column_letter(start_col + 2)
     col_d = get_column_letter(start_col + 3)
     col_e = get_column_letter(start_col + 4)
@@ -333,7 +310,6 @@ def write_restaurant_row(ws, row, restaurant, start_col, df, has_low_reviews=Fal
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
     cell.number_format = '0.00'
-    
     if has_low_reviews:
         cell = ws.cell(row=row, column=start_col + 8, value=int(low_count) if low_count is not None else 0)
         cell.font = DATA_FONT
@@ -347,7 +323,6 @@ def write_total_row(ws, row, region, start_col, first_rest_row, last_rest_row, h
     cell.alignment = LEFT_ALIGN
     cell.fill = YELLOW_FILL
     cell.border = THIN_BORDER
-    
     for i in range(5):
         col_idx = start_col + 1 + i
         col_letter = get_column_letter(col_idx)
@@ -357,7 +332,6 @@ def write_total_row(ws, row, region, start_col, first_rest_row, last_rest_row, h
         cell.alignment = CENTER_ALIGN
         cell.fill = YELLOW_FILL
         cell.border = THIN_BORDER
-    
     col_b = get_column_letter(start_col + 1)
     col_f = get_column_letter(start_col + 5)
     cell = ws.cell(row=row, column=start_col + 6, value=f"=SUM({col_b}{row}:{col_f}{row})")
@@ -365,7 +339,6 @@ def write_total_row(ws, row, region, start_col, first_rest_row, last_rest_row, h
     cell.alignment = CENTER_ALIGN
     cell.fill = YELLOW_FILL
     cell.border = THIN_BORDER
-    
     col_c = get_column_letter(start_col + 2)
     col_d = get_column_letter(start_col + 3)
     col_e = get_column_letter(start_col + 4)
@@ -377,7 +350,6 @@ def write_total_row(ws, row, region, start_col, first_rest_row, last_rest_row, h
     cell.fill = YELLOW_FILL
     cell.border = THIN_BORDER
     cell.number_format = '0.00'
-    
     if has_low_reviews:
         col_i = get_column_letter(start_col + 8)
         formula = f"=SUM({col_i}{first_rest_row}:{col_i}{last_rest_row})"
@@ -393,7 +365,6 @@ def write_common_restaurant_row(ws, row, restaurant, start_col, site_row, agg_ro
     cell.font = DATA_FONT
     cell.alignment = LEFT_ALIGN
     cell.border = THIN_BORDER
-    
     for i in range(5):
         col_idx = start_col + 1 + i
         site_col = get_column_letter(2 + i)
@@ -404,14 +375,12 @@ def write_common_restaurant_row(ws, row, restaurant, start_col, site_row, agg_ro
         cell.font = DATA_FONT
         cell.alignment = CENTER_ALIGN
         cell.border = THIN_BORDER
-    
     col_b = get_column_letter(start_col + 1)
     col_f = get_column_letter(start_col + 5)
     cell = ws.cell(row=row, column=start_col + 6, value=f"=SUM({col_b}{row}:{col_f}{row})")
     cell.font = DATA_FONT
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
-    
     col_c = get_column_letter(start_col + 2)
     col_d = get_column_letter(start_col + 3)
     col_e = get_column_letter(start_col + 4)
@@ -430,7 +399,6 @@ def write_common_total_row(ws, row, region, start_col, site_total_row, agg_total
     cell.alignment = LEFT_ALIGN
     cell.fill = YELLOW_FILL
     cell.border = THIN_BORDER
-    
     for i in range(5):
         col_idx = start_col + 1 + i
         site_col = get_column_letter(2 + i)
@@ -442,7 +410,6 @@ def write_common_total_row(ws, row, region, start_col, site_total_row, agg_total
         cell.alignment = CENTER_ALIGN
         cell.fill = YELLOW_FILL
         cell.border = THIN_BORDER
-    
     col_b = get_column_letter(start_col + 1)
     col_f = get_column_letter(start_col + 5)
     cell = ws.cell(row=row, column=start_col + 6, value=f"=SUM({col_b}{row}:{col_f}{row})")
@@ -450,7 +417,6 @@ def write_common_total_row(ws, row, region, start_col, site_total_row, agg_total
     cell.alignment = CENTER_ALIGN
     cell.fill = YELLOW_FILL
     cell.border = THIN_BORDER
-    
     col_c = get_column_letter(start_col + 2)
     col_d = get_column_letter(start_col + 3)
     col_e = get_column_letter(start_col + 4)
@@ -466,13 +432,11 @@ def write_common_total_row(ws, row, region, start_col, site_total_row, agg_total
 
 def write_block(ws, start_row, block_title, df, month_year, has_low_reviews=True, low_counts=None):
     row_map = {}
-    
     ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=9 if has_low_reviews else 8)
     cell = ws.cell(row=start_row, column=1, value=month_year)
     cell.font = TITLE_FONT
     cell.alignment = CENTER_ALIGN
     start_row += 2
-    
     ws.merge_cells(start_row=start_row, start_column=1, end_row=start_row, end_column=9 if has_low_reviews else 8)
     cell = ws.cell(row=start_row, column=1, value=block_title)
     cell.font = GROUP_FONT
@@ -480,17 +444,14 @@ def write_block(ws, start_row, block_title, df, month_year, has_low_reviews=True
     cell.fill = GREEN_FILL
     cell.border = THIN_BORDER
     start_row += 1
-    
     ws.merge_cells(start_row=start_row, start_column=2, end_row=start_row, end_column=6)
     cell = ws.cell(row=start_row, column=2, value="Кол-во поставленных звезд")
     cell.font = SUBHEADER_FONT
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
     start_row += 1
-    
     write_headers(ws, start_row, "СПБ", 1, has_low_reviews)
     start_row += 1
-    
     first_spb_row = start_row
     for restaurant in SPB_ORDER:
         low_count = low_counts.get(restaurant, 0) if low_counts else 0
@@ -498,21 +459,17 @@ def write_block(ws, start_row, block_title, df, month_year, has_low_reviews=True
         row_map[restaurant] = start_row
         start_row += 1
     last_spb_row = start_row - 1
-    
     write_total_row(ws, start_row, "СПб", 1, first_spb_row, last_spb_row, has_low_reviews)
     row_map["Итого СПб:"] = start_row
     start_row += 2
-    
     ws.merge_cells(start_row=start_row, start_column=2, end_row=start_row, end_column=6)
     cell = ws.cell(row=start_row, column=2, value="Кол-во поставленных звезд")
     cell.font = SUBHEADER_FONT
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
     start_row += 1
-    
     write_headers(ws, start_row, "Тюмень", 1, has_low_reviews)
     start_row += 1
-    
     first_tmn_row = start_row
     for restaurant in TMN_ORDER:
         low_count = low_counts.get(restaurant, 0) if low_counts else 0
@@ -520,11 +477,9 @@ def write_block(ws, start_row, block_title, df, month_year, has_low_reviews=True
         row_map[restaurant] = start_row
         start_row += 1
     last_tmn_row = start_row - 1
-    
     write_total_row(ws, start_row, "Тюмень", 1, first_tmn_row, last_tmn_row, has_low_reviews)
     row_map["Итого Тюмень:"] = start_row
     start_row += 1
-    
     return row_map, start_row
 
 def write_common_block(ws, start_row, row_map_site, row_map_agg, row_map_geo):
@@ -535,47 +490,39 @@ def write_common_block(ws, start_row, row_map_site, row_map_agg, row_map_geo):
     cell.fill = GREEN_FILL
     cell.border = THIN_BORDER
     start_row += 1
-    
     ws.merge_cells(start_row=start_row, start_column=12, end_row=start_row, end_column=16)
     cell = ws.cell(row=start_row, column=12, value="Кол-во поставленных звезд")
     cell.font = SUBHEADER_FONT
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
     start_row += 1
-    
     write_headers(ws, start_row, "СПБ", 11, has_low_reviews=False)
     start_row += 1
-    
     for restaurant in SPB_ORDER:
         site_row = row_map_site[restaurant]
         agg_row = row_map_agg[restaurant]
         geo_row = row_map_geo[restaurant]
         write_common_restaurant_row(ws, start_row, restaurant, 11, site_row, agg_row, geo_row)
         start_row += 1
-    
     write_common_total_row(ws, start_row, "СПб", 11, 
                            row_map_site["Итого СПб:"], 
                            row_map_agg["Итого СПб:"], 
                            row_map_geo["Итого СПб:"])
     start_row += 2
-    
     ws.merge_cells(start_row=start_row, start_column=12, end_row=start_row, end_column=16)
     cell = ws.cell(row=start_row, column=12, value="Кол-во поставленных звезд")
     cell.font = SUBHEADER_FONT
     cell.alignment = CENTER_ALIGN
     cell.border = THIN_BORDER
     start_row += 1
-    
     write_headers(ws, start_row, "Тюмень", 11, has_low_reviews=False)
     start_row += 1
-    
     for restaurant in TMN_ORDER:
         site_row = row_map_site[restaurant]
         agg_row = row_map_agg[restaurant]
         geo_row = row_map_geo[restaurant]
         write_common_restaurant_row(ws, start_row, restaurant, 11, site_row, agg_row, geo_row)
         start_row += 1
-    
     write_common_total_row(ws, start_row, "Тюмень", 11,
                            row_map_site["Итого Тюмень:"],
                            row_map_agg["Итого Тюмень:"],
@@ -585,48 +532,40 @@ def write_common_block(ws, start_row, row_map_site, row_map_agg, row_map_geo):
 def write_analysis_sheet(writer, comp_all, pos_all):
     comp_all.to_excel(writer, sheet_name="Анализ отзывов", index=False, startrow=1)
     pos_all.to_excel(writer, sheet_name="Анализ отзывов", index=False, startrow=len(comp_all) + 4)
-    
     ws = writer.sheets["Анализ отзывов"]
-    
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(comp_all.columns))
     cell = ws.cell(row=1, column=1, value="Анализ отзывов (жалобы)")
     cell.font = TITLE_FONT
     cell.alignment = CENTER_ALIGN
-    
     for col_idx in range(1, len(comp_all.columns) + 1):
         cell = ws.cell(row=2, column=col_idx)
         cell.font = SUBHEADER_FONT
         cell.alignment = CENTER_ALIGN
         cell.fill = GREEN_FILL
         cell.border = THIN_BORDER
-    
     for row_idx in range(3, len(comp_all) + 3):
         for col_idx in range(1, len(comp_all.columns) + 1):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.font = DATA_FONT
             cell.alignment = CENTER_ALIGN if col_idx > 1 else LEFT_ALIGN
             cell.border = THIN_BORDER
-    
     pos_start_row = len(comp_all) + 4
     ws.merge_cells(start_row=pos_start_row, start_column=1, end_row=pos_start_row, end_column=len(pos_all.columns))
     cell = ws.cell(row=pos_start_row, column=1, value="Анализ отзывов (позитив)")
     cell.font = TITLE_FONT
     cell.alignment = CENTER_ALIGN
-    
     for col_idx in range(1, len(pos_all.columns) + 1):
         cell = ws.cell(row=pos_start_row + 1, column=col_idx)
         cell.font = SUBHEADER_FONT
         cell.alignment = CENTER_ALIGN
         cell.fill = GREEN_FILL
         cell.border = THIN_BORDER
-    
     for row_idx in range(pos_start_row + 2, pos_start_row + 2 + len(pos_all)):
         for col_idx in range(1, len(pos_all.columns) + 1):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.font = DATA_FONT
             cell.alignment = CENTER_ALIGN if col_idx > 1 else LEFT_ALIGN
             cell.border = THIN_BORDER
-    
     for col_idx in range(1, max(len(comp_all.columns), len(pos_all.columns)) + 1):
         ws.column_dimensions[get_column_letter(col_idx)].width = 18
 
@@ -638,7 +577,7 @@ sky = get_sky_gradient()
 st.markdown("""
 <style>
 /* Контейнеры загрузчиков */
-.element-container:has(> .stFileUploader) {
+.element-container:has( > .stFileUploader) {
     background: white;
     border-radius: 12px;
     padding: 20px;
@@ -647,25 +586,25 @@ st.markdown("""
     transition: all 0.3s ease;
 }
 
-.element-container:has(> .stFileUploader):hover {
+.element-container:has( > .stFileUploader):hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
 
 /* Сайт/приложение - голубой */
-.element-container:nth-child(2):has(> .stFileUploader) {
+.element-container:nth-child(2):has( > .stFileUploader) {
     border-color: #3498DB;
     background: linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%);
 }
 
 /* Агрегаторы - ЖЁЛТЫЙ */
-.element-container:nth-child(3):has(> .stFileUploader) {
+.element-container:nth-child(3):has( > .stFileUploader) {
     border-color: #F1C40F;
     background: linear-gradient(135deg, #FEF9E7 0%, #FFFFFF 100%);
 }
 
 /* Геосервисы - зелёный */
-.element-container:nth-child(4):has(> .stFileUploader) {
+.element-container:nth-child(4):has( > .stFileUploader) {
     border-color: #27AE60;
     background: linear-gradient(135deg, #E8F8F5 0%, #FFFFFF 100%);
 }
@@ -702,7 +641,6 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
 st.markdown(f"""
 <div class="header-block">
     <h1>📅 КР месяц</h1>
@@ -710,11 +648,9 @@ st.markdown(f"""
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Формирование ежемесячного отчёта по отзывам из трёх источников</p>
 </div>
 """, unsafe_allow_html=True)
-
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
 st.markdown("### 📂 Загрузка файлов")
 col1, col2, col3 = st.columns(3)
-
 with col1:
     st.markdown("#### 📱 Сайт / приложение")
     file1 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="site", label_visibility="collapsed")
@@ -725,13 +661,11 @@ with col3:
     st.markdown("#### 📍 Геосервисы")
     file3 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="geo", label_visibility="collapsed")
 st.markdown('</div>', unsafe_allow_html=True)
-
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
 st.subheader("⚙️ Настройки")
-
 col_a, col_b, col_c = st.columns(3)
 with col_a:
-    month_names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", 
+    month_names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
                    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
     current_month_idx = datetime.now().month - 1
     if current_month_idx == 0:
@@ -741,13 +675,10 @@ with col_a:
         default_month = month_names[current_month_idx - 1]
         default_year = datetime.now().year
     selected_month = st.selectbox("Месяц отчёта", month_names, index=month_names.index(default_month))
-
 with col_b:
     selected_year = st.number_input("Год", value=default_year, min_value=2020, max_value=2030, step=1)
-
 with col_c:
     price_threshold = st.number_input("Минимальная сумма заказа", value=749, step=10)
-
 st.markdown("")
 generate_report = st.button("🚀 Сформировать отчёт", use_container_width=True, type="primary")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -755,14 +686,11 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ==========================================================
 # ОБРАБОТКА ДАННЫХ
 # ==========================================================
-
 if generate_report:
     if not (file1 and file2 and file3):
         st.error("⚠️ Пожалуйста, загрузите все три Excel-файла.")
         st.stop()
-
     month_year = f"{selected_month} ({selected_year}г)"
-    
     with st.spinner("⏳ Обработка данных..."):
         try:
             # --- Сайт ---
@@ -772,74 +700,59 @@ if generate_report:
             df1["Рейтинг"] = pd.to_numeric(df1["Рейтинг"], errors="coerce")
             df1["Текст"] = df1["Комментарий"].fillna("")
             df1 = df1[["Ресторан", "Рейтинг", "Текст", "Сумма"]].dropna(subset=["Ресторан", "Рейтинг"])
-
             # --- Агрегаторы ---
             df2 = pd.read_excel(file2)
             df2["Ресторан"] = df2["Адрес"].apply(map_restaurant_address)
             df2["Рейтинг"] = pd.to_numeric(df2["Оценка"], errors="coerce")
             df2["Текст"] = df2["Отзыв"].fillna("")
             df2 = df2[["Ресторан", "Рейтинг", "Текст"]].dropna(subset=["Ресторан", "Рейтинг"])
-
             # --- Геосервисы ---
             df3 = pd.read_excel(file3)
             if "Статус отзыва" in df3.columns:
                 df3 = df3[df3["Статус отзыва"] != "Удален"].copy()
-            
             if "Название филиала" in df3.columns and "Адрес филиала" in df3.columns:
                 df3["Ресторан"] = df3.apply(lambda r: map_restaurant_address(str(r["Название филиала"])) or map_restaurant_address(str(r["Адрес филиала"])), axis=1)
             elif "Адрес филиала" in df3.columns:
                 df3["Ресторан"] = df3["Адрес филиала"].apply(map_restaurant_address)
             else:
                 df3["Ресторан"] = None
-
             df3["Рейтинг"] = pd.to_numeric(df3["Оценка"], errors="coerce")
             df3["Текст"] = df3["Текст отзыва"].fillna("")
             df3 = df3[["Ресторан", "Рейтинг", "Текст"]].dropna(subset=["Ресторан", "Рейтинг"])
-
             # --- Таблицы оценок ---
             stats1 = calc_stats_site(df1, price_threshold)
             stats2 = calc_stats_standard(df2)
             stats3 = calc_stats_standard(df3)
-            
             low_counts = {rest: len(df1[(df1["Ресторан"] == rest) & (df1["Рейтинг"] == 5) & (df1["Сумма"] <= price_threshold)]) for rest in ALL_RESTAURANTS}
-
             # --- Анализ отзывов ---
             df_all_texts = pd.concat([df1[["Ресторан", "Текст"]], df2[["Ресторан", "Текст"]], df3[["Ресторан", "Текст"]]], ignore_index=True)
             comp_all = calc_summary_fast(df_all_texts, COMPLAINT_KEYWORDS)
             pos_all = calc_summary_fast(df_all_texts, POSITIVE_KEYWORDS)
             comp_all = add_summary_totals(add_summary_totals(comp_all, "СПб", COMPLAINT_KEYWORDS), "Тюмень", COMPLAINT_KEYWORDS)
             pos_all = add_summary_totals(add_summary_totals(pos_all, "СПб", POSITIVE_KEYWORDS), "Тюмень", POSITIVE_KEYWORDS)
-
             # =====================================================
             # СОХРАНЕНИЕ EXCEL С ФОРМУЛАМИ
             # =====================================================
             output = io.BytesIO()
-            
             with pd.ExcelWriter(output, engine="openpyxl") as writer:
                 workbook = writer.book
                 ws = workbook.create_sheet("Оценки")
-                
                 start_row = 1
-                
                 row_map_site, next_row = write_block(
                     ws, start_row, "Сайт/приложение", stats1, month_year,
                     has_low_reviews=True, low_counts=low_counts
                 )
-                
                 agg_start_row = next_row + 2
                 row_map_agg, next_row = write_block(
                     ws, agg_start_row, "Агрегаторы", stats2, month_year,
                     has_low_reviews=False, low_counts=None
                 )
-                
                 geo_start_row = next_row + 2
                 row_map_geo, next_row = write_block(
                     ws, geo_start_row, "Геосервисы (Я.Карты, 2ГИС, Гугл карты)", stats3, month_year,
                     has_low_reviews=False, low_counts=None
                 )
-                
                 write_common_block(ws, start_row, row_map_site, row_map_agg, row_map_geo)
-                
                 ws.column_dimensions['A'].width = 18
                 for col_idx in range(2, 10):
                     ws.column_dimensions[get_column_letter(col_idx)].width = 10
@@ -847,23 +760,18 @@ if generate_report:
                 ws.column_dimensions['K'].width = 18
                 for col_idx in range(12, 19):
                     ws.column_dimensions[get_column_letter(col_idx)].width = 10
-                
                 write_analysis_sheet(writer, comp_all, pos_all)
-                
                 if "Sheet" in workbook.sheetnames:
                     del workbook["Sheet"]
-
             output.seek(0)
             st.success(f"✅ Отчёт за {month_year} успешно сформирован!")
-
             st.download_button(
                 "📥 Скачать Excel", output,
                 file_name=f"КР_{selected_month}_{selected_year}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-
             st.markdown('<div class="content-block">', unsafe_allow_html=True)
-            st.subheader("📊 Общий итог")
+            st.subheader(" Общий итог")
             df_all_filtered = pd.concat([
                 df1[~((df1["Рейтинг"] == 5) & (df1["Сумма"] <= price_threshold))][["Ресторан", "Рейтинг", "Текст"]],
                 df2, df3
@@ -880,7 +788,6 @@ if generate_report:
             stats_all = pd.DataFrame(stats_all_rows)
             st.dataframe(stats_all, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
-
         except Exception as e:
             st.error(f"❌ Произошла ошибка при обработке: {e}")
             st.exception(e)
