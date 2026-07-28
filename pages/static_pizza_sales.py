@@ -1,7 +1,6 @@
 # pages/universal_report.py
 import streamlit as st
 import pandas as pd
-import numpy as np
 import re
 import io
 from datetime import datetime
@@ -110,9 +109,9 @@ def apply_dynamic_styles():
 
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return "☀️ Доброе утро!"
+    if 5 <= hour < 12: return "️ Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return " Добрый вечер!"
+    if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌙 Доброй ночи!"
 
 # ==========================================================
@@ -366,7 +365,7 @@ st.markdown(f"""
 
 st.markdown("""
 <div class="content-block">
-    <h3> Как работает отчёт</h3>
+    <h3>📋 Как работает отчёт</h3>
     <p><b>Принцип работы:</b></p>
     <ul>
         <li>Введите список позиций в текстовое поле (каждая строка = одна позиция в отчёте)</li>
@@ -382,7 +381,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("###  Загрузка файла")
+st.markdown("### 📂 Загрузка файла")
 file_main = st.file_uploader(
     "Загрузите файл рейтинг_продукт (Excel)",
     type=['xlsx'],
@@ -433,7 +432,7 @@ if file_main:
                 rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
                 
                 if not rules:
-                    st.error(" Введите хотя бы одну позицию!")
+                    st.error("❌ Введите хотя бы одну позицию!")
                 else:
                     # Агрегируем данные
                     data = aggregate_by_rules(df, rules_text)
@@ -465,7 +464,7 @@ if file_main:
                     
                     # Кнопка скачивания
                     st.download_button(
-                        label=" Скачать отчёт Excel",
+                        label="📥 Скачать отчёт Excel",
                         data=output,
                         file_name=f"Универсальный_отчёт_{period_str.replace('.', '-')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -478,4 +477,4 @@ if file_main:
                 st.code(traceback.format_exc())
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info("👆 Загрузите файл для начала работы")
+    st.info(" Загрузите файл для начала работы")
