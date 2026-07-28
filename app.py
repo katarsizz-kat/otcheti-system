@@ -36,6 +36,9 @@ apply_theme(greeting_data["theme"], holiday_effects)
 # === ИНИЦИАЛИЗАЦИЯ ПАСХАЛКИ ===
 init_easter_egg()
 
+# === МОДАЛЬНОЕ ОКНО С ДИНОЗАВРОМ (В НАЧАЛЕ, ЧТОБЫ БЫЛО ПОВЕРХ ВСЕГО) ===
+render_dino_modal()
+
 # === ВЕРХНЯЯ ПАНЕЛЬ ===
 render_app_header()
 
@@ -48,7 +51,7 @@ render_welcome_block(
 )
 
 # === КАРТОЧКИ ОТЧЁТОВ ===
-st.markdown("###  Доступные отчёты", unsafe_allow_html=True)
+st.markdown("### 📋 Доступные отчёты", unsafe_allow_html=True)
 cols = st.columns(3)
 for idx, report in enumerate(reports):
     with cols[idx % 3]:
@@ -64,8 +67,5 @@ render_upcoming_holidays_section(upcoming_holidays)
 # === ПОДВАЛ ===
 render_footer()
 
-# === СКРЫТАЯ КНОПКА ПАСХАЛКИ ===
+# === ПРОЗРАЧНАЯ КНОПКА ВЫЗОВА ДИНО ===
 render_secret_button()
-
-# === МОДАЛЬНОЕ ОКНО С ДИНОЗАВРОМ ===
-render_dino_modal()
