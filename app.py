@@ -15,8 +15,12 @@ from components import (
     render_holiday_banner,
     render_report_card,
     render_upcoming_holidays_section,
-    render_mascot,
     render_footer,
+)
+from components.easter_egg import (
+    init_easter_egg,
+    render_dino_modal,
+    render_secret_button,
 )
 
 # Получаем данные
@@ -28,6 +32,9 @@ upcoming_holidays = get_upcoming_holidays(days=7)
 # Применяем тему
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
 apply_theme(greeting_data["theme"], holiday_effects)
+
+# === ИНИЦИАЛИЗАЦИЯ ПАСХАЛКИ ===
+init_easter_egg()
 
 # === ВЕРХНЯЯ ПАНЕЛЬ ===
 render_app_header()
@@ -41,7 +48,7 @@ render_welcome_block(
 )
 
 # === КАРТОЧКИ ОТЧЁТОВ ===
-st.markdown("### 📋 Доступные отчёты", unsafe_allow_html=True)
+st.markdown("###  Доступные отчёты", unsafe_allow_html=True)
 cols = st.columns(3)
 for idx, report in enumerate(reports):
     with cols[idx % 3]:
@@ -54,15 +61,11 @@ if holiday:
 # === БЛИЖАЙШИЕ ПРАЗДНИКИ ===
 render_upcoming_holidays_section(upcoming_holidays)
 
-# === МАСКОТ (ДИНО) ===
-mascot_data = holiday.get("mascot") if holiday and isinstance(holiday, dict) else None
-if mascot_data and isinstance(mascot_data, dict) and mascot_data.get("enabled"):
-    render_mascot(
-        mascot_type=mascot_data.get("type", "dino"),
-        custom_text=mascot_data.get("text"),
-    )
-else:
-    render_mascot(mascot_type="dino")
-
 # === ПОДВАЛ ===
 render_footer()
+
+# === СКРЫТАЯ КНОПКА ПАСХАЛКИ ===
+render_secret_button()
+
+# === МОДАЛЬНОЕ ОКНО С ДИНОЗАВРОМ ===
+render_dino_modal()
