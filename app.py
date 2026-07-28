@@ -16,12 +16,7 @@ from components import (
     render_report_card,
     render_upcoming_holidays_section,
     render_footer,
-)
-from easter_eggs.dino import (
-    init_easter_egg,
-    render_dino_modal,
-    render_secret_button,
-)
+
 
 # Получаем данные
 greeting_data = get_current_greeting()
@@ -33,11 +28,9 @@ upcoming_holidays = get_upcoming_holidays(days=7)
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
 apply_theme(greeting_data["theme"], holiday_effects)
 
-# === ИНИЦИАЛИЗАЦИЯ ПАСХАЛКИ ===
-init_easter_egg()
 
-# === МОДАЛЬНОЕ ОКНО С ДИНОЗАВРОМ (В НАЧАЛЕ, ЧТОБЫ БЫЛО ПОВЕРХ ВСЕГО) ===
-render_dino_modal()
+
+
 
 # === ВЕРХНЯЯ ПАНЕЛЬ ===
 render_app_header()
@@ -67,5 +60,6 @@ render_upcoming_holidays_section(upcoming_holidays)
 # === ПОДВАЛ ===
 render_footer()
 
-# === ПРОЗРАЧНАЯ КНОПКА ВЫЗОВА ДИНО (ВНИЗУ СТРАНИЦЫ) ===
-render_secret_button()
+# ВМЕСТО НИХ добавьте в САМЫЙ КОНЕЦ файла (после render_footer()):
+from easter_eggs.dino import render_dino_easter_egg
+render_dino_easter_egg()
