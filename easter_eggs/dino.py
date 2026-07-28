@@ -17,24 +17,17 @@ def render_dino_modal():
     
     text = get_mascot_text("dino")
     
-    # Полный HTML с динозавром, текстом и работающим JavaScript
     components.html(f"""
     <!DOCTYPE html>
     <html>
     <head>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: transparent;
-            overflow: hidden;
-        }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: transparent; overflow: hidden; }}
         #overlay {{
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -62,18 +55,11 @@ def render_dino_modal():
             transform-origin: bottom center;
             filter: hue-rotate(90deg) saturate(1.5);
         }}
-        #text {{
-            font-size: 18px;
-            color: #2C3E50;
-            margin: 0;
-            line-height: 1.4;
-        }}
+        #text {{ font-size: 18px; color: #2C3E50; margin: 0; line-height: 1.4; }}
         #close-btn {{
             position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 36px;
-            height: 36px;
+            top: 15px; right: 15px;
+            width: 36px; height: 36px;
             background: rgba(0,0,0,0.1);
             border: none;
             border-radius: 50%;
@@ -85,18 +71,9 @@ def render_dino_modal():
             color: #666;
             transition: all 0.2s ease;
         }}
-        #close-btn:hover {{
-            background: rgba(0,0,0,0.2);
-            transform: scale(1.1);
-        }}
-        @keyframes fadeIn {{
-            from {{ opacity: 0; }}
-            to {{ opacity: 1; }}
-        }}
-        @keyframes slideUp {{
-            from {{ opacity: 0; transform: translateY(50px) scale(0.8); }}
-            to {{ opacity: 1; transform: translateY(0) scale(1); }}
-        }}
+        #close-btn:hover {{ background: rgba(0,0,0,0.2); transform: scale(1.1); }}
+        @keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
+        @keyframes slideUp {{ from {{ opacity: 0; transform: translateY(50px) scale(0.8); }} to {{ opacity: 1; transform: translateY(0) scale(1); }} }}
         @keyframes dinoWave {{
             0%, 100% {{ transform: rotate(0deg) translateY(0); }}
             25% {{ transform: rotate(-15deg) translateY(-5px); }}
@@ -114,25 +91,13 @@ def render_dino_modal():
             </div>
         </div>
         <script>
-            // Автозакрытие через 10 секунд
-            setTimeout(function() {{
-                closeModal();
-            }}, 10000);
-            
-            // Закрытие по клику на крестик
-            document.getElementById('close-btn').addEventListener('click', function() {{
-                closeModal();
-            }});
-            
+            setTimeout(function() {{ closeModal(); }}, 10000);
+            document.getElementById('close-btn').addEventListener('click', function() {{ closeModal(); }});
             function closeModal() {{
                 var overlay = document.getElementById('overlay');
                 overlay.style.opacity = '0';
                 overlay.style.transition = 'opacity 0.3s ease';
-                setTimeout(function() {{
-                    overlay.style.display = 'none';
-                    // Отправляем сообщение родительскому окну для сброса session_state
-                    window.parent.postMessage({{type: 'easter_egg_close'}}, '*');
-                }}, 300);
+                setTimeout(function() {{ overlay.style.display = 'none'; }}, 300);
             }}
         </script>
     </body>
@@ -145,7 +110,6 @@ def render_secret_button():
     if "easter_egg_activated" not in st.session_state:
         st.session_state.easter_egg_activated = False
     
-    # Невидимая кнопка через HTML с JavaScript
     components.html("""
     <!DOCTYPE html>
     <html>
@@ -155,10 +119,8 @@ def render_secret_button():
         body { background: transparent; overflow: hidden; }
         #dino-btn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 24px;
-            height: 24px;
+            bottom: 20px; right: 20px;
+            width: 24px; height: 24px;
             cursor: pointer;
             opacity: 0.15;
             transition: opacity 0.3s ease;
@@ -169,9 +131,7 @@ def render_secret_button():
             font-size: 20px;
             user-select: none;
         }
-        #dino-btn:hover {
-            opacity: 0.6;
-        }
+        #dino-btn:hover { opacity: 0.6; }
     </style>
     </head>
     <body>
