@@ -11,6 +11,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
+st.write("🔥 ТЕСТ — если вы видите это, файл работает!")
 
 # ==========================================================
 # СТИЛИ
