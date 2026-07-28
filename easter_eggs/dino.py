@@ -4,19 +4,19 @@ from config.mascots import get_mascot_text
 
 
 def init_easter_egg():
-    """Инициализирует пасхалку с Konami Code."""
+    """Инициализирует пасхалку."""
     if "easter_egg_activated" not in st.session_state:
         st.session_state.easter_egg_activated = False
 
 
 def render_dino_modal():
-    """Рендерит модальное окно с динозавром."""
+    """Рендерит модальное окно с динозавром ПОВЕРХ всего."""
     if not st.session_state.get("easter_egg_activated"):
         return
     
     text = get_mascot_text("dino")
     
-    # Модальное окно через st.markdown (поверх всего окна)
+    # Модальное окно через st.markdown с position: fixed
     st.markdown(f"""
     <div id="dino-overlay" style="
         position: fixed;
@@ -27,7 +27,7 @@ def render_dino_modal():
         background: rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        z-index: 9999;
+        z-index: 99999;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -43,29 +43,8 @@ def render_dino_modal():
             animation: slideUp 0.5s ease-out;
             position: relative;
         ">
-            <button id="dino-close-btn" style="
-                position: absolute;
-                top: 15px;
-                right: 15px;
-                width: 36px;
-                height: 36px;
-                background: transparent;
-                border: none;
-                border-radius: 50%;
-                font-size: 20px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #999;
-                opacity: 0.3;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.opacity='0.8'" 
-              onmouseout="this.style.opacity='0.3'">
-                ✖
-            </button>
             <div style="font-size: 120px; margin-bottom: 20px; animation: dinoWave 1.5s ease-in-out infinite; display: inline-block; transform-origin: bottom center; filter: hue-rotate(90deg) saturate(1.5);">
-                
+                🦖
             </div>
             <p style="font-size: 18px; color: #2C3E50; margin: 0; line-height: 1.4;">
                 {text}
@@ -102,60 +81,107 @@ def render_dino_modal():
                 }}, 300);
             }}
         }}, 10000);
-        
-        // Закрытие по клику на крестик
-        document.getElementById('dino-close-btn').addEventListener('click', function() {{
-            var overlay = document.getElementById('dino-overlay');
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.3s ease';
-            setTimeout(function() {{
-                overlay.style.display = 'none';
-            }}, 300);
-        }});
     </script>
     """, unsafe_allow_html=True)
+    
+    # Скрытая кнопка закрытия (позиционируется поверх модального окна)
+    st.markdown("""
+    <style>
+        button[data-testid="stBaseButton-secondary"][key="close_dino_modal"] {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(calc(-50% + 160px), calc(-50% - 110px)) !important;
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            background: rgba(255,255,255,0.3) !important;
+            border: none !important;
+            border-radius: 50% !important;
+            font-size: 18px !important;
+            cursor: pointer !important;
+            z-index: 100000 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: #666 !important;
+            opacity: 0.5 !important;
+        }
+        button[data-testid="stBaseButton-secondary"][key="close_dino_modal"]:hover {
+            opacity: 1 !important;
+            background: rgba(255,255,255,0.8) !important;
+        }
+        button[data-testid="stBaseButton-secondary"][key="close_dino_modal"] span {
+            display: none !important;
+        }
+        button[data-testid="stBaseButton-secondary"][key="close_dino_modal"]::before {
+            content: '✖' !important;
+            font-size: 18px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Невидимая кнопка для закрытия
+    if st.button("", key="close_dino_modal"):
+        st.session_state.easter_egg_activated = False
+        st.rerun()
 
 
 def render_secret_button():
-    """Рендерит скрытую кнопку в футере для активации пасхалки."""
+    """Рендерит прозрачную кнопку-эмодзи в правом нижнем углу."""
     if "easter_egg_activated" not in st.session_state:
         st.session_state.easter_egg_activated = False
     
-    # Создаём колонку с кнопкой
-    col1, col2 = st.columns([0.95, 0.05])
+    # Прозрачная кнопка через HTML
+    st.markdown("""
+    <div id="secret-dino-btn" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        opacity: 0.15;
+        transition: opacity 0.3s ease;
+        z-index: 9998;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    " onmouseover="this.style.opacity='0.6'" 
+      onmouseout="this.style.opacity='0.15'"
+      onclick="document.getElementById('activate-dino-checkbox').click()">
+        🦖
+    </div>
+    """, unsafe_allow_html=True)
     
-    with col2:
-        # Кнопка с эмодзи динозавра
-        if st.button("🦖", key="secret_dino_btn"):
-            st.session_state.easter_egg_activated = True
-            st.balloons()
-            st.rerun()
+    # Скрытый checkbox для активации (Streamlit не видит HTML-клики, поэтому используем checkbox)
+    activate = st.checkbox("", key="activate_dino_checkbox", label_visibility="collapsed")
     
-    # Делаем кнопку максимально незаметной
+    if activate:
+        st.session_state.easter_egg_activated = True
+        st.balloons()
+        st.rerun()
+    
+    # Стили для скрытия checkbox и позиционирования его поверх кнопки
     st.markdown("""
     <style>
-        button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"] {
-            opacity: 0.1 !important;
-            font-size: 16px !important;
-            padding: 0 !important;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            min-width: 20px !important;
-            width: 20px !important;
-            height: 20px !important;
-            line-height: 1 !important;
+        div[data-testid="stCheckbox"] > label {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            width: 24px !important;
+            height: 24px !important;
+            opacity: 0 !important;
+            cursor: pointer !important;
+            z-index: 9999 !important;
             margin: 0 !important;
+            padding: 0 !important;
         }
-        button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"]:hover {
-            opacity: 0.5 !important;
-        }
-        button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"] span {
+        div[data-testid="stCheckbox"] > label > div {
             display: none !important;
-        }
-        button[data-testid="stBaseButton-secondary"][key="secret_dino_btn"]::before {
-            content: '🦖' !important;
-            font-size: 16px !important;
         }
     </style>
     """, unsafe_allow_html=True)
