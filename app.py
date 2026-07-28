@@ -56,6 +56,6 @@ render_upcoming_holidays_section(upcoming_holidays)
 # === ПОДВАЛ ===
 render_footer()
 
-# === ПАСХАЛКА С ДИНОЗАВРОМ (в самом конце, чтобы кнопка была внизу) ===
+# === ПАСХАЛКА С ДИНОЗАВРОМ (в самом конце) ===
 from easter_eggs.dino import render_dino_easter_egg
 render_dino_easter_egg()
