@@ -102,9 +102,8 @@ def _render_dino_modal_html():
         
     phrase = st.session_state.dino_phrase
     
-    # Обрати внимание на style="display: flex !important;" — это переопределяет display: none из styles.py
     modal_html = f"""
-    <div class="dino-modal" id="dino-modal" style="display: flex !important;">
+    <div class="dino-modal-overlay" id="dino-modal-overlay" style="display: flex !important;">
         <div class="dino-modal-content">
             <span class="dino-modal-close" id="dino-close-btn">&times;</span>
             <div class="dino-gif-container">
@@ -122,7 +121,7 @@ def _render_dino_modal_html():
             if (label.textContent.includes('🦖_HIDDEN_DINO_TRIGGER_999')) {{
                 const checkbox = label.querySelector('input[type="checkbox"]');
                 if (checkbox && checkbox.checked) {{
-                    checkbox.click(); // Снимет галочку и вызовет rerun
+                    checkbox.click();
                 }}
             }}
         }});
@@ -130,8 +129,8 @@ def _render_dino_modal_html():
     
     document.getElementById('dino-close-btn').addEventListener('click', closeDinoModal);
     
-    document.getElementById('dino-modal').addEventListener('click', function(e) {{
-        if (e.target.id === 'dino-modal') {{
+    document.getElementById('dino-modal-overlay').addEventListener('click', function(e) {{
+        if (e.target.id === 'dino-modal-overlay') {{
             closeDinoModal();
         }}
     }});
