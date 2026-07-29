@@ -57,7 +57,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
         ".dino-emoji-btn:active { transform: scale(1.1); }"
         
         # Стили для модального окна
-        ".dino-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease-out; }"
+        ".dino-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); }"
         ".dino-modal-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 8% auto; padding: 0; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6); position: relative; animation: scaleIn 0.4s ease-out; }"
         ".dino-modal-close { position: absolute; right: 20px; top: 15px; color: white; font-size: 36px; font-weight: bold; cursor: pointer; z-index: 10; transition: all 0.3s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }"
         ".dino-modal-close:hover { color: #FFD700; transform: scale(1.2); background: rgba(255,255,255,0.1); }"
