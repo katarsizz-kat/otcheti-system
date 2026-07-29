@@ -1,13 +1,13 @@
-"""Пасхалка с динозавром."""
+"""Пасхалка с динозавром — финальная версия."""
 import os
 import random
+import base64
 import streamlit as st
 from config.mascots import get_random_phrase
 
 def render_dino_footer():
     """Рендерит кнопку и логику динозавра в подвале."""
     
-    # Инициализация состояния
     if "dino_modal_open" not in st.session_state:
         st.session_state.dino_modal_open = False
     if "dino_phrase" not in st.session_state:
@@ -15,50 +15,44 @@ def render_dino_footer():
     if "dino_click_count" not in st.session_state:
         st.session_state.dino_click_count = 0
 
-    # Если модалка открыта — показываем её
     if st.session_state.dino_modal_open:
         _render_dino_modal()
     else:
-        # Показываем только кнопку
         _render_dino_button()
 
 def _render_dino_button():
-    """Рендерит кнопку-динозавра (прозрачную, без фона)."""
-    # Создаём колонку для кнопки (левая часть подвала)
-    dino_col, _ = st.columns([1, 10])
-    
-    with dino_col:
-        if st.button("🦖", key="dino_emoji_btn", help="Нажми меня!", use_container_width=False):
+    """Рендерит кнопку-динозавра."""
+    col1, col2 = st.columns([1, 10])
+    with col1:
+        if st.button("", key="dino_open_btn", help="Нажми меня!"):
             st.session_state.dino_click_count += 1
-            
-            # Каждое пятое нажатие — специальная фраза для Кристины
             if st.session_state.dino_click_count % 5 == 0:
                 st.session_state.dino_phrase = "Кристина лучшая ❤️"
             else:
                 st.session_state.dino_phrase = get_random_phrase()
-            
             st.session_state.dino_modal_open = True
             st.rerun()
 
+def _get_gif_base64(gif_path: str) -> str:
+    """Читает гифку и возвращает base64 строку."""
+    try:
+        with open(gif_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except:
+        return ""
+
 def _render_dino_modal():
     """Рендерит модальное окно с динозавром."""
-    # Выбираем случайную гифку
     gif_num = random.choice([1, 2])
+    gif_path = f"assets/dino{gif_num}.gif"
     
-    # Абсолютный путь к гифке
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    gif_path = os.path.join(base_dir, "assets", f"dino{gif_num}.gif")
-    
-    # Проверяем существование файла
-    if not os.path.exists(gif_path):
-        # Если гифки нет, используем placeholder из интернета
-        gif_url = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+    # Загружаем гифку как base64 (работает на Streamlit Cloud)
+    gif_base64 = _get_gif_base64(gif_path)
+    if gif_base64:
+        gif_src = f"data:image/gif;base64,{gif_base64}"
     else:
-        # Читаем файл и конвертируем в base64
-        import base64
-        with open(gif_path, "rb") as f:
-            gif_data = f.read()
-            gif_url = f"data:image/gif;base64,{base64.b64encode(gif_data).decode()}"
+        # Fallback на внешний URL
+        gif_src = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
     
     phrase = st.session_state.dino_phrase
     
@@ -73,11 +67,10 @@ def _render_dino_modal():
             width: 100%;
             height: 100%;
             background: rgba(0, 0, 0, 0.75);
-            z-index: 9999;
+            z-index: 99999;
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.3s ease-out;
         }
         .dino-modal {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -87,8 +80,30 @@ def _render_dino_modal():
             width: 90%;
             box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
             overflow: hidden;
-            animation: scaleIn 0.4s ease-out;
             position: relative;
+        }
+        .dino-close-btn {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            color: white !important;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            line-height: 1;
+        }
+        .dino-close-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
         }
         .dino-gif-container {
             text-align: center;
@@ -114,70 +129,52 @@ def _render_dino_modal():
             font-weight: 600;
             line-height: 1.6;
         }
-        .dino-close-btn {
-            position: absolute;
-            right: 20px;
-            top: 15px;
-            color: white !important;
-            font-size: 36px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 10;
-            transition: all 0.3s ease;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .dino-close-btn:hover {
-            color: #FFD700 !important;
-            transform: scale(1.2);
-            background: rgba(255, 255, 255, 0.2);
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
         </style>
         """,
         unsafe_allow_html=True
     )
     
-    # HTML модалки с крестиком внутри
+    # HTML модалки с JavaScript для закрытия
     modal_html = f"""
-    <div class="dino-overlay">
+    <div class="dino-overlay" id="dino-overlay">
         <div class="dino-modal">
-            <div class="dino-close-btn" onclick="document.querySelector('button[key=close_dino_modal]').click()">×</div>
+            <button class="dino-close-btn" id="dino-close-btn" onclick="closeDinoModal()">&times;</button>
             <div class="dino-gif-container">
-                <img src="{gif_url}" alt="Динозавр" class="dino-gif" />
+                <img src="{gif_src}" alt="Динозавр" class="dino-gif" />
             </div>
             <div class="dino-phrase">
                 <p>{phrase}</p>
             </div>
         </div>
     </div>
+    <script>
+    function closeDinoModal() {{
+        const overlay = document.getElementById('dino-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }}
+    
+    // Закрытие по клику вне окна
+    document.getElementById('dino-overlay').addEventListener('click', function(e) {{
+        if (e.target.id === 'dino-overlay') {{
+            closeDinoModal();
+        }}
+    }});
+    
+    // Закрытие по Escape
+    document.addEventListener('keydown', function(e) {{
+        if (e.key === 'Escape') {{
+            closeDinoModal();
+        }}
+    }});
+    
+    // Автозакрытие через 10 секунд
+    setTimeout(closeDinoModal, 10000);
+    </script>
     """
     
     st.markdown(modal_html, unsafe_allow_html=True)
     
-    # Невидимая кнопка закрытия (для обработки клика)
-    st.markdown(
-        """
-        <style>
-        button[key="close_dino_modal"] {
-            display: none !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    if st.button("close", key="close_dino_modal"):
-        st.session_state.dino_modal_open = False
-        st.rerun()
-    
-    # Звуковой эффект "ррр" через Web Audio API
+    # Звуковой эффект "ррр"
     st.markdown(
         """
         <script>
