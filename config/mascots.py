@@ -2,7 +2,6 @@
 import json
 import random
 import os
-from datetime import datetime
 
 # Путь к файлу с фразами
 MASCOTS_FILE = os.path.join(os.path.dirname(__file__), "mascots.json")
@@ -13,7 +12,7 @@ _phrases_cache = None
 def load_phrases():
     """Загружает фразы из JSON файла."""
     global _phrases_cache
-    if _phases_cache is None:
+    if _phrases_cache is None:
         try:
             with open(MASCOTS_FILE, 'r', encoding='utf-8') as f:
                 _phrases_cache = json.load(f)
