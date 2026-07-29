@@ -1,8 +1,9 @@
-"""Пасхалка с динозавром — чистый Python, без JavaScript."""
+"""Пасхалка с динозавром — финальная версия."""
 import os
 import random
 import base64
 import streamlit as st
+import streamlit.components.v1 as components
 from config.mascots import get_random_phrase
 
 def render_dino_footer():
@@ -54,91 +55,93 @@ def _render_dino_modal():
     
     phrase = st.session_state.dino_phrase
     
-    # CSS для модалки с красивой кнопкой закрытия ВНУТРИ
-    st.markdown(
-        """
-        <style>
-        .dino-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 99999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .dino-modal {
-            background: #FFFFFF !important;
-            border-radius: 20px;
-            padding: 0;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
-            overflow: hidden;
-            position: relative;
-            border: 4px solid #667eea;
-        }
-        .dino-close-native {
-            position: absolute;
-            right: 15px;
-            top: 15px;
-            z-index: 10;
-        }
-        .dino-close-native button {
-            background: rgba(0,0,0,0.1) !important;
-            border: none !important;
-            border-radius: 50% !important;
-            width: 36px !important;
-            height: 36px !important;
-            min-width: 36px !important;
-            padding: 0 !important;
-            font-size: 20px !important;
-            color: #000000 !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-        .dino-close-native button:hover {
-            background: rgba(0,0,0,0.2) !important;
-            transform: scale(1.1) !important;
-        }
-        .dino-gif-container {
-            text-align: center;
-            padding: 30px 20px 10px 20px;
-            background: #F8F9FA;
-        }
-        .dino-gif {
-            max-width: 100%;
-            height: auto;
-            border-radius: 12px;
-        }
-        .dino-phrase {
-            background: #FFFFFF !important;
-            padding: 24px;
-            margin: 0;
-            text-align: center;
-        }
-        .dino-phrase p {
-            margin: 0;
-            font-size: 22px;
-            color: #000000 !important;
-            font-weight: 700;
-            line-height: 1.5;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    # HTML модалки (без JavaScript!)
-    modal_html = f"""
-    <div class="dino-overlay">
+    # HTML + CSS + JavaScript через components.html (надёжно работает)
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+    body {{
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+    }}
+    .dino-overlay {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+    .dino-modal {{
+        background: #FFFFFF;
+        border-radius: 20px;
+        padding: 0;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+        position: relative;
+        border: 4px solid #667eea;
+    }}
+    .dino-close-btn {{
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        color: #000000;
+        font-size: 32px;
+        font-weight: bold;
+        cursor: pointer;
+        z-index: 10;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.1);
+        border: none;
+        line-height: 1;
+        transition: all 0.2s ease;
+    }}
+    .dino-close-btn:hover {{
+        background: rgba(0,0,0,0.2);
+        transform: scale(1.1);
+    }}
+    .dino-gif-container {{
+        text-align: center;
+        padding: 30px 20px 10px 20px;
+        background: #F8F9FA;
+    }}
+    .dino-gif {{
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+    }}
+    .dino-phrase {{
+        background: #FFFFFF;
+        padding: 24px;
+        margin: 0;
+        text-align: center;
+    }}
+    .dino-phrase p {{
+        margin: 0;
+        font-size: 22px;
+        color: #000000;
+        font-weight: 700;
+        line-height: 1.5;
+    }}
+    </style>
+    </head>
+    <body>
+    <div class="dino-overlay" id="dino-overlay">
         <div class="dino-modal">
+            <button class="dino-close-btn" id="dino-close-btn" title="Закрыть">&times;</button>
             <div class="dino-gif-container">
                 <img src="{gif_src}" alt="Динозавр" class="dino-gif" />
             </div>
@@ -147,36 +150,65 @@ def _render_dino_modal():
             </div>
         </div>
     </div>
+    <script>
+    // Звук "ррр" при открытии
+    try {{
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.3);
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    }} catch(err) {{
+        console.log('Audio error:', err);
+    }}
+    
+    // Закрытие по крестику
+    document.getElementById('dino-close-btn').addEventListener('click', function() {{
+        const overlay = document.getElementById('dino-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }});
+    
+    // Закрытие по клику вне окна
+    document.getElementById('dino-overlay').addEventListener('click', function(e) {{
+        if (e.target.id === 'dino-overlay') {{
+            const overlay = document.getElementById('dino-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }}
+    }});
+    
+    // Закрытие по Escape
+    document.addEventListener('keydown', function(e) {{
+        if (e.key === 'Escape') {{
+            const overlay = document.getElementById('dino-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }}
+    }});
+    
+    // Автозакрытие через 10 секунд
+    setTimeout(function() {{
+        const overlay = document.getElementById('dino-overlay');
+        if (overlay) overlay.style.display = 'none';
+    }}, 10000);
+    </script>
+    </body>
+    </html>
     """
     
-    st.markdown(modal_html, unsafe_allow_html=True)
+    # Рендерим через components.html (JavaScript работает надёжно)
+    components.html(html_content, height=600, scrolling=False)
     
-    # Кнопка закрытия ВНУТРИ модалки (через абсолютное позиционирование)
-    st.markdown('<div class="dino-close-native">', unsafe_allow_html=True)
-    if st.button("×", key="dino_close_btn", help="Закрыть"):
-        st.session_state.dino_modal_open = False
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Звук "ррр" (работает при первом рендере)
-    st.markdown(
-        """
-        <script>
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(80, audioContext.currentTime + 0.3);
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
-        } catch(err) {}
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+    # Нативная кнопка закрытия Streamlit (гарантированно работает)
+    st.markdown("<div style='margin-top: 20px; text-align: center;'>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([3, 2, 3])
+    with col2:
+        if st.button("✖ Закрыть окно", key="dino_close_native_btn", use_container_width=True):
+            st.session_state.dino_modal_open = False
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
