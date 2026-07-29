@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром — версия без JavaScript."""
+"""Пасхалка с динозавром."""
 import os
 import random
 import streamlit as st
@@ -23,22 +23,58 @@ def render_dino_footer():
         _render_dino_button()
 
 def _render_dino_button():
-    """Рендерит кнопку-динозавра."""
-    # Создаём колонку для кнопки (левая часть подвала)
-    dino_col, _ = st.columns([1, 10])
+    """Рендерит кнопку-динозавра (прозрачную, без фона)."""
+    st.markdown(
+        """
+        <style>
+        .dino-footer-button { text-align: left; margin-bottom: 16px; padding-left: 8px; }
+        .dino-emoji-btn { 
+            background: rgba(255,255,255,0.1) !important; 
+            border: none !important; 
+            font-size: 32px; 
+            cursor: pointer; 
+            padding: 8px 12px; 
+            transition: all 0.3s ease; 
+            border-radius: 8px; 
+            line-height: 1; 
+        }
+        .dino-emoji-btn:hover { transform: scale(1.2) rotate(-10deg); background: rgba(255,255,255,0.2) !important; }
+        .dino-emoji-btn:active { transform: scale(1.1); }
+        </style>
+        <div class="dino-footer-button">
+            <button class="dino-emoji-btn" id="dino-open-btn" title="Нажми меня!">🦖</button>
+        </div>
+        <script>
+        document.getElementById('dino-open-btn').addEventListener('click', function() {
+            // Находим скрытый чекбокс Streamlit и кликаем его
+            const labels = document.querySelectorAll('label');
+            labels.forEach(label => {
+                if (label.textContent.includes('DINO_TRIGGER_HIDDEN')) {
+                    const checkbox = label.querySelector('input[type="checkbox"]');
+                    if (checkbox) checkbox.click();
+                }
+            });
+        });
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
     
-    with dino_col:
-        if st.button("🦖", key="dino_emoji_btn", help="Нажми меня!"):
-            st.session_state.dino_click_count += 1
-            
-            # Каждое пятое нажатие — специальная фраза для Кристины
-            if st.session_state.dino_click_count % 5 == 0:
-                st.session_state.dino_phrase = "Кристина лучшая ❤️"
-            else:
-                st.session_state.dino_phrase = get_random_phrase()
-            
-            st.session_state.dino_modal_open = True
-            st.rerun()
+    # Скрытый чекбокс для управления состоянием
+    st.checkbox("DINO_TRIGGER_HIDDEN", key="dino_trigger", value=False)
+    
+    # Если чекбокс активен, открываем модалку
+    if st.session_state.dino_trigger:
+        st.session_state.dino_click_count += 1
+        
+        # Каждое пятое нажатие — специальная фраза для Кристины
+        if st.session_state.dino_click_count % 5 == 0:
+            st.session_state.dino_phrase = "Кристина лучшая ❤️"
+        else:
+            st.session_state.dino_phrase = get_random_phrase()
+        
+        st.session_state.dino_modal_open = True
+        st.rerun()
 
 def _render_dino_modal():
     """Рендерит модальное окно с динозавром."""
@@ -46,12 +82,14 @@ def _render_dino_modal():
     gif_num = random.choice([1, 2])
     gif_path = f"assets/dino{gif_num}.gif"
     
+    # Проверяем существование файла
     if not os.path.exists(gif_path):
-        gif_path = "https://media.giphy.com/media/v1.Y1l3cO7hPjC7S/giphy.gif"
+        # Если гифки нет, используем placeholder из интернета
+        gif_path = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
     
     phrase = st.session_state.dino_phrase
     
-    # Затемнённый фон (overlay)
+    # CSS для модалки
     st.markdown(
         """
         <style>
@@ -66,6 +104,7 @@ def _render_dino_modal():
             display: flex;
             align-items: center;
             justify-content: center;
+            animation: fadeIn 0.3s ease-out;
         }
         .dino-modal {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -75,6 +114,7 @@ def _render_dino_modal():
             width: 90%;
             box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
             overflow: hidden;
+            animation: scaleIn 0.4s ease-out;
         }
         .dino-gif-container {
             text-align: center;
@@ -84,6 +124,7 @@ def _render_dino_modal():
             max-width: 100%;
             height: auto;
             border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         }
         .dino-phrase {
             background: rgba(255, 255, 255, 0.95);
@@ -99,42 +140,90 @@ def _render_dino_modal():
             font-weight: 600;
             line-height: 1.6;
         }
+        .dino-close-btn {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        .dino-close-btn:hover {
+            color: #FFD700;
+            transform: scale(1.2);
+            background: rgba(255,255,255,0.1);
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
         </style>
         """,
         unsafe_allow_html=True
     )
     
-    # Контейнер с модалкой
-    st.markdown(
-        f"""
-        <div class="dino-overlay">
-            <div class="dino-modal">
-                <div class="dino-gif-container">
-                    <img src="{gif_path}" alt="Динозавр" class="dino-gif" />
-                </div>
-                <div class="dino-phrase">
-                    <p>{phrase}</p>
-                </div>
+    # HTML модалки с JavaScript для закрытия
+    modal_html = f"""
+    <div class="dino-overlay" id="dino-overlay">
+        <div class="dino-modal" style="position: relative;">
+            <span class="dino-close-btn" id="dino-close-btn">&times;</span>
+            <div class="dino-gif-container">
+                <img src="{gif_path}" alt="Динозавр" class="dino-gif" />
+            </div>
+            <div class="dino-phrase">
+                <p>{phrase}</p>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+    </div>
+    <script>
+    // Функция закрытия модалки
+    function closeDinoModal() {{
+        const labels = document.querySelectorAll('label');
+        labels.forEach(label => {{
+            if (label.textContent.includes('DINO_TRIGGER_HIDDEN')) {{
+                const checkbox = label.querySelector('input[type="checkbox"]');
+                if (checkbox && checkbox.checked) {{
+                    checkbox.click(); // Снимет галочку и вызовет rerun
+                }}
+            }}
+        }});
+    }}
     
-    # Кнопка закрытия (под модалкой)
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    // Закрытие по клику на крестик
+    document.getElementById('dino-close-btn').addEventListener('click', closeDinoModal);
     
-    col1, col2, col3 = st.columns([3, 2, 3])
-    with col2:
-        if st.button(" Закрыть", key="close_dino_modal", use_container_width=True):
-            st.session_state.dino_modal_open = False
-            st.rerun()
+    // Закрытие по клику вне окна (на затемненный фон)
+    document.getElementById('dino-overlay').addEventListener('click', function(e) {{
+        if (e.target.id === 'dino-overlay') {{
+            closeDinoModal();
+        }}
+    }});
     
-    # Звуковой эффект (информация)
+    // Закрытие по клавише Escape
+    document.addEventListener('keydown', function(e) {{
+        if (e.key === 'Escape') {{
+            closeDinoModal();
+        }}
+    }});
+    
+    // Автозакрытие через 10 секунд
+    setTimeout(closeDinoModal, 10000);
+    </script>
+    """
+    
+    st.markdown(modal_html, unsafe_allow_html=True)
+    
+    # Звуковой эффект "ррр" через Web Audio API
     st.markdown(
         """
         <script>
-        // Простой звук "ррр" через Web Audio API
         try {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
