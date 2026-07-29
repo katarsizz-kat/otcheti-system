@@ -1,573 +1,622 @@
-# pages/3_universal_report.py
 import streamlit as st
 import pandas as pd
+import numpy as np
 import re
 import io
-from datetime import datetime
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-import warnings
-warnings.filterwarnings('ignore')
+from datetime import datetime, timedelta, time, date
+import xlsxwriter
+from xlsxwriter.utility import xl_col_to_name
 
-st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
+# --- НАСТРОЙКИ И КОНСТАНТЫ ---
+st.set_page_config(page_title="ОС - Отчет", layout="wide", page_icon="💬")
 
-# Стили
-st.markdown("""
-<style>
-.stApp { background: #f0f2f6 !important; }
-.header-block {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 24px;
-    border-radius: 16px;
-    margin-bottom: 24px;
-    color: white;
-}
-.content-block {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-.input-box {
-    background: #fff3cd;
-    border: 3px solid #ffc107;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+BRAND_COLORS = {
+    "primary": "#2C3E50", "secondary": "#3498DB", "accent": "#F1C40F",
+    "rating_bad": "#C0392B", "rating_good": "#27AE60",
+    "bg_light": "#F8F9FA"
 }
 
-/* Стили для текстового поля ввода */
-textarea {
-    border: 2px solid #4a90e2 !important;
-    border-radius: 8px !important;
-    padding: 12px !important;
-    font-size: 14px !important;
-    background-color: #ffffff !important;
-    min-height: 300px !important;
+MSK_OFFSET = timedelta(hours=3)
+TYUMEN_ORDER = ['Тюмень №2 – Орджоникидзе', 'Тюмень №3 – Мельникайте']
+
+# Операторы, которые НЕ учитываются в совместной работе
+EXCLUDED_OPERATORS = ['Marketing SPB']
+
+# ============================================================
+# КАТЕГОРИИ ЖАЛОБ
+# ============================================================
+
+CATEGORY_MAPPING = {
+    'Отравление':                          'Критические инциденты',
+    'Инородный предмет в блюде':            'Критические инциденты',
+    'Опоздания':                            'Опоздания',
+    'Не доставили заказ':                   'Перепутанная/недовезённая позиция',
+    'Холодная пицца':                       'Жалоба на блюдо',
+    'Разлит / Повреждение упаковки':        'Жалоба на блюдо',
+    'Забыли позицию':                       'Перепутанная/недовезённая позиция',
+    'Перепутали позицию':                   'Перепутанная/недовезённая позиция',
+    'Невкусно':                             'Жалоба на блюдо',
+    'Некачественно':                        'Жалоба на блюдо',
+    'Приложение / Сайт / IT-сбои':          'Сайт и IT-сбои',
+    'Проблема с бонусами или промокодом':   'Программа лояльности',
+    'Скидка на День Рождения':              'Программа лояльности',
+    'Возврат ДС':                           'Возврат ДС',
+    'Слишком дорого':                       'Жалоба на сервис',
+    'Жалоба на сервис':                     'Жалоба на сервис',
+    'Не дозвониться':                       'Жалоба на сервис',
+    'Управление аккаунтом':                 'Аккаунт',
 }
 
-textarea:focus {
-    border-color: #2c5aa0 !important;
-    box-shadow: 0 0 8px rgba(74, 144, 226, 0.3) !important;
-    outline: none !important;
-}
+AGG_ORDER = [
+    'Опоздания', 'Перепутанная/недовезённая позиция', 'Жалоба на блюдо',
+    'Сайт и IT-сбои', 'Программа лояльности', 'Возврат ДС',
+    'Жалоба на сервис', 'Аккаунт', 'Критические инциденты'
+]
 
-/* Стили для placeholder */
-textarea::placeholder {
-    color: #6c757d !important;
-    font-style: italic;
-    opacity: 0.8;
-}
 
-/* Стили для label поля ввода */
-[data-testid="stTextArea"] label {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-}
-</style>
-""", unsafe_allow_html=True)
+def categorize_complaint_detailed(text, reason):
+    """Таблица 1: Детальная категоризация."""
+    t = (str(text) + " " + str(reason)).lower()
 
-# Функции
-def normalize_text(text):
-    if not isinstance(text, str): return ""
-    # Латиница в кириллицу
-    replacements = {'a': 'а', 'e': 'е', 'o': 'о', 'p': 'р', 'c': 'с', 'y': 'у', 'x': 'х',
-                   'A': 'А', 'E': 'Е', 'O': 'О', 'P': 'Р', 'C': 'С', 'Y': 'У', 'X': 'Х', 'ё': 'е', 'Ё': 'Е'}
-    for lat, cyr in replacements.items(): text = text.replace(lat, cyr)
-    
-    # Базовая очистка
-    text = text.lower().replace('"', '').replace("'", "")
-    text = re.sub(r'\(.*?\)', '', text)
-    
-    # Убираем слова-паразиты для пицц
-    text = re.sub(r'\bпицца\b|\bpizza\b', '', text)
-    text = re.sub(r'\bтонкое\b|\bтрад\b|\bтрадиционное\b|\bтесто\b|\bсм\b|\bnew\b', '', text)
-    
-    # Унификация чисел
-    num_words = {'четыре': '4', 'пять': '5', 'шесть': '6', 'семь': '7', 'восемь': '8', 'девять': '9', 'десять': '10'}
-    for word, digit in num_words.items():
-        text = text.replace(word, digit)
-        
-    # Убираем лишние пробелы
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+    if any(w in t for w in ['отравл', 'тошнит', 'тошнило', 'диарея', 'рвота',
+                             'плохо стало', 'заболел', 'заболели']):
+        return 'Отравление'
+    if any(w in t for w in ['волос', 'проволока', 'инородн', 'предмет',
+                             'стекло', 'металл', 'мусор', 'плесень', 'жук',
+                             'таракан', 'гвоздь', 'щепка']):
+        return 'Инородный предмет в блюде'
+    if any(w in t for w in ['опозд', 'задержк', 'долго', 'где курьер',
+                             'не везут', 'нарушение сроков', 'отодвигается',
+                             'сдвинули время', 'принудительн', 'изменили время',
+                             'праздник не вышло', 'ждали на праздник',
+                             'срыв', 'не привезли вовремя', 'не в заявленное',
+                             'час задержк', 'два часа', 'больше часа',
+                             'более чем на час', 'на 40 минут', 'на 50 минут',
+                             'на 30 минут', 'на полтора', 'статус не меняется',
+                             'курьер не едет', 'не выехал']):
+        return 'Опоздания'
+    if any(w in t for w in ['не привезли заказ', 'не доставили заказ',
+                             'нет моего заказа', 'заказ не привезли',
+                             'не получил заказ', 'заказ так и не',
+                             'отменили заказ', 'заказ не попал']):
+        return 'Не доставили заказ'
+    if any(w in t for w in ['холодн', 'остывш', 'ледян', 'не горяч',
+                             'еле тепл', 'тепленьк']):
+        return 'Холодная пицца'
+    if any(w in t for w in ['разлит', 'вылит', 'растаяло', 'растаявш',
+                             'пострадал десерт', 'повреждение упаковк',
+                             'мятая', 'смята', 'прилипла', 'перевёрнут',
+                             'перевернут', 'соус в пакет', 'соус в картошк',
+                             'раздавлен', 'протекает', 'коробка вся']):
+        return 'Разлит / Повреждение упаковки'
+    if any(w in t for w in ['забыли', 'не положили', 'не доложили',
+                             'отсутствует', 'нет в заказе', 'не хватает',
+                             'не привезли соус', 'не привезли перец',
+                             'не привезли фри', 'не привезли крылья',
+                             'не привезли подарочн', 'недовоз',
+                             'не положили один', 'не положили два',
+                             'не было соуса', 'нет соуса', 'без соуса',
+                             'без перца', 'без бортиков', 'без курицы',
+                             'без картошки', 'некомплектн', 'не полный заказ',
+                             'не разрезана', 'не порезана']):
+        return 'Забыли позицию'
+    if any(w in t for w in ['перепутали', 'не тот', 'не ту', 'другой заказ',
+                             'вместо', 'привезли одинаковые', 'не то тесто',
+                             'не тот борт', 'сырный борт а не колбасный',
+                             'колбасный а не сырный', 'другую пиццу',
+                             'не та пицца', 'не те', 'ошибк в заказ',
+                             'привезли не то', 'пришла не та',
+                             '20 см вместо', '30 см вместо',
+                             'не тот размер']):
+        return 'Перепутали позицию'
+    if any(w in t for w in ['невкусно', 'ужасн вкус', 'резин', 'сухая',
+                             'без начинки', 'мало начинки', 'горелые',
+                             'горелая', 'пережарен', 'пересушен',
+                             'никакая на вкус', 'отвратительн вкус']):
+        return 'Невкусно'
+    if any(w in t for w in ['некачествен', 'сырое', 'сырая', 'непропечен',
+                             'недожарен', 'контроль качества',
+                             'не соответствует', 'ужасно приготовлен',
+                             'начинка размазан', 'тесто не пропеклос',
+                             'слипшаяся', 'качество доставленн']):
+        return 'Некачественно'
+    if any(w in t for w in ['не работает', 'ошибка', 'глючит', 'глючная',
+                             'не оформляется', 'зависает', 'корзина пуст',
+                             'внутренняя ошибка', 'не тот адрес',
+                             'не отображается', 'пропали заказ',
+                             'не могу оформить', 'сложность в оформлен',
+                             'не прошла оплат', 'оплату не засчитал',
+                             'не могу применить', 'сброс', 'не загружается',
+                             'не предлагает оплатить', 'приложение у меня',
+                             'указало этот адрес', 'некорректная работа',
+                             'не могу сделать заказ', 'не могу зарегистрир',
+                             'не приходят сообщен', 'не отображается истор',
+                             'статус заказа в приложени']):
+        return 'Приложение / Сайт / IT-сбои'
+    if any(w in t for w in ['промокод', 'бонус', 'папа бонус', 'балл',
+                             'не начислили', 'списали', 'не применился',
+                             'не сработал', 'начислен', 'баллы за',
+                             'не приходят бонусн', 'автоматом спиш',
+                             'не дали списать', 'не дает списать']):
+        return 'Проблема с бонусами или промокодом'
+    if any(w in t for w in ['день рождения', 'день рождени', 'др',
+                             'скидка на др', 'промокод на день',
+                             'подарок на др', 'на днях был др',
+                             'дню рождения', 'днем рождения',
+                             'не пришёл промокод', 'не присылают']):
+        return 'Скидка на День Рождения'
+    if any(w in t for w in ['возврат', 'верните деньги', 'верните средств',
+                             'вернуть деньги', 'вернуть средств',
+                             'двойное списан', 'два раза оплатил',
+                             'списались за оба', 'компенсац',
+                             'возмещен', 'когда вернутся',
+                             'возврат денежн', 'частичную компенс']):
+        return 'Возврат ДС'
+    if any(w in t for w in ['слишком дорог', 'очень дорог', 'завышен',
+                             'содрать', 'платная доставка',
+                             'стоимость доставк', 'цена завыш',
+                             'неприемлем', 'заплатила очень много']):
+        return 'Слишком дорого'
+    if any(w in t for w in ['груб', 'хам', 'невежл', 'хамили',
+                             'наказать', 'конфликт', 'перекладывание вины',
+                             'не умеете работать', 'отвратительн сервис',
+                             'курьер грубил', 'смеялся', 'не отдал заказ',
+                             'без термосумки', 'без терминала',
+                             'не русского', 'отказалась принять',
+                             'не приняли заказ', 'отказ принять']):
+        return 'Жалоба на сервис'
+    if any(w in t for w in ['не берут трубку', 'не отвечает', 'сбрасывает',
+                             'недозвон', 'телефон недоступен',
+                             'не дозвониться', 'номер занят',
+                             'не подходит', 'никто не взял',
+                             'не отвечает на звонки', 'оператор не отвечает',
+                             'поддержка не отвечает', 'горячую линию',
+                             'никто не подходит', 'сброс звонка',
+                             'идет сброс']):
+        return 'Не дозвониться'
+    if any(w in t for w in ['удалите профиль', 'удаление аккаунта',
+                             'восстановить аккаунт', 'объединить',
+                             'уведомления', 'спам', 'рассылк',
+                             'отключите', 'изменился номер',
+                             'объединение аккаунт', 'не могу зарегистрир',
+                             'случайно удалила', 'удалил аккаунт']):
+        return 'Управление аккаунтом'
 
-def extract_size(text):
-    """Извлекает размер пиццы (15, 23, 30, 35, 40) из строки"""
-    if not isinstance(text, str): return None
-    match = re.search(r'\b(15|23|30|35|40)\s*см\b', str(text))
-    return match.group(1) if match else None
+    return 'Другое / Запрос'
 
-def extract_pizza_name(text):
-    """Извлекает название пиццы без размера и типа теста"""
-    if not isinstance(text, str): return ""
-    name = str(text)
-    # Убираем размер
-    name = re.sub(r'\s*\b(15|23|30|35|40)\s*см\b', '', name)
-    # Убираем тип теста в скобках
-    name = re.sub(r'\s*\(.*?(тонкое|трад|традиционное).*?\)', '', name)
-    # Убираем слово "пицца"
-    name = re.sub(r'\bпицца\b', '', name, flags=re.IGNORECASE)
-    return name.strip()
 
-def map_city(legal_entity):
-    le = str(legal_entity)
-    if 'СПБ' in le: return 'СПБ'
-    elif 'ПД' in le and 'СПБ' not in le: return 'Тюмень'
-    return None
+def get_aggregated_category(detailed_cat):
+    return CATEGORY_MAPPING.get(detailed_cat, 'Другое')
 
-def extract_period(uploaded_file):
-    df = pd.read_excel(uploaded_file, header=None, nrows=10)
-    for idx, row in df.iterrows():
-        for val in row.values:
-            if pd.notna(val) and 'Период' in str(val):
-                match = re.search(r'(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})', str(val))
-                if match:
-                    start = datetime.strptime(match.group(1), '%d.%m.%Y')
-                    end = datetime.strptime(match.group(2), '%d.%m.%Y')
-                    return f"{start.strftime('%d.%m')}-{end.strftime('%d.%m.%Y')}"
-    return f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
 
-def read_file(uploaded_file):
-    df = pd.read_excel(uploaded_file, header=None)
-    header_row = None
-    for idx, row in df.iterrows():
-        vals = [str(v) for v in row.values if pd.notna(v)]
-        if 'Юридическое лицо' in ' '.join(vals) and 'Блюдо' in ' '.join(vals):
-            header_row = idx
-            break
-    if header_row is None: raise ValueError("Не найдены заголовки!")
-    headers = df.iloc[header_row].values
-    df = df[header_row + 1:].copy()
-    df.columns = headers
-    df = df.reset_index(drop=True)
-    df = df[~df['Юридическое лицо'].astype(str).str.contains('OLAP|всего|Итого', na=False)]
-    df = df.dropna(how='all')
-    df['Юридическое лицо'] = df['Юридическое лицо'].ffill()
-    df['Категория блюда'] = df['Категория блюда'].ffill()
-    df = df[~df['Блюдо'].astype(str).str.contains(r'\+', na=False)]
-    df = df[~df['Блюдо'].astype(str).str.contains('персонал', case=False, na=False)]
-    df = df[df['Блюдо'].notna()]
-    df['Количество блюд'] = pd.to_numeric(df['Количество блюд'], errors='coerce').fillna(0)
-    df['Сумма со скидкой, р.'] = pd.to_numeric(df['Сумма со скидкой, р.'], errors='coerce').fillna(0)
-    return df
+# ============================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ============================================================
 
-def aggregate_data(df, rules_text):
-    df = df.copy()
-    df['Город'] = df['Юридическое лицо'].apply(map_city)
-    df = df[df['Город'].notna()]
-    
-    # Предварительно вычисляем нормализованные имена и размеры
-    df['Блюдо_norm'] = df['Блюдо'].apply(normalize_text)
-    df['Размер'] = df['Блюдо'].apply(extract_size)
-    
-    rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
-    result = {}
-    
-    for city in ['СПБ', 'Тюмень']:
-        city_data = df[df['Город'] == city]
-        city_result = {}
-        
-        for rule in rules:
-            rule_norm = normalize_text(rule)
-            rule_size = extract_size(rule)
-            rule_tokens = set(rule_norm.split())
-            
-            # Фильтрация по размеру (если он указан в правиле)
-            if rule_size:
-                subset = city_data[city_data['Размер'] == rule_size]
-            else:
-                subset = city_data.copy()
-            
-            # Проверка: все ли слова из правила есть в названии блюда
-            def check_match(dish_norm):
-                dish_tokens = set(dish_norm.split())
-                return rule_tokens.issubset(dish_tokens)
-            
-            matches = subset[subset['Блюдо_norm'].apply(check_match)]
-            
-            city_result[rule] = {
-                'qty': int(matches['Количество блюд'].sum()),
-                'sum': round(matches['Сумма со скидкой, р.'].sum(), 2)
-            }
-        result[city] = city_result
-    return result
+def extract_restaurant_number(restaurant_name):
+    if pd.isna(restaurant_name):
+        return 9999
+    match = re.search(r'№\s*(\d+)', str(restaurant_name))
+    return int(match.group(1)) if match else 9999
 
-def aggregate_pizza_by_size(df, rules_text):
-    """Агрегирует данные по пиццам с разбивкой по размерам"""
-    df = df.copy()
-    df['Город'] = df['Юридическое лицо'].apply(map_city)
-    df = df[df['Город'].notna()]
-    
-    # Добавляем поля для анализа
-    df['Блюдо_norm'] = df['Блюдо'].apply(normalize_text)
-    df['Размер'] = df['Блюдо'].apply(extract_size)
-    df['Название_пиццы'] = df['Блюдо'].apply(extract_pizza_name)
-    df['Название_пиццы_norm'] = df['Название_пиццы'].apply(normalize_text)
-    
-    rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
-    
-    # Структура результата: {city: {pizza_name: {size: {qty, sum}}}}
-    result = {}
-    
-    for city in ['СПБ', 'Тюмень']:
-        city_data = df[df['Город'] == city]
-        city_result = {}
-        
-        for rule in rules:
-            rule_norm = normalize_text(rule)
-            rule_tokens = set(rule_norm.split())
-            
-            # Находим все пиццы, соответствующие правилу
-            def check_match(pizza_norm):
-                pizza_tokens = set(pizza_norm.split())
-                return rule_tokens.issubset(pizza_tokens)
-            
-            matches = city_data[city_data['Название_пиццы_norm'].apply(check_match)]
-            
-            # Группируем по размерам
-            size_data = {}
-            for size in ['15', '23', '30', '35', '40']:
-                size_matches = matches[matches['Размер'] == size]
-                size_data[size] = {
-                    'qty': int(size_matches['Количество блюд'].sum()),
-                    'sum': round(size_matches['Сумма со скидкой, р.'].sum(), 2)
-                }
-            
-            # Итого
-            total_qty = sum(size_data[s]['qty'] for s in size_data)
-            total_sum = sum(size_data[s]['sum'] for s in size_data)
-            size_data['Всего'] = {'qty': total_qty, 'sum': total_sum}
-            
-            city_result[rule] = size_data
-        
-        result[city] = city_result
-    
-    return result
 
-def create_excel(data, period_str, rules):
-    wb = Workbook()
-    if 'Sheet' in wb.sheetnames: del wb['Sheet']
-    ws = wb.create_sheet("Отчёт")
-    border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
-    
-    yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
-    blue_fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
-    
-    # Период
-    ws.merge_cells('A1:H1')
-    c = ws.cell(1, 1, period_str)
-    c.font = Font(bold=True, size=16)
-    c.alignment = Alignment(horizontal='center')
-    c.fill = yellow_fill
-    
-    # Города
-    ws.merge_cells('A2:D2')
-    c = ws.cell(2, 1, "СПб сейчас")
-    c.font = Font(bold=True, size=12)
-    c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
-    
-    ws.merge_cells('E2:H2')
-    c = ws.cell(2, 5, "Тюмень сейчас")
-    c.font = Font(bold=True, size=12)
-    c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
-    
-    # Заголовки
-    for col, header in [(1, 'Наименование'), (2, 'Количество'), (3, 'Сумма, ₽'),
-                        (5, 'Наименование'), (6, 'Количество'), (7, 'Сумма, ₽')]:
-        c = ws.cell(3, col, header)
-        c.font = Font(bold=True, size=10)
-        c.border = border
-        c.alignment = Alignment(horizontal='center')
-    
-    # Данные
-    row = 4
-    for rule in rules:
-        ws.cell(row, 1, rule).border = border
-        ws.cell(row, 2, data['СПБ'][rule]['qty']).border = border
-        ws.cell(row, 2).alignment = Alignment(horizontal='center')
-        ws.cell(row, 3, data['СПБ'][rule]['sum']).border = border
-        ws.cell(row, 3).number_format = '#,##0.00'
-        
-        ws.cell(row, 5, rule).border = border
-        ws.cell(row, 6, data['Тюмень'][rule]['qty']).border = border
-        ws.cell(row, 6).alignment = Alignment(horizontal='center')
-        ws.cell(row, 7, data['Тюмень'][rule]['sum']).border = border
-        ws.cell(row, 7).number_format = '#,##0.00'
-        row += 1
-    
-    # Итого
-    total_row = row + 1
-    for col in [1, 5]:
-        c = ws.cell(total_row, col, 'ИТОГО')
-        c.font = Font(bold=True, size=11)
-        c.border = border
-    
-    for col in [2, 6]:
-        c = ws.cell(total_row, col, f"=SUM({get_column_letter(col)}4:{get_column_letter(col)}{total_row-1})")
-        c.font = Font(bold=True, size=11)
-        c.border = border
-        c.alignment = Alignment(horizontal='center')
-    
-    for col in [3, 7]:
-        c = ws.cell(total_row, col, f"=SUM({get_column_letter(col)}4:{get_column_letter(col)}{total_row-1})")
-        c.font = Font(bold=True, size=11)
-        c.border = border
-        c.number_format = '#,##0.00'
-    
-    ws.column_dimensions['A'].width = 40
-    ws.column_dimensions['B'].width = 12
-    ws.column_dimensions['C'].width = 15
-    ws.column_dimensions['D'].width = 3
-    ws.column_dimensions['E'].width = 40
-    ws.column_dimensions['F'].width = 12
-    ws.column_dimensions['G'].width = 15
-    
-    return wb
+def get_restaurant_sort_key(restaurant_name, city_name=''):
+    city = str(city_name)
+    name = str(restaurant_name)
+    if 'Санкт-Петербург' in city or 'Санкт-Петербург' in name:
+        return (0, extract_restaurant_number(name), name)
+    elif 'Тюмень' in city or 'Тюмень' in name:
+        try:
+            return (1, TYUMEN_ORDER.index(name), name)
+        except ValueError:
+            return (1, 9999, name)
+    else:
+        return (2, extract_restaurant_number(name), name)
 
-def create_pizza_excel(data, period_str, rules):
-    """Создает Excel с разбивкой пицц по размерам как на скриншоте"""
-    wb = Workbook()
-    if 'Sheet' in wb.sheetnames: del wb['Sheet']
-    ws = wb.create_sheet("Отчёт")
-    
-    border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
-    thick_border = Border(left=Side('thick'), right=Side('thick'), top=Side('thick'), bottom=Side('thick'))
-    yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
-    blue_fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
-    gray_fill = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')
-    
-    # Заголовок периода
-    ws.merge_cells('A1:G1')
-    c = ws.cell(1, 1, period_str)
-    c.font = Font(bold=True, size=16)
-    c.alignment = Alignment(horizontal='center')
-    c.fill = yellow_fill
-    
-    # Заголовок города (СПБ)
-    ws.merge_cells('A2:G2')
-    c = ws.cell(2, 1, "СПБ")
-    c.font = Font(bold=True, size=14)
-    c.alignment = Alignment(horizontal='center')
-    c.fill = blue_fill
-    
-    # Заголовки колонок
-    headers = ['Пиццы', '15 см', '23 см', '30 см', '35 см', '40 см', 'Всего']
-    for col, header in enumerate(headers, 1):
-        c = ws.cell(3, col, header)
-        c.font = Font(bold=True, size=11)
-        c.border = thick_border
-        c.alignment = Alignment(horizontal='center')
-        c.fill = gray_fill
-    
-    # Данные
-    row = 4
-    for rule in rules:
-        # Название пиццы
-        c = ws.cell(row, 1, rule)
-        c.border = border
-        c.alignment = Alignment(horizontal='left')
-        
-        # Размеры
-        for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 2):
-            qty = data['СПБ'][rule][size]['qty']
-            c = ws.cell(row, col_idx, qty)
-            c.border = border
-            c.alignment = Alignment(horizontal='center')
-        
-        # Итого
-        total_qty = data['СПБ'][rule]['Всего']['qty']
-        c = ws.cell(row, 7, total_qty)
-        c.font = Font(bold=True)
-        c.border = thick_border
-        c.alignment = Alignment(horizontal='center')
-        
-        row += 1
-    
-    # Итого строка
-    ws.cell(row, 1, 'Итого')
-    ws.cell(row, 1).font = Font(bold=True, size=11)
-    ws.cell(row, 1).border = thick_border
-    
-    for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 2):
-        col_letter = get_column_letter(col_idx)
-        c = ws.cell(row, col_idx, f"=SUM({col_letter}4:{col_letter}{row-1})")
-        c.font = Font(bold=True, size=11)
-        c.border = thick_border
-        c.alignment = Alignment(horizontal='center')
-    
-    # Общая сумма
-    ws.cell(row, 7, f"=SUM(G4:G{row-1})")
-    ws.cell(row, 7).font = Font(bold=True, size=11)
-    ws.cell(row, 7).border = thick_border
-    ws.cell(row, 7).alignment = Alignment(horizontal='center')
-    
-    # Ширина колонок
-    ws.column_dimensions['A'].width = 45
-    ws.column_dimensions['B'].width = 10
-    ws.column_dimensions['C'].width = 10
-    ws.column_dimensions['D'].width = 10
-    ws.column_dimensions['E'].width = 10
-    ws.column_dimensions['F'].width = 10
-    ws.column_dimensions['G'].width = 10
-    
-    return wb
 
-# Интерфейс
-st.markdown("""
-<div class="header-block">
-    <h1>📊 Универсальный отчёт</h1>
-    <p>Умный отчёт с разбивкой пицц по размерам и нечётким поиском</p>
-</div>
-""", unsafe_allow_html=True)
+def analyze_bot_fails(df):
+    bot_fails = []
+    fail_kw = ['запуталась', 'не поняла', 'упс, кажется', 'пошло не так', 'не совсем поняла']
+    demand_kw = ['оператор', 'позови', 'соедини', 'живого', 'человек']
+    for _, row in df.iterrows():
+        text = str(row.get('Первичное сообщение', '')).lower()
+        is_fail = any(k in text for k in fail_kw)
+        is_demand = any(k in text for k in demand_kw)
+        if is_fail or is_demand:
+            msgs = re.findall(r'Клиент\s*\([^)]+\):\s*(.*?)(?:\n|$)',
+                              str(row.get('Первичное сообщение', '')), re.DOTALL)
+            summary = msgs[0].strip()[:120] if msgs else "Нет текста"
+            bot_fails.append({
+                '№ Обращения': row.get('Номер обращения', ''),
+                'Дата': row.get('Дата отзыва', ''),
+                'Ресторан': row.get('Ресторан', ''),
+                'Суть обращения': summary,
+                'Тип ошибки бота': 'Требовал оператора' if is_demand else 'Бот не понял'
+            })
+    return pd.DataFrame(bot_fails)
 
-# Описание работы
-st.markdown("""
-<div class="content-block">
-<h3>📋 Как работает отчёт</h3>
 
-<h4>📝 Стандартный режим:</h4>
-<ul>
-<li><b>Гибкий поиск:</b> Введите название позиции — программа найдёт все совпадения (порядок слов не важен).</li>
-<li><b>Примеры:</b> <code>Картофель из печи 150 гр</code>, <code>Рогалики с колбасками</code>, <code>Сырная пицца</code>.</li>
-<li><b>Авто-очистка:</b> Игнорируются слова <i>"пицца", "тонкое", "традиционное", "тесто", "см", "new"</i>.</li>
-<li><b>Унификация:</b> <code>4 сыра</code> и <code>четыре сыра</code> считаются одной позицией.</li>
-<li><b>Результат:</b> Количество и сумма по СПб и Тюмени для каждой позиции.</li>
-</ul>
+def get_hour_interval(hour):
+    """Возвращает часовой интервал в формате HH:00-HH+1:00."""
+    next_hour = (hour + 1) % 24
+    return f"{hour:02d}:00-{next_hour:02d}:00"
 
-<h4>🍕 Пиццы по размерам:</h4>
-<ul>
-<li><b>Если нужен отчёт по пиццам с разбивкой по размерам</b> — переключитесь на раздел <b>"🍕 Пиццы по размерам"</b> сверху.</li>
-<li>Программа автоматически сгруппирует все размеры (15, 23, 30, 35, 40 см) в отдельные колонки.</li>
-<li>Тонкое и традиционное тесто суммируются внутри каждого размера.</li>
-</ul>
-</div>
-""", unsafe_allow_html=True)
-# Переключатель режима
-report_mode = st.radio(
-    "📋 Выберите режим отчёта:",
-    ["📝 Стандартный отчёт", "🍕 Пиццы по размерам"],
-    horizontal=True,
-    help="Стандартный - обычный отчёт с количеством и суммой\nПиццы по размерам - отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см"
-)
 
-# ПОЛЕ ВВОДА
-st.markdown('<div class="input-box">', unsafe_allow_html=True)
-st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
-st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b></p>", unsafe_allow_html=True)
+# Порядок всех 24 часовых интервалов (хронологический)
+INTERVAL_ORDER = [get_hour_interval(h) for h in range(24)]
 
-if report_mode == "🍕 Пиццы по размерам":
-    default_rules = """Сырная
-Пепперони
-Четыре Сыра
-Мясная
-Супер Папа
-Гавайская
-Цыпленок Барбекю
-Маргарита
-Мексиканская
-Ветчина и Грибы"""
-else:
-    default_rules = """Сырная 30
-Четыре сыра 35
-Пепперони 30
-Картофель из печи 150 гр
-Рогалики с колбасками"""
 
-rules_text = st.text_area(
-    "Список позиций:",
-    value="",
-    height=400 if report_mode == "🍕 Пиццы по размерам" else 300,
-    key="rules_input",
-    label_visibility="visible",
-    placeholder=default_rules
-)
-st.markdown('</div>', unsafe_allow_html=True)
+def get_weekday_name(d):
+    return ['Понедельник', 'Вторник', 'Среда', 'Четверг',
+            'Пятница', 'Суббота', 'Воскресенье'][d.weekday()]
 
-# ЗАГРУЗКА ФАЙЛА
-st.markdown('<div class="content-block">', unsafe_allow_html=True)
-st.markdown("### 📂 Загрузка файла")
-file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
-st.markdown('</div>', unsafe_allow_html=True)
 
-# ГЕНЕРАЦИЯ
-if file_main:
-    st.markdown('<div class="content-block">', unsafe_allow_html=True)
-    
+# ============================================================
+# ГЛАВНАЯ ФУНКЦИЯ
+# ============================================================
+
+def main():
+    st.markdown(
+        f"<h1 style='text-align:center;color:{BRAND_COLORS['primary']}'>"
+        f"💬 Отчет по работе Отдела Обратной Связи (ОС)</h1>",
+        unsafe_allow_html=True
+    )
+    st.markdown("---")
+
+    # ── ЗАГРУЗКА ──
+    st.sidebar.header("📂 Загрузка данных")
+    uploaded_file = st.sidebar.file_uploader(
+        "Загрузите выгрузку тикетов (Excel/CSV)", type=['xlsx', 'csv'])
+    if not uploaded_file:
+        st.info("👈 Загрузите файл с выгрузкой обращений в боковой панели.")
+        return
+
     try:
-        period_str = extract_period(file_main)
-        file_main.seek(0)
-        st.info(f"📅 Период: **{period_str}**")
-    except:
-        period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
-        st.warning("⚠️ Не удалось определить период")
-    
-    if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
-        with st.spinner("Формирую отчёт..."):
-            try:
-                df = read_file(file_main)
-                rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
-                
-                if not rules:
-                    st.error("❌ Введите хотя бы одну позицию в поле выше!")
-                else:
-                    # ИСПРАВЛЕНО: добавлен эмодзи 🍕 для точного совпадения со значением из st.radio
-                    if report_mode == "🍕 Пиццы по размерам":
-                        # Режим отчёта по пиццам с разбивкой по размерам
-                        data = aggregate_pizza_by_size(df, rules_text)
-                        wb = create_pizza_excel(data, period_str, rules)
-                        
-                        # Превью
-                        st.success("✅ Отчёт сформирован!")
-                        st.subheader("📋 Превью (СПБ)")
-                        
-                        preview_data = []
-                        for rule in rules:
-                            row = {'Позиция': rule}
-                            for size in ['15', '23', '30', '35', '40']:
-                                row[f'{size} см'] = data['СПБ'][rule][size]['qty']
-                            row['Всего'] = data['СПБ'][rule]['Всего']['qty']
-                            preview_data.append(row)
-                        
-                        preview = pd.DataFrame(preview_data)
-                        st.dataframe(preview, use_container_width=True)
-                    else:
-                        # Стандартный режим
-                        data = aggregate_data(df, rules_text)
-                        wb = create_excel(data, period_str, rules)
-                        
-                        st.success("✅ Отчёт сформирован!")
-                        st.subheader("📋 Превью (СПБ)")
-                        preview = pd.DataFrame([
-                            {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
-                            for rule in rules
-                        ])
-                        st.dataframe(preview, use_container_width=True)
-                    
-                    # Скачивание
-                    output = io.BytesIO()
-                    wb.save(output)
-                    output.seek(0)
-                    
-                    file_name = f"Отчёт_{'pizza_' if report_mode == '🍕 Пиццы по размерам' else ''}{period_str.replace('.', '-')}.xlsx"
-                    
-                    st.download_button(
-                        label="📥 Скачать Excel",
-                        data=output,
-                        file_name=file_name,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
-            except Exception as e:
-                st.error(f"❌ Ошибка: {str(e)}")
-                import traceback
-                st.code(traceback.format_exc())
-    st.markdown('</div>', unsafe_allow_html=True)
-else:
-    st.info("👆 Загрузите файл для начала работы")
+        df = (pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv')
+              else pd.read_excel(uploaded_file))
+    except Exception as e:
+        st.error(f"Ошибка чтения файла: {e}")
+        return
+
+    df['Дата отзыва'] = pd.to_datetime(df['Дата отзыва'], errors='coerce')
+
+    # ── ФИЛЬТРЫ ──
+    st.sidebar.markdown("---")
+    st.sidebar.header("🔍 Фильтры")
+    available_cities = df['Город'].dropna().unique().tolist() if 'Город' in df.columns else []
+    default_cities = [c for c in ['Санкт-Петербург', 'Тюмень'] if c in available_cities]
+    cities = st.sidebar.multiselect("Город/регион:", options=available_cities,
+                                     default=default_cities or available_cities[:3])
+    df_filtered = df[df['Город'].isin(cities)] if cities else df.copy()
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📅 Период")
+    date_type = st.sidebar.radio("Тип фильтра:", ["Интервал дат", "Отдельные даты"])
+    valid_dates = df_filtered['Дата отзыва'].dropna()
+
+    if not valid_dates.empty:
+        min_d, max_d = valid_dates.min().date(), valid_dates.max().date()
+        if date_type == "Интервал дат":
+            dr = st.sidebar.date_input("Период:", value=(min_d, max_d),
+                                        min_value=min_d, max_value=max_d)
+            if isinstance(dr, (list, tuple)) and len(dr) == 2:
+                df_filtered = df_filtered[
+                    (df_filtered['Дата отзыва'].dt.date >= dr[0]) &
+                    (df_filtered['Дата отзыва'].dt.date <= dr[1])]
+        else:
+            ud = sorted(valid_dates.dt.date.unique(), reverse=True)
+            sel = st.sidebar.multiselect("Даты:", options=ud,
+                                          default=ud[:7] if len(ud) >= 7 else ud)
+            if sel:
+                df_filtered = df_filtered[df_filtered['Дата отзыва'].dt.date.isin(sel)]
+
+    valid_dates = df_filtered['Дата отзыва'].dropna()
+    if not valid_dates.empty:
+        st.success(f"✅ Тикетов: **{len(df_filtered)}** | "
+                   f"**{valid_dates.min().date()}** — **{valid_dates.max().date()}**")
+    else:
+        st.success(f"✅ Тикетов: **{len(df_filtered)}**")
+
+    # ── ВКЛАДКИ ──
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Статистика операторов", "🍕 Жалобы и Рестораны",
+        "🤖 Анализ Чат-бота", "📥 Экспорт в Excel"])
+
+    # =============================================
+    # ВКЛАДКА 1: СТАТИСТИКА ОПЕРАТОРОВ
+    # =============================================
+    with tab1:
+        st.subheader("Загрузка операторов и распределение по часам")
+        st.caption("⏱ Только живые операторы (без Marketing SPB). МСК (+3 ч). До 02:00 = предыдущий день.")
+
+        df_op = df_filtered[
+            (df_filtered['Исполнитель'].notna()) &
+            (df_filtered['Исполнитель'] != 'Системный пользователь')
+        ].copy()
+
+        if df_op.empty:
+            st.warning("Нет данных по живым операторам.")
+        else:
+            df_op['Дата_МСК'] = df_op['Дата отзыва'] + MSK_OFFSET
+            df_op['Час_МСК'] = df_op['Дата_МСК'].dt.hour
+            df_op['Дата_рабочая'] = df_op.apply(
+                lambda r: (r['Дата_МСК'] - timedelta(days=1)).date()
+                if r['Час_МСК'] < 2 else r['Дата_МСК'].date(), axis=1)
+
+            # --- Таблица операторов ---
+            st.markdown("##### 📋 Статистика по операторам")
+            op_rows = []
+            for op in df_op['Исполнитель'].unique():
+                sub = df_op[df_op['Исполнитель'] == op]
+                days = sub['Дата_рабочая'].nunique()
+                total = len(sub)
+                op_rows.append({
+                    'Оператор': op, 'Всего обращений': total,
+                    'Рабочих дней': days,
+                    'Среднее в день': round(total / days, 2) if days else 0})
+            df_op_stats = pd.DataFrame(op_rows).sort_values('Всего обращений', ascending=False)
+            st.dataframe(df_op_stats, use_container_width=True, hide_index=True)
+
+            # --- Совместная работа (БЕЗ Marketing SPB) ---
+            st.markdown("##### 👥 Совместная работа операторов")
+            st.caption(f"Дни, когда обращения обрабатывали несколько операторов одновременно. "
+                       f"Исключены: {', '.join(EXCLUDED_OPERATORS)}")
+
+            df_op_joint = df_op[~df_op['Исполнитель'].isin(EXCLUDED_OPERATORS)].copy()
+            day_ops = df_op_joint.groupby('Дата_рабочая')['Исполнитель'].apply(
+                lambda x: sorted(set(x))).reset_index()
+            day_ops['Кол-во'] = day_ops['Исполнитель'].apply(len)
+            multi = day_ops[day_ops['Кол-во'] > 1].copy()
+
+            if not multi.empty:
+                multi['Операторы'] = multi['Исполнитель'].apply(', '.join)
+                st.dataframe(
+                    multi[['Дата_рабочая', 'Кол-во', 'Операторы']]
+                    .sort_values('Дата_рабочая', ascending=False),
+                    use_container_width=True, hide_index=True)
+            else:
+                st.info("Каждый день работал только один оператор (без учёта Marketing SPB).")
+
+            # --- Часовые интервалы (все по 1 часу) ---
+            st.markdown("##### 🕐 Распределение по часам (МСК)")
+            df_op['Интервал'] = df_op['Час_МСК'].apply(get_hour_interval)
+            h_stats = df_op.groupby('Интервал').size().reset_index(name='Обращений')
+            # Все интервалы по 1 часу, поэтому "Обращений/час" = "Обращений"
+            h_stats['Обращений/час'] = h_stats['Обращений'].astype(float)
+            h_stats['_s'] = h_stats['Интервал'].apply(
+                lambda x: INTERVAL_ORDER.index(x) if x in INTERVAL_ORDER else 99)
+            h_stats = h_stats.sort_values('_s').drop('_s', axis=1)
+
+            # Добавляем пропущенные интервалы (чтобы в таблице были все 24 часа)
+            all_intervals_df = pd.DataFrame({'Интервал': INTERVAL_ORDER})
+            h_stats = all_intervals_df.merge(h_stats, on='Интервал', how='left').fillna(0)
+            h_stats['Обращений'] = h_stats['Обращений'].astype(int)
+            h_stats['Обращений/час'] = h_stats['Обращений/час'].astype(float)
+
+            st.dataframe(h_stats, use_container_width=True, hide_index=True)
+            st.bar_chart(h_stats.set_index('Интервал')[['Обращений/час']])
+
+    # =============================================
+    # ВКЛАДКА 2: ЖАЛОБЫ И РЕСТОРАНЫ
+    # =============================================
+    with tab2:
+        st.subheader("Аналитика жалоб по категориям и ресторанам")
+
+        df_f = df_filtered.copy()
+        df_f['Категория'] = df_f.apply(
+            lambda r: categorize_complaint_detailed(
+                r.get('Первичное сообщение', ''), r.get('Причина обращения', '')), axis=1)
+        df_f['Категория_укрупн'] = df_f['Категория'].apply(get_aggregated_category)
+
+        # --- ТАБЛИЦА 1: Детальная ---
+        st.markdown("##### 📋 Таблица 1: Детальные категории жалоб")
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            cat_counts = df_f['Категория'].value_counts()
+            st.bar_chart(cat_counts)
+        with col2:
+            pivot1 = pd.pivot_table(df_f, index='Ресторан', columns='Категория',
+                                     aggfunc='size', fill_value=0)
+            pivot1['ИТОГО'] = pivot1.sum(axis=1)
+            p1_reset = pivot1.reset_index()
+            city_map = df_f.drop_duplicates('Ресторан').set_index('Ресторан')['Город'].to_dict()
+            p1_reset['Город'] = p1_reset['Ресторан'].map(city_map).fillna('')
+            p1_reset['_sk'] = p1_reset.apply(
+                lambda r: get_restaurant_sort_key(r['Ресторан'], r['Город']), axis=1)
+            p1_reset = p1_reset.sort_values('_sk').drop(['Город', '_sk'], axis=1)
+            pivot1_sorted = p1_reset.set_index('Ресторан')
+            st.dataframe(pivot1_sorted, use_container_width=True)
+
+        st.markdown("---")
+
+        # --- ТАБЛИЦА 2: Укрупнённая ---
+        st.markdown("##### 📋 Таблица 2: Укрупнённые категории жалоб")
+        col3, col4 = st.columns([1, 2])
+        with col3:
+            agg_counts = df_f['Категория_укрупн'].value_counts()
+            agg_sorted = pd.Series({k: agg_counts.get(k, 0) for k in AGG_ORDER
+                                    if agg_counts.get(k, 0) > 0})
+            st.bar_chart(agg_sorted)
+        with col4:
+            pivot2 = pd.pivot_table(df_f, index='Ресторан', columns='Категория_укрупн',
+                                     aggfunc='size', fill_value=0)
+            pivot2['ИТОГО'] = pivot2.sum(axis=1)
+            p2_reset = pivot2.reset_index()
+            p2_reset['Город'] = p2_reset['Ресторан'].map(city_map).fillna('')
+            p2_reset['_sk'] = p2_reset.apply(
+                lambda r: get_restaurant_sort_key(r['Ресторан'], r['Город']), axis=1)
+            p2_reset = p2_reset.sort_values('_sk').drop(['Город', '_sk'], axis=1)
+            pivot2_sorted = p2_reset.set_index('Ресторан')
+            st.dataframe(pivot2_sorted, use_container_width=True)
+
+    # =============================================
+    # ВКЛАДКА 3: АНАЛИЗ ЧАТ-БОТА
+    # =============================================
+    with tab3:
+        st.subheader("Ошибки чат-бота и запросы оператора")
+        bot_df = analyze_bot_fails(df_filtered)
+        if not bot_df.empty:
+            c1, c2 = st.columns([1, 3])
+            with c1:
+                st.metric("Сбоев бота", len(bot_df))
+                st.dataframe(bot_df['Тип ошибки бота'].value_counts(),
+                             use_container_width=True)
+            with c2:
+                st.dataframe(bot_df, use_container_width=True, hide_index=True)
+        else:
+            st.success("Сбоев бота не обнаружено.")
+
+    # =============================================
+    # ВКЛАДКА 4: ЭКСПОРТ
+    # =============================================
+    with tab4:
+        st.subheader("Генерация Excel-отчёта")
+        st.info("7 листов: Операторы · Часы · Дни · Жалобы (деталь) · "
+                "Жалобы (укрупн) · Бот. С диаграммами!")
+
+        if st.button("📥 Сформировать и скачать Excel", type="primary"):
+            with st.spinner("Формируем..."):
+                buf = io.BytesIO()
+                try:
+                    with pd.ExcelWriter(buf, engine='xlsxwriter') as writer:
+                        wb = writer.book
+                        hdr = wb.add_format({'bold': True, 'bg_color': '#2C3E50',
+                                             'font_color': 'white', 'border': 1})
+                        title_fmt = wb.add_format({'bold': True, 'font_size': 13})
+
+                        # ── Лист 1: Операторы ──
+                        if not df_op.empty:
+                            df_op_stats.to_excel(writer, sheet_name='Операторы', index=False)
+                            ws = writer.sheets['Операторы']
+                            for c, v in enumerate(df_op_stats.columns):
+                                ws.write(0, c, v, hdr)
+                            ws.set_column('A:A', 30)
+                            ws.set_column('B:D', 18)
+
+                        # ── Лист 2: Часы ──
+                        if not df_op.empty:
+                            h_stats.to_excel(writer, sheet_name='Часы', index=False)
+                            ws2 = writer.sheets['Часы']
+                            for c, v in enumerate(h_stats.columns):
+                                ws2.write(0, c, v, hdr)
+                            ws2.set_column('A:A', 15)
+                            ws2.set_column('B:C', 18)
+                            try:
+                                n = len(h_stats)
+                                ch = wb.add_chart({'type': 'column'})
+                                ch.add_series({
+                                    'name': 'Обращений/час',
+                                    'categories': f"'Часы'!$A$2:$A${n+1}",
+                                    'values': f"'Часы'!$C$2:$C${n+1}",
+                                })
+                                ch.set_title({'name': 'Нагрузка по часам (МСК)'})
+                                ch.set_size({'width': 900, 'height': 450})
+                                ws2.insert_chart('E2', ch)
+                            except Exception:
+                                pass
+
+                        # ── Лист 3: Дни ──
+                        if not df_op.empty:
+                            day_stats = df_op.groupby('Дата_рабочая').size().reset_index(name='Обращений')
+                            day_stats = day_stats.sort_values('Обращений', ascending=False)
+                            day_stats['День недели'] = day_stats['Дата_рабочая'].apply(get_weekday_name)
+                            wd_order = ['Понедельник', 'Вторник', 'Среда', 'Четверг',
+                                        'Пятница', 'Суббота', 'Воскресенье']
+                            wd_stats = df_op.groupby(
+                                df_op['Дата_рабочая'].apply(get_weekday_name)
+                            ).size().reset_index(name='Обращений')
+                            wd_stats.columns = ['День недели', 'Обращений']
+                            wd_stats['_s'] = wd_stats['День недели'].apply(
+                                lambda x: wd_order.index(x) if x in wd_order else 99)
+                            wd_stats = wd_stats.sort_values('_s').drop('_s', axis=1)
+
+                            day_stats.to_excel(writer, sheet_name='Дни', index=False, startrow=1)
+                            ws3 = writer.sheets['Дни']
+                            ws3.write(0, 0, 'Топ загруженных дней', title_fmt)
+                            for c, v in enumerate(day_stats.columns):
+                                ws3.write(1, c, v, hdr)
+                            ws3.set_column('A:A', 14)
+                            ws3.set_column('B:C', 16)
+                            sr = len(day_stats) + 4
+                            ws3.write(sr, 0, 'По дням недели', title_fmt)
+                            wd_stats.to_excel(writer, sheet_name='Дни', index=False, startrow=sr+1)
+                            for c, v in enumerate(wd_stats.columns):
+                                ws3.write(sr+1, c, v, hdr)
+
+                        # ── Лист 4: Жалобы детальные ──
+                        p1_reset.to_excel(writer, sheet_name='Жалобы детальные', index=False)
+                        ws4 = writer.sheets['Жалобы детальные']
+                        for c, v in enumerate(p1_reset.columns):
+                            ws4.write(0, c, v, hdr)
+                        ws4.set_column('A:A', 35)
+                        try:
+                            cols_c = [c for c in p1_reset.columns if c not in ('Ресторан', 'ИТОГО')]
+                            nr = len(p1_reset)
+                            if cols_c and nr > 0:
+                                ch2 = wb.add_chart({'type': 'bar', 'subtype': 'stacked'})
+                                for ci, cn in enumerate(cols_c):
+                                    ri = list(p1_reset.columns).index(cn)
+                                    cl = xl_col_to_name(ri)
+                                    ch2.add_series({
+                                        'name': str(cn),
+                                        'categories': f"'Жалобы детальные'!$A$2:$A${nr+1}",
+                                        'values': f"'Жалобы детальные'!${cl}$2:${cl}${nr+1}",
+                                    })
+                                ch2.set_title({'name': 'Детальные жалобы по ресторанам'})
+                                ch2.set_size({'width': 900, 'height': 600})
+                                ws4.insert_chart('H2', ch2)
+                        except Exception:
+                            pass
+
+                        # ── Лист 5: Жалобы укрупнённые ──
+                        p2_reset.to_excel(writer, sheet_name='Жалобы укрупнённые', index=False)
+                        ws5 = writer.sheets['Жалобы укрупнённые']
+                        for c, v in enumerate(p2_reset.columns):
+                            ws5.write(0, c, v, hdr)
+                        ws5.set_column('A:A', 35)
+                        try:
+                            cols_c2 = [c for c in p2_reset.columns if c not in ('Ресторан', 'ИТОГО')]
+                            nr2 = len(p2_reset)
+                            if cols_c2 and nr2 > 0:
+                                ch3 = wb.add_chart({'type': 'bar', 'subtype': 'stacked'})
+                                for ci, cn in enumerate(cols_c2):
+                                    ri = list(p2_reset.columns).index(cn)
+                                    cl = xl_col_to_name(ri)
+                                    ch3.add_series({
+                                        'name': str(cn),
+                                        'categories': f"'Жалобы укрупнённые'!$A$2:$A${nr2+1}",
+                                        'values': f"'Жалобы укрупнённые'!${cl}$2:${cl}${nr2+1}",
+                                    })
+                                ch3.set_title({'name': 'Укрупнённые жалобы по ресторанам'})
+                                ch3.set_size({'width': 800, 'height': 500})
+                                ws5.insert_chart('H2', ch3)
+                        except Exception:
+                            pass
+
+                        # ── Лист 6: Бот ──
+                        if not bot_df.empty:
+                            bot_df.to_excel(writer, sheet_name='Бот', index=False)
+                            ws6 = writer.sheets['Бот']
+                            for c, v in enumerate(bot_df.columns):
+                                ws6.write(0, c, v, hdr)
+                            ws6.set_column('A:A', 15)
+                            ws6.set_column('B:B', 20)
+                            ws6.set_column('C:C', 30)
+                            ws6.set_column('D:D', 60)
+                            ws6.set_column('E:E', 22)
+
+                except Exception as e:
+                    st.error(f"Ошибка при формировании Excel: {e}")
+                    return
+
+                buf.seek(0)
+                st.download_button(
+                    label="💾 Скачать отчёт (.xlsx)",
+                    data=buf,
+                    file_name="OS_Report.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                st.balloons()
+
+
+if __name__ == "__main__":
+    main()
