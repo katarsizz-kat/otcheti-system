@@ -60,18 +60,12 @@ def render_welcome_block(icon: str, greeting: str, subtitle: str = ""):
     )
 
 # =============================================================================
-# ПРАЗДНИЧНЫЙ БАННЕР (КНОПКА, СТИЛИЗОВАННАЯ ПОД БАННЕР)
+# ПРАЗДНИЧНЫЙ БАННЕР
 # =============================================================================
 def render_holiday_banner(holiday: dict):
-    """
-    Баннер праздника.
-    Реализован как кнопка, стилизованная под голубой баннер.
-    При клике открывает popup с поздравлением, Дино и пасхалкой.
-    """
     if not holiday:
         return
     
-    # Добавляем дату в ключ для уникальности
     today = datetime.datetime.now().strftime("%m-%d")
     safe_title = make_key(f"{today}_{holiday.get('title', 'unknown')}")
     state_key = f"show_popup_{safe_title}"
@@ -79,7 +73,6 @@ def render_holiday_banner(holiday: dict):
     if state_key not in st.session_state:
         st.session_state[state_key] = False
     
-    # Структура текста: эмодзи → "Сегодня праздник" → НАЗВАНИЕ → пожелание
     banner_text = (
         f"{holiday.get('emoji', '')}\n\n"
         f"Сегодня праздник\n\n"
@@ -87,7 +80,6 @@ def render_holiday_banner(holiday: dict):
         f"{holiday.get('message', '')}"
     )
     
-    # Кнопка с увеличенным шрифтом и паддингом
     banner_clicked = st.button(
         label=banner_text,
         key=f"banner_btn_{safe_title}",
@@ -102,21 +94,17 @@ def render_holiday_banner(holiday: dict):
         _render_holiday_popup(holiday, safe_title, state_key)
 
 def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
-    """Показывает поздравление, Дино и пасхалку."""
     from config.actions import execute_action
     
-    # Безопасное получение полей (защита от null в JSON)
     popup = holiday.get("popup") if isinstance(holiday.get("popup"), dict) else {}
     mascot = holiday.get("mascot") if isinstance(holiday.get("mascot"), dict) else {}
     secret = holiday.get("secret") if isinstance(holiday.get("secret"), dict) else {}
     button = holiday.get("button") if isinstance(holiday.get("button"), dict) else {}
     
-    # Эффект шариков при первом открытии
     if not st.session_state.get(f"balloons_shown_{safe_title}"):
         st.balloons()
         st.session_state[f"balloons_shown_{safe_title}"] = True
     
-    # Popup с поздравлением (увеличенный шрифт)
     if popup.get("enabled"):
         st.markdown(
             f"""<div style="background: linear-gradient(135deg, rgba(241,196,15,0.2) 0%, rgba(230,126,34,0.2) 100%); padding: 24px; border-radius: 16px; margin: 16px 0; border: 2px solid rgba(241,196,15,0.4);">
@@ -126,7 +114,6 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
             unsafe_allow_html=True,
         )
     
-    # Дино-маскот (увеличенный шрифт)
     if mascot.get("enabled"):
         st.markdown(
             f"""<div style="background: rgba(46, 204, 113, 0.15); padding: 16px 20px; border-radius: 12px; margin: 16px 0; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(46, 204, 113, 0.3);">
@@ -136,7 +123,6 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
             unsafe_allow_html=True,
         )
     
-    # Пасхалка показывается сразу (увеличенный шрифт)
     if secret.get("enabled"):
         st.markdown(
             f"""<div style="background: rgba(155, 89, 182, 0.15); padding: 16px 20px; border-radius: 12px; margin: 16px 0; border: 1px solid rgba(155, 89, 182, 0.3);">
@@ -145,26 +131,17 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
             unsafe_allow_html=True,
         )
     
-    # === ОБРАБОТКА ДЕЙСТВИЙ ===
     action_key = f"action_executed_{safe_title}"
     if button.get("enabled") and button.get("action"):
         action_name = button["action"]
-        # Кнопка для выполнения действия
-        if st.button(
-            "Выполнить действие",
-            key=f"action_btn_{safe_title}",
-            use_container_width=True,
-            type="primary",
-        ):
+        if st.button("Выполнить действие", key=f"action_btn_{safe_title}", use_container_width=True, type="primary"):
             result = execute_action(action_name, holiday)
             st.session_state[action_key] = result
         
-        # Показываем результат действия
         if action_key in st.session_state:
             result = st.session_state[action_key]
             _render_action_result(result)
     
-    # Кнопка закрытия
     st.markdown("---")
     if st.button("✖ Закрыть", key=f"close_{safe_title}", use_container_width=True):
         st.session_state[state_key] = False
@@ -174,7 +151,6 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
         st.rerun()
 
 def _render_action_result(result: dict):
-    """Отображает результат выполнения действия."""
     result_type = result.get("type", "message")
     if result_type == "message":
         st.success(f"**{result.get('title', '')}**: {result.get('text', '')}")
@@ -187,7 +163,6 @@ def _render_action_result(result: dict):
 # КАРТОЧКА ОТЧЁТА
 # =============================================================================
 def render_report_card(report: dict):
-    """Карточка перехода на страницу отчёта."""
     st.markdown(
         f"""<a href="/{report['page']}" style="text-decoration:none;">
 <div class="report-card fade-in">
@@ -204,7 +179,6 @@ def render_report_card(report: dict):
 # БЛОК БЛИЖАЙШИХ ПРАЗДНИКОВ
 # =============================================================================
 def render_upcoming_holidays_section(upcoming_holidays: list):
-    """Полная секция ближайших праздников."""
     if not upcoming_holidays:
         return
     
@@ -235,64 +209,14 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
             )
 
 # =============================================================================
-# МАСКОТ (ДИНО) - УПРОЩЁННАЯ ВЕРСИЯ
-# =============================================================================
-def render_mascot(mascot_type: str = "dino", custom_text: str = None):
-    """
-    Отображает маскота (Дино) в левом нижнем углу.
-    Упрощённая версия без анимаций.
-    """
-    if not mascot_type:
-        return
-    
-    from config.mascots import get_mascot_emoji, get_mascot_text
-    
-    safe_type = make_key(mascot_type)
-    emoji = get_mascot_emoji(mascot_type)
-    state_key = f"mascot_show_{safe_type}"
-    text_key = f"mascot_text_{safe_type}"
-    
-    if state_key not in st.session_state:
-        st.session_state[state_key] = False
-    
-    if custom_text:
-        st.session_state[text_key] = custom_text
-    elif text_key not in st.session_state:
-        st.session_state[text_key] = get_mascot_text(mascot_type)
-    
-    show_bubble = st.session_state.get(state_key, False)
-    bubble_text = st.session_state.get(text_key, "")
-    
-    # Создаём контейнер для маскота
-    mascot_col, _ = st.columns([1, 10])
-    with mascot_col:
-        # Кнопка-динозавр
-        if st.button(emoji, key=f"mascot_btn_{safe_type}", use_container_width=True):
-            if not custom_text:
-                st.session_state[text_key] = get_mascot_text(mascot_type)
-            st.session_state[state_key] = True
-            st.rerun()
-        
-        # Облачко с текстом
-        if show_bubble:
-            st.markdown(
-                f"""<div style="background: white; padding: 12px 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 10px;">
-<p style="margin: 0; font-size: 14px; color: #2C3E50;">{bubble_text}</p>
-</div>"""
-            )
-            if st.button("✖ Закрыть", key=f"mascot_close_{safe_type}", use_container_width=True):
-                st.session_state[state_key] = False
-                st.rerun()
-
-# =============================================================================
 # ПОДВАЛ (FOOTER) С КНОПКОЙ-ДИНОЗАВРОМ
 # =============================================================================
 def render_footer():
     """Подвал приложения с кнопкой-динозавром."""
-    from easter_eggs.dino import render_dino_button, render_dino_modal
+    from easter_eggs.dino import render_dino_footer
     
-    # Кнопка-динозавр (в левом углу, перед копирайтом)
-    render_dino_button()
+    # Вызываем единую функцию, которая управляет и кнопкой, и модалкой
+    render_dino_footer()
     
     # Копирайт
     st.markdown(
@@ -301,6 +225,3 @@ def render_footer():
         '</div>',
         unsafe_allow_html=True,
     )
-    
-    # Модальное окно (скрыто по умолчанию)
-    render_dino_modal()
