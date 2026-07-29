@@ -13,36 +13,48 @@ def render_dino_footer():
     if "dino_phrase" not in st.session_state:
         st.session_state.dino_phrase = get_random_phrase()
 
-    # 2. Скрытый виджет-триггер (чекбокс надежно меняет session_state при клике)
-    hidden_label = "🦖_HIDDEN_DINO_TRIGGER_999"
-    st.checkbox(hidden_label, key="dino_trigger", value=st.session_state.dino_modal_open)
+    # 2. Скрытый чекбокс для управления состоянием (надежный способ Streamlit)
+    st.checkbox("🦖_HIDDEN_DINO_TRIGGER_999", key="dino_trigger", value=st.session_state.dino_modal_open)
 
-    # 3. Скрипт для скрытия виджета и обработки кликов по нашей кнопке
+    # 3. Видимая кнопка-эмодзи и JS для управления
     st.markdown(
-        f"""
+        """
         <style>
-        /* Дополнительная страховка для скрытия через CSS */
-        div[data-testid="stCheckbox"]:has(span:contains("{hidden_label}")) {{
+        /* Скрываем чекбокс динозавра через CSS */
+        div[data-testid="stCheckbox"]:has(label:contains("🦖_HIDDEN_DINO_TRIGGER_999")) {
             display: none !important;
-        }}
+        }
+        .dino-footer-button { text-align: left; margin-bottom: 16px; padding-left: 8px; }
+        .dino-emoji-btn { 
+            background: transparent !important; 
+            border: none !important; 
+            font-size: 32px; 
+            cursor: pointer; 
+            padding: 8px 12px; 
+            transition: all 0.3s ease; 
+            border-radius: 8px; 
+            line-height: 1; 
+        }
+        .dino-emoji-btn:hover { transform: scale(1.2) rotate(-10deg); background: rgba(255,255,255,0.1) !important; }
+        .dino-emoji-btn:active { transform: scale(1.1); }
         </style>
         <script>
-        // Скрываем виджет динозавра после загрузки страницы
-        setTimeout(() => {{
+        // Скрываем чекбокс (дополнительная страховка JS)
+        document.addEventListener("DOMContentLoaded", function() {
             const labels = document.querySelectorAll('label');
-            labels.forEach(label => {{
-                if (label.textContent.includes('{hidden_label}')) {{
-                    const checkboxContainer = label.closest('div[data-testid="stCheckbox"]');
-                    if (checkboxContainer) checkboxContainer.style.display = 'none';
-                }}
-            }});
-        }}, 100);
+            labels.forEach(label => {
+                if (label.textContent.includes('🦖_HIDDEN_DINO_TRIGGER_999')) {
+                    const container = label.closest('div[data-testid="stCheckbox"]');
+                    if (container) container.style.display = 'none';
+                }
+            });
+        });
 
-        // Обработка клика по видимой кнопке-эмодзи
-        document.addEventListener('click', function(e) {{
-            if (e.target.id === 'dino-visual-btn' || e.target.closest('#dino-visual-btn')) {{
-                // 1. Воспроизводим звук "ррр"
-                try {{
+        // Обработка клика по кнопке-динозавру
+        document.addEventListener('click', function(e) {
+            if (e.target.id === 'dino-visual-btn' || e.target.closest('#dino-visual-btn')) {
+                // 1. Звук "ррр"
+                try {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
@@ -55,22 +67,19 @@ def render_dino_footer():
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
                     oscillator.start(audioContext.currentTime);
                     oscillator.stop(audioContext.currentTime + 0.3);
-                }} catch(err) {{}}
+                } catch(err) {}
                 
-                // 2. Находим скрытый чекбокс Streamlit и программно кликаем его
+                // 2. Программно кликаем скрытый чекбокс Streamlit
                 const labels = document.querySelectorAll('label');
-                labels.forEach(label => {{
-                    if (label.textContent.includes('{hidden_label}')) {{
+                labels.forEach(label => {
+                    if (label.textContent.includes('🦖_HIDDEN_DINO_TRIGGER_999')) {
                         const checkbox = label.querySelector('input[type="checkbox"]');
-                        if (checkbox) {{
-                            checkbox.click(); // Это изменит session_state и вызовет rerun
-                        }}
-                    }}
-                }});
-            }}
-        }});
+                        if (checkbox) checkbox.click();
+                    }
+                });
+            }
+        });
         </script>
-        
         <div class="dino-footer-button">
             <button class="dino-emoji-btn" id="dino-visual-btn" title="Нажми меня!">🦖</button>
         </div>
@@ -78,7 +87,7 @@ def render_dino_footer():
         unsafe_allow_html=True
     )
 
-    # 4. Если триггер активен (чекбокс отмечен), обновляем фразу и показываем модалку
+    # 4. Если чекбокс активен, обновляем фразу и показываем модалку
     if st.session_state.dino_trigger:
         st.session_state.dino_phrase = get_random_phrase()
         _render_dino_modal_html()
@@ -93,8 +102,9 @@ def _render_dino_modal_html():
         
     phrase = st.session_state.dino_phrase
     
+    # Обрати внимание на style="display: flex !important;" — это переопределяет display: none из styles.py
     modal_html = f"""
-    <div class="dino-modal-overlay" id="dino-modal-overlay">
+    <div class="dino-modal" id="dino-modal" style="display: flex !important;">
         <div class="dino-modal-content">
             <span class="dino-modal-close" id="dino-close-btn">&times;</span>
             <div class="dino-gif-container">
@@ -105,33 +115,27 @@ def _render_dino_modal_html():
             </div>
         </div>
     </div>
-    
     <script>
-    // Функция закрытия модалки
     function closeDinoModal() {{
         const labels = document.querySelectorAll('label');
         labels.forEach(label => {{
             if (label.textContent.includes('🦖_HIDDEN_DINO_TRIGGER_999')) {{
                 const checkbox = label.querySelector('input[type="checkbox"]');
-                // Если чекбокс отмечен, снимаем отметку (это вызовет rerun и закроет модалку)
                 if (checkbox && checkbox.checked) {{
-                    checkbox.click();
+                    checkbox.click(); // Снимет галочку и вызовет rerun
                 }}
             }}
         }});
     }}
-
-    // Закрытие по клику на крестик
+    
     document.getElementById('dino-close-btn').addEventListener('click', closeDinoModal);
     
-    // Закрытие по клику вне окна (на затемненный фон)
-    document.getElementById('dino-modal-overlay').addEventListener('click', function(e) {{
-        if (e.target.id === 'dino-modal-overlay') {{
+    document.getElementById('dino-modal').addEventListener('click', function(e) {{
+        if (e.target.id === 'dino-modal') {{
             closeDinoModal();
         }}
     }});
     
-    // Закрытие по клавише Escape
     document.addEventListener('keydown', function(e) {{
         if (e.key === 'Escape') {{
             closeDinoModal();
