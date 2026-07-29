@@ -53,5 +53,5 @@ if holiday:
 # === БЛИЖАЙШИЕ ПРАЗДНИКИ ===
 render_upcoming_holidays_section(upcoming_holidays)
 
-# === ПОДВАЛ (внутри него уже вызывается логика кнопки и модалки динозавра) ===
+# === ПОДВАЛ (с кнопкой-динозавром) ===
 render_footer()
