@@ -4,21 +4,11 @@ from config.theme import get_theme_colors
 from config.effects import get_theme_effect, get_holiday_effects
 
 def apply_theme(theme: str, holiday_effects: list = None):
-    """
-    Применяет тему и эффекты к приложению.
-    Этапы:
-     1. Загрузка цветов темы
-     2. Загрузка базовых стилей интерфейса
-     3. Подключение эффектов времени суток
-     4. Подключение праздничных эффектов
-    """
     if holiday_effects is None:
         holiday_effects = []
     
-    # 1. Загрузка цветов темы
     colors = get_theme_colors(theme)
     
-    # 2. Базовые стили интерфейса
     base_css = (
         "<style>"
         ".stApp { background: " + colors['bg_main'] + " !important; min-height: 100vh; }"
@@ -44,20 +34,20 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "button[data-testid='stBaseButton-secondary']:hover { transform: scale(1.02) !important; box-shadow: 0 8px 24px rgba(41, 128, 185, 0.4) !important; }"
         "@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }"
         "@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }"
-        "@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }"
+        "@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }"
         "@keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }"
         "@keyframes mascotIdle { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(3deg); } }"
         "@keyframes mascotWave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-20deg); } 75% { transform: rotate(20deg); } }"
         ".fade-in { animation: fadeIn 0.6s ease-out; }"
         
-        # Стили для кнопки-динозавра в подвале (только эмодзи, без фона)
+        # Стили для кнопки-динозавра в подвале
         ".dino-footer-button { text-align: left; margin-bottom: 16px; padding-left: 8px; }"
-        ".dino-emoji-btn { background: none !important; border: none !important; font-size: 32px; cursor: pointer; padding: 8px 12px; transition: all 0.3s ease; border-radius: 8px; line-height: 1; }"
+        ".dino-emoji-btn { background: transparent !important; border: none !important; font-size: 32px; cursor: pointer; padding: 8px 12px; transition: all 0.3s ease; border-radius: 8px; line-height: 1; }"
         ".dino-emoji-btn:hover { transform: scale(1.2) rotate(-10deg); background: rgba(255,255,255,0.1) !important; }"
         ".dino-emoji-btn:active { transform: scale(1.1); }"
         
         # Стили для модального окна
-        ".dino-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); }"
+        ".dino-modal-overlay { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease-out; }"
         ".dino-modal-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 8% auto; padding: 0; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6); position: relative; animation: scaleIn 0.4s ease-out; }"
         ".dino-modal-close { position: absolute; right: 20px; top: 15px; color: white; font-size: 36px; font-weight: bold; cursor: pointer; z-index: 10; transition: all 0.3s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }"
         ".dino-modal-close:hover { color: #FFD700; transform: scale(1.2); background: rgba(255,255,255,0.1); }"
@@ -72,13 +62,9 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "</style>"
     )
     
-    # 3. Эффекты времени суток
     effects_css = get_theme_effect(theme)
-    
-    # 4. Праздничные эффекты
     holiday_css = get_holiday_effects(holiday_effects)
     
-    # Выводим всё вместе
     st.markdown(
         base_css + effects_css + holiday_css,
         unsafe_allow_html=True
