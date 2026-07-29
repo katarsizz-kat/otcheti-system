@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром."""
+"""Пасхалка с динозавром — версия без JavaScript."""
 import os
 import random
 import streamlit as st
@@ -24,57 +24,21 @@ def render_dino_footer():
 
 def _render_dino_button():
     """Рендерит кнопку-динозавра (прозрачную, без фона)."""
-    st.markdown(
-        """
-        <style>
-        .dino-footer-button { text-align: left; margin-bottom: 16px; padding-left: 8px; }
-        .dino-emoji-btn { 
-            background: rgba(255,255,255,0.1) !important; 
-            border: none !important; 
-            font-size: 32px; 
-            cursor: pointer; 
-            padding: 8px 12px; 
-            transition: all 0.3s ease; 
-            border-radius: 8px; 
-            line-height: 1; 
-        }
-        .dino-emoji-btn:hover { transform: scale(1.2) rotate(-10deg); background: rgba(255,255,255,0.2) !important; }
-        .dino-emoji-btn:active { transform: scale(1.1); }
-        </style>
-        <div class="dino-footer-button">
-            <button class="dino-emoji-btn" id="dino-open-btn" title="Нажми меня!">🦖</button>
-        </div>
-        <script>
-        document.getElementById('dino-open-btn').addEventListener('click', function() {
-            // Находим скрытый чекбокс Streamlit и кликаем его
-            const labels = document.querySelectorAll('label');
-            labels.forEach(label => {
-                if (label.textContent.includes('DINO_TRIGGER_HIDDEN')) {
-                    const checkbox = label.querySelector('input[type="checkbox"]');
-                    if (checkbox) checkbox.click();
-                }
-            });
-        });
-        </script>
-        """,
-        unsafe_allow_html=True
-    )
+    # Создаём колонку для кнопки (левая часть подвала)
+    dino_col, _ = st.columns([1, 10])
     
-    # Скрытый чекбокс для управления состоянием
-    st.checkbox("DINO_TRIGGER_HIDDEN", key="dino_trigger", value=False)
-    
-    # Если чекбокс активен, открываем модалку
-    if st.session_state.dino_trigger:
-        st.session_state.dino_click_count += 1
-        
-        # Каждое пятое нажатие — специальная фраза для Кристины
-        if st.session_state.dino_click_count % 5 == 0:
-            st.session_state.dino_phrase = "Кристина лучшая ❤️"
-        else:
-            st.session_state.dino_phrase = get_random_phrase()
-        
-        st.session_state.dino_modal_open = True
-        st.rerun()
+    with dino_col:
+        if st.button("🦖", key="dino_emoji_btn", help="Нажми меня!", use_container_width=False):
+            st.session_state.dino_click_count += 1
+            
+            # Каждое пятое нажатие — специальная фраза для Кристины
+            if st.session_state.dino_click_count % 5 == 0:
+                st.session_state.dino_phrase = "Кристина лучшая ❤️"
+            else:
+                st.session_state.dino_phrase = get_random_phrase()
+            
+            st.session_state.dino_modal_open = True
+            st.rerun()
 
 def _render_dino_modal():
     """Рендерит модальное окно с динозавром."""
@@ -140,28 +104,6 @@ def _render_dino_modal():
             font-weight: 600;
             line-height: 1.6;
         }
-        .dino-close-btn {
-            position: absolute;
-            right: 20px;
-            top: 15px;
-            color: white;
-            font-size: 36px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 10;
-            transition: all 0.3s ease;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-        .dino-close-btn:hover {
-            color: #FFD700;
-            transform: scale(1.2);
-            background: rgba(255,255,255,0.1);
-        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
         </style>
@@ -169,11 +111,10 @@ def _render_dino_modal():
         unsafe_allow_html=True
     )
     
-    # HTML модалки с JavaScript для закрытия
+    # HTML модалки
     modal_html = f"""
-    <div class="dino-overlay" id="dino-overlay">
-        <div class="dino-modal" style="position: relative;">
-            <span class="dino-close-btn" id="dino-close-btn">&times;</span>
+    <div class="dino-overlay">
+        <div class="dino-modal">
             <div class="dino-gif-container">
                 <img src="{gif_path}" alt="Динозавр" class="dino-gif" />
             </div>
@@ -182,45 +123,20 @@ def _render_dino_modal():
             </div>
         </div>
     </div>
-    <script>
-    // Функция закрытия модалки
-    function closeDinoModal() {{
-        const labels = document.querySelectorAll('label');
-        labels.forEach(label => {{
-            if (label.textContent.includes('DINO_TRIGGER_HIDDEN')) {{
-                const checkbox = label.querySelector('input[type="checkbox"]');
-                if (checkbox && checkbox.checked) {{
-                    checkbox.click(); // Снимет галочку и вызовет rerun
-                }}
-            }}
-        }});
-    }}
-    
-    // Закрытие по клику на крестик
-    document.getElementById('dino-close-btn').addEventListener('click', closeDinoModal);
-    
-    // Закрытие по клику вне окна (на затемненный фон)
-    document.getElementById('dino-overlay').addEventListener('click', function(e) {{
-        if (e.target.id === 'dino-overlay') {{
-            closeDinoModal();
-        }}
-    }});
-    
-    // Закрытие по клавише Escape
-    document.addEventListener('keydown', function(e) {{
-        if (e.key === 'Escape') {{
-            closeDinoModal();
-        }}
-    }});
-    
-    // Автозакрытие через 10 секунд
-    setTimeout(closeDinoModal, 10000);
-    </script>
     """
     
     st.markdown(modal_html, unsafe_allow_html=True)
     
-    # Звуковой эффект "ррр" через Web Audio API
+    # Кнопка закрытия (под модалкой)
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([3, 2, 3])
+    with col2:
+        if st.button("✖ Закрыть", key="close_dino_modal", use_container_width=True):
+            st.session_state.dino_modal_open = False
+            st.rerun()
+    
+    # Звуковой эффект "ррр" через Web Audio API (выполняется один раз при рендере)
     st.markdown(
         """
         <script>
