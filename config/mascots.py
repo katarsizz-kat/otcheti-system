@@ -1,19 +1,18 @@
 """Система маскотов приложения."""
 import random
 
-
 # База данных маскотов
 MASCOTS = {
     "dino": {
         "emoji": "🦖",
         "name": "Дино",
         "default_texts": [
-            "Привет! Я Дино! ",
+            "Привет! Я Дино!",
             "Ррр! Как дела?",
             "Люблю отчёты и пиццу! 🍕",
             "Нажми на баннер праздника! 🎉",
-            "Я маленький, но храбрый! 💪",
-            "Давай сформируем отчёт? ",
+            "Я маленький, но храбрый!",
+            "Давай сформируем отчёт?",
         ],
     },
 }
@@ -37,7 +36,6 @@ def get_mascot_text(mascot_type: str, custom_text: str = None) -> str:
     """
     if custom_text:
         return custom_text
-    
     mascot = get_mascot(mascot_type)
     return random.choice(mascot["default_texts"])
 
