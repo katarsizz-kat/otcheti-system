@@ -53,9 +53,5 @@ if holiday:
 # === БЛИЖАЙШИЕ ПРАЗДНИКИ ===
 render_upcoming_holidays_section(upcoming_holidays)
 
-# === ПОДВАЛ ===
+# === ПОДВАЛ (с кнопкой-динозавром) ===
 render_footer()
-
-# === ПАСХАЛКА С ДИНОЗАВРОМ (в самом конце) ===
-from easter_eggs.dino import render_dino_easter_egg
-render_dino_easter_egg()
