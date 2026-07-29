@@ -48,33 +48,45 @@ textarea::placeholder {
 # Функции
 def normalize_text(text):
     if not isinstance(text, str): return ""
-    # 1. Латиница в кириллицу
+    # Латиница в кириллицу
     replacements = {'a': 'а', 'e': 'е', 'o': 'о', 'p': 'р', 'c': 'с', 'y': 'у', 'x': 'х',
                    'A': 'А', 'E': 'Е', 'O': 'О', 'P': 'Р', 'C': 'С', 'Y': 'У', 'X': 'Х', 'ё': 'е', 'Ё': 'Е'}
     for lat, cyr in replacements.items(): text = text.replace(lat, cyr)
     
-    # 2. Базовая очистка
+    # Базовая очистка
     text = text.lower().replace('"', '').replace("'", "")
-    text = re.sub(r'\(.*?\)', '', text) # убираем скобки
+    text = re.sub(r'\(.*?\)', '', text)
     
-    # 3. Убираем слова-паразиты для пицц (тесто, пицца, см)
+    # Убираем слова-паразиты для пицц
     text = re.sub(r'\bпицца\b|\bpizza\b', '', text)
-    text = re.sub(r'\bтонкое\b|\bтрадиционное\b|\bтесто\b|\bсм\b', '', text)
+    text = re.sub(r'\bтонкое\b|\bтрад\b|\bтрадиционное\b|\bтесто\b|\bсм\b|\bnew\b', '', text)
     
-    # 4. Унификация чисел (чтобы "4 сыра" и "четыре сыра" были равны)
+    # Унификация чисел
     num_words = {'четыре': '4', 'пять': '5', 'шесть': '6', 'семь': '7', 'восемь': '8', 'девять': '9', 'десять': '10'}
     for word, digit in num_words.items():
         text = text.replace(word, digit)
         
-    # 5. Убираем лишние пробелы
+    # Убираем лишние пробелы
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 def extract_size(text):
     """Извлекает размер пиццы (15, 23, 30, 35, 40) из строки"""
     if not isinstance(text, str): return None
-    match = re.search(r'\b(15|23|30|35|40)\b', str(text))
+    match = re.search(r'\b(15|23|30|35|40)\s*см\b', str(text))
     return match.group(1) if match else None
+
+def extract_pizza_name(text):
+    """Извлекает название пиццы без размера и типа теста"""
+    if not isinstance(text, str): return ""
+    name = str(text)
+    # Убираем размер
+    name = re.sub(r'\s*\b(15|23|30|35|40)\s*см\b', '', name)
+    # Убираем тип теста в скобках
+    name = re.sub(r'\s*\(.*?(тонкое|трад|традиционное).*?\)', '', name)
+    # Убираем слово "пицца"
+    name = re.sub(r'\bпицца\b', '', name, flags=re.IGNORECASE)
+    return name.strip()
 
 def map_city(legal_entity):
     le = str(legal_entity)
@@ -123,7 +135,7 @@ def aggregate_data(df, rules_text):
     df['Город'] = df['Юридическое лицо'].apply(map_city)
     df = df[df['Город'].notna()]
     
-    # Предварительно вычисляем нормализованные имена и размеры для скорости
+    # Предварительно вычисляем нормализованные имена и размеры
     df['Блюдо_norm'] = df['Блюдо'].apply(normalize_text)
     df['Размер'] = df['Блюдо'].apply(extract_size)
     
@@ -139,13 +151,13 @@ def aggregate_data(df, rules_text):
             rule_size = extract_size(rule)
             rule_tokens = set(rule_norm.split())
             
-            # 1. Быстрая фильтрация по размеру (если он указан в правиле)
+            # Фильтрация по размеру (если он указан в правиле)
             if rule_size:
                 subset = city_data[city_data['Размер'] == rule_size]
             else:
                 subset = city_data.copy()
             
-            # 2. Проверка: все ли слова из правила есть в названии блюда
+            # Проверка: все ли слова из правила есть в названии блюда
             def check_match(dish_norm):
                 dish_tokens = set(dish_norm.split())
                 return rule_tokens.issubset(dish_tokens)
@@ -157,6 +169,58 @@ def aggregate_data(df, rules_text):
                 'sum': round(matches['Сумма со скидкой, р.'].sum(), 2)
             }
         result[city] = city_result
+    return result
+
+def aggregate_pizza_by_size(df, rules_text):
+    """Агрегирует данные по пиццам с разбивкой по размерам"""
+    df = df.copy()
+    df['Город'] = df['Юридическое лицо'].apply(map_city)
+    df = df[df['Город'].notna()]
+    
+    # Добавляем поля для анализа
+    df['Блюдо_norm'] = df['Блюдо'].apply(normalize_text)
+    df['Размер'] = df['Блюдо'].apply(extract_size)
+    df['Название_пиццы'] = df['Блюдо'].apply(extract_pizza_name)
+    df['Название_пиццы_norm'] = df['Название_пиццы'].apply(normalize_text)
+    
+    rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
+    
+    # Структура результата: {city: {pizza_name: {size: {qty, sum}}}}
+    result = {}
+    
+    for city in ['СПБ', 'Тюмень']:
+        city_data = df[df['Город'] == city]
+        city_result = {}
+        
+        for rule in rules:
+            rule_norm = normalize_text(rule)
+            rule_tokens = set(rule_norm.split())
+            
+            # Находим все пиццы, соответствующие правилу
+            def check_match(pizza_norm):
+                pizza_tokens = set(pizza_norm.split())
+                return rule_tokens.issubset(pizza_tokens)
+            
+            matches = city_data[city_data['Название_пиццы_norm'].apply(check_match)]
+            
+            # Группируем по размерам
+            size_data = {}
+            for size in ['15', '23', '30', '35', '40']:
+                size_matches = matches[matches['Размер'] == size]
+                size_data[size] = {
+                    'qty': int(size_matches['Количество блюд'].sum()),
+                    'sum': round(size_matches['Сумма со скидкой, р.'].sum(), 2)
+                }
+            
+            # Итого
+            total_qty = sum(size_data[s]['qty'] for s in size_data)
+            total_sum = sum(size_data[s]['sum'] for s in size_data)
+            size_data['Всего'] = {'qty': total_qty, 'sum': total_sum}
+            
+            city_result[rule] = size_data
+        
+        result[city] = city_result
+    
     return result
 
 def create_excel(data, period_str, rules):
@@ -241,6 +305,94 @@ def create_excel(data, period_str, rules):
     
     return wb
 
+def create_pizza_excel(data, period_str, rules):
+    """Создает Excel с разбивкой пицц по размерам как на скриншоте"""
+    wb = Workbook()
+    if 'Sheet' in wb.sheetnames: del wb['Sheet']
+    ws = wb.create_sheet("Отчёт")
+    
+    border = Border(left=Side('thin'), right=Side('thin'), top=Side('thin'), bottom=Side('thin'))
+    thick_border = Border(left=Side('thick'), right=Side('thick'), top=Side('thick'), bottom=Side('thick'))
+    yellow_fill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
+    blue_fill = PatternFill(start_color='00BFFF', end_color='00BFFF', fill_type='solid')
+    gray_fill = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')
+    
+    # Заголовок периода
+    ws.merge_cells('A1:G1')
+    c = ws.cell(1, 1, period_str)
+    c.font = Font(bold=True, size=16)
+    c.alignment = Alignment(horizontal='center')
+    c.fill = yellow_fill
+    
+    # Заголовок города (СПБ)
+    ws.merge_cells('A2:G2')
+    c = ws.cell(2, 1, "СПБ")
+    c.font = Font(bold=True, size=14)
+    c.alignment = Alignment(horizontal='center')
+    c.fill = blue_fill
+    
+    # Заголовки колонок
+    headers = ['Пиццы', '15 см', '23 см', '30 см', '35 см', '40 см', 'Всего']
+    for col, header in enumerate(headers, 1):
+        c = ws.cell(3, col, header)
+        c.font = Font(bold=True, size=11)
+        c.border = thick_border
+        c.alignment = Alignment(horizontal='center')
+        c.fill = gray_fill
+    
+    # Данные
+    row = 4
+    for rule in rules:
+        # Название пиццы
+        c = ws.cell(row, 1, rule)
+        c.border = border
+        c.alignment = Alignment(horizontal='left')
+        
+        # Размеры
+        for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 2):
+            qty = data['СПБ'][rule][size]['qty']
+            c = ws.cell(row, col_idx, qty)
+            c.border = border
+            c.alignment = Alignment(horizontal='center')
+        
+        # Итого
+        total_qty = data['СПБ'][rule]['Всего']['qty']
+        c = ws.cell(row, 7, total_qty)
+        c.font = Font(bold=True)
+        c.border = thick_border
+        c.alignment = Alignment(horizontal='center')
+        
+        row += 1
+    
+    # Итого строка
+    ws.cell(row, 1, 'Итого')
+    ws.cell(row, 1).font = Font(bold=True, size=11)
+    ws.cell(row, 1).border = thick_border
+    
+    for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 2):
+        col_letter = get_column_letter(col_idx)
+        c = ws.cell(row, col_idx, f"=SUM({col_letter}4:{col_letter}{row-1})")
+        c.font = Font(bold=True, size=11)
+        c.border = thick_border
+        c.alignment = Alignment(horizontal='center')
+    
+    # Общая сумма
+    ws.cell(row, 7, f"=SUM(G4:G{row-1})")
+    ws.cell(row, 7).font = Font(bold=True, size=11)
+    ws.cell(row, 7).border = thick_border
+    ws.cell(row, 7).alignment = Alignment(horizontal='center')
+    
+    # Ширина колонок
+    ws.column_dimensions['A'].width = 45
+    ws.column_dimensions['B'].width = 10
+    ws.column_dimensions['C'].width = 10
+    ws.column_dimensions['D'].width = 10
+    ws.column_dimensions['E'].width = 10
+    ws.column_dimensions['F'].width = 10
+    ws.column_dimensions['G'].width = 10
+    
+    return wb
+
 # Интерфейс
 st.markdown("""
 <div class="header-block">
@@ -249,15 +401,22 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Переключатель режима
+report_mode = st.radio(
+    "📋 Выберите режим отчёта:",
+    ["📝 Стандартный отчёт", " Пиццы по размерам"],
+    horizontal=True,
+    help="Стандартный - обычный отчёт с количеством и суммой\nПиццы по размерам - отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см"
+)
+
 st.markdown("""
 <div class="content-block">
     <h3>📋 Как работает умный поиск</h3>
     <ul>
-        <li><b>Для пицц:</b> Пишите название и размер, например: <code>Сырная 30</code> или <code>Четыре сыра 35</code>.</li>
-        <li><b>Авто-игнорирование:</b> Программа сама игнорирует слова <i>"пицца", "тонкое", "традиционное", "тесто", "см"</i>. Поэтому правило <code>Сырная 30</code> найдёт и сложит <i>"Пицца сырная 30 см традиционное"</i> и <i>"Сырная 30 тонкое тесто"</i>.</li>
+        <li><b>Для пицц:</b> Пишите название, например: <code>Сырная</code> или <code>Четыре сыра</code>.</li>
+        <li><b>Авто-игнорирование:</b> Программа сама игнорирует слова <i>"пицца", "тонкое", "традиционное", "тесто", "см", "new"</i>.</li>
         <li><b>Унификация чисел:</b> <code>4 сыра</code> и <code>четыре сыра</code> считаются одной позицией.</li>
-        <li><b>Для закусок:</b> Логика та же, пишите как в выгрузке, например: <code>Картофель из печи 150 гр</code>.</li>
-        <li><b>Без размера:</b> Если написать просто <code>Сырная</code>, программа просуммирует все размеры этой пиццы.</li>
+        <li><b>В режиме "Пиццы по размерам":</b> Программа автоматически сгруппирует все размеры и покажет их в отдельных колонках.</li>
     </ul>
 </div>
 """, unsafe_allow_html=True)
@@ -267,12 +426,20 @@ st.markdown('<div class="input-box">', unsafe_allow_html=True)
 st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b></p>", unsafe_allow_html=True)
 
-default_rules = """Сырная 15
-Сырная 23
-Сырная 30
-Сырная 35
-Сырная 40
-Четыре сыра 30
+if report_mode == "🍕 Пиццы по размерам":
+    default_rules = """Сырная
+Пепперони
+Четыре Сыра
+Мясная
+Супер Папа
+Гавайская
+Цыпленок Барбекю
+Маргарита
+Мексиканская
+Ветчина и Грибы"""
+else:
+    default_rules = """Сырная 30
+Четыре сыра 35
 Пепперони 30
 Картофель из печи 150 гр
 Рогалики с колбасками"""
@@ -280,7 +447,7 @@ default_rules = """Сырная 15
 rules_text = st.text_area(
     "Список позиций:",
     value="",
-    height=300,
+    height=400 if report_mode == "🍕 Пиццы по размерам" else 300,
     key="rules_input",
     label_visibility="visible",
     placeholder=default_rules
@@ -314,26 +481,49 @@ if file_main:
                 if not rules:
                     st.error("❌ Введите хотя бы одну позицию в поле выше!")
                 else:
-                    data = aggregate_data(df, rules_text)
-                    wb = create_excel(data, period_str, rules)
+                    if report_mode == " Пиццы по размерам":
+                        # Режим отчёта по пиццам с разбивкой по размерам
+                        data = aggregate_pizza_by_size(df, rules_text)
+                        wb = create_pizza_excel(data, period_str, rules)
+                        
+                        # Превью
+                        st.success("✅ Отчёт сформирован!")
+                        st.subheader("📋 Превью (СПБ)")
+                        
+                        preview_data = []
+                        for rule in rules:
+                            row = {'Позиция': rule}
+                            for size in ['15', '23', '30', '35', '40']:
+                                row[f'{size} см'] = data['СПБ'][rule][size]['qty']
+                            row['Всего'] = data['СПБ'][rule]['Всего']['qty']
+                            preview_data.append(row)
+                        
+                        preview = pd.DataFrame(preview_data)
+                        st.dataframe(preview, use_container_width=True)
+                    else:
+                        # Стандартный режим
+                        data = aggregate_data(df, rules_text)
+                        wb = create_excel(data, period_str, rules)
+                        
+                        st.success("✅ Отчёт сформирован!")
+                        st.subheader("📋 Превью (СПБ)")
+                        preview = pd.DataFrame([
+                            {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
+                            for rule in rules
+                        ])
+                        st.dataframe(preview, use_container_width=True)
                     
+                    # Скачивание
                     output = io.BytesIO()
                     wb.save(output)
                     output.seek(0)
                     
-                    st.success("✅ Отчёт сформирован!")
-                    
-                    st.subheader("📋 Превью (СПБ)")
-                    preview = pd.DataFrame([
-                        {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
-                        for rule in rules
-                    ])
-                    st.dataframe(preview, use_container_width=True)
+                    file_name = f"Отчёт_{'pizza_' if report_mode == '🍕 Пиццы по размерам' else ''}{period_str.replace('.', '-')}.xlsx"
                     
                     st.download_button(
                         label="📥 Скачать Excel",
                         data=output,
-                        file_name=f"Отчёт_{period_str.replace('.', '-')}.xlsx",
+                        file_name=file_name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
                     )
