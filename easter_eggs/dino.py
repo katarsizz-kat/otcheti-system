@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром — версия без JavaScript."""
+"""Пасхалка с динозавром."""
 import os
 import random
 import streamlit as st
@@ -44,12 +44,21 @@ def _render_dino_modal():
     """Рендерит модальное окно с динозавром."""
     # Выбираем случайную гифку
     gif_num = random.choice([1, 2])
-    gif_path = f"assets/dino{gif_num}.gif"
+    
+    # Абсолютный путь к гифке
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    gif_path = os.path.join(base_dir, "assets", f"dino{gif_num}.gif")
     
     # Проверяем существование файла
     if not os.path.exists(gif_path):
         # Если гифки нет, используем placeholder из интернета
-        gif_path = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+        gif_url = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
+    else:
+        # Читаем файл и конвертируем в base64
+        import base64
+        with open(gif_path, "rb") as f:
+            gif_data = f.read()
+            gif_url = f"data:image/gif;base64,{base64.b64encode(gif_data).decode()}"
     
     phrase = st.session_state.dino_phrase
     
@@ -79,6 +88,7 @@ def _render_dino_modal():
             box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
             overflow: hidden;
             animation: scaleIn 0.4s ease-out;
+            position: relative;
         }
         .dino-gif-container {
             text-align: center;
@@ -100,9 +110,32 @@ def _render_dino_modal():
         .dino-phrase p {
             margin: 0;
             font-size: 20px;
-            color: #2C3E50;
+            color: #2C3E50 !important;
             font-weight: 600;
             line-height: 1.6;
+        }
+        .dino-close-btn {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            color: white !important;
+            font-size: 36px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .dino-close-btn:hover {
+            color: #FFD700 !important;
+            transform: scale(1.2);
+            background: rgba(255, 255, 255, 0.2);
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -111,12 +144,13 @@ def _render_dino_modal():
         unsafe_allow_html=True
     )
     
-    # HTML модалки
+    # HTML модалки с крестиком внутри
     modal_html = f"""
     <div class="dino-overlay">
         <div class="dino-modal">
+            <div class="dino-close-btn" onclick="document.querySelector('button[key=close_dino_modal]').click()">×</div>
             <div class="dino-gif-container">
-                <img src="{gif_path}" alt="Динозавр" class="dino-gif" />
+                <img src="{gif_url}" alt="Динозавр" class="dino-gif" />
             </div>
             <div class="dino-phrase">
                 <p>{phrase}</p>
@@ -127,16 +161,23 @@ def _render_dino_modal():
     
     st.markdown(modal_html, unsafe_allow_html=True)
     
-    # Кнопка закрытия (под модалкой)
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    # Невидимая кнопка закрытия (для обработки клика)
+    st.markdown(
+        """
+        <style>
+        button[key="close_dino_modal"] {
+            display: none !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     
-    col1, col2, col3 = st.columns([3, 2, 3])
-    with col2:
-        if st.button("✖ Закрыть", key="close_dino_modal", use_container_width=True):
-            st.session_state.dino_modal_open = False
-            st.rerun()
+    if st.button("close", key="close_dino_modal"):
+        st.session_state.dino_modal_open = False
+        st.rerun()
     
-    # Звуковой эффект "ррр" через Web Audio API (выполняется один раз при рендере)
+    # Звуковой эффект "ррр" через Web Audio API
     st.markdown(
         """
         <script>
