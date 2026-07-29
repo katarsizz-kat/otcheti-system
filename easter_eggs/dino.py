@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром."""
+"""Пасхалка с динозавром — чистый Python, без JavaScript."""
 import os
 import random
 import base64
@@ -54,7 +54,7 @@ def _render_dino_modal():
     
     phrase = st.session_state.dino_phrase
     
-    # CSS с максимальным контрастом
+    # CSS для модалки с красивой кнопкой закрытия ВНУТРИ
     st.markdown(
         """
         <style>
@@ -69,7 +69,6 @@ def _render_dino_modal():
             display: flex;
             align-items: center;
             justify-content: center;
-            pointer-events: none;
         }
         .dino-modal {
             background: #FFFFFF !important;
@@ -81,30 +80,32 @@ def _render_dino_modal():
             overflow: hidden;
             position: relative;
             border: 4px solid #667eea;
-            pointer-events: auto;
         }
-        .dino-close-btn {
+        .dino-close-native {
             position: absolute;
             right: 15px;
             top: 15px;
-            color: #000000 !important;
-            font-size: 32px;
-            font-weight: bold;
-            cursor: pointer;
             z-index: 10;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.1);
-            border: none;
-            line-height: 1;
         }
-        .dino-close-btn:hover {
-            background: rgba(0,0,0,0.2);
-            transform: scale(1.1);
+        .dino-close-native button {
+            background: rgba(0,0,0,0.1) !important;
+            border: none !important;
+            border-radius: 50% !important;
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            padding: 0 !important;
+            font-size: 20px !important;
+            color: #000000 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .dino-close-native button:hover {
+            background: rgba(0,0,0,0.2) !important;
+            transform: scale(1.1) !important;
         }
         .dino-gif-container {
             text-align: center;
@@ -129,20 +130,15 @@ def _render_dino_modal():
             font-weight: 700;
             line-height: 1.5;
         }
-        .dino-close-streamlit {
-            margin-top: 20px;
-            text-align: center;
-        }
         </style>
         """,
         unsafe_allow_html=True
     )
     
-    # HTML модалки
+    # HTML модалки (без JavaScript!)
     modal_html = f"""
-    <div class="dino-overlay" id="dino-overlay">
+    <div class="dino-overlay">
         <div class="dino-modal">
-            <button class="dino-close-btn" id="dino-close-btn" title="Закрыть">&times;</button>
             <div class="dino-gif-container">
                 <img src="{gif_src}" alt="Динозавр" class="dino-gif" />
             </div>
@@ -151,42 +147,18 @@ def _render_dino_modal():
             </div>
         </div>
     </div>
-    <script>
-    document.getElementById('dino-close-btn').addEventListener('click', function() {{
-        const overlay = document.getElementById('dino-overlay');
-        if (overlay) overlay.style.display = 'none';
-    }});
-    document.getElementById('dino-overlay').addEventListener('click', function(e) {{
-        if (e.target.id === 'dino-overlay') {{
-            const overlay = document.getElementById('dino-overlay');
-            if (overlay) overlay.style.display = 'none';
-        }}
-    }});
-    document.addEventListener('keydown', function(e) {{
-        if (e.key === 'Escape') {{
-            const overlay = document.getElementById('dino-overlay');
-            if (overlay) overlay.style.display = 'none';
-        }}
-    }});
-    setTimeout(function() {{
-        const overlay = document.getElementById('dino-overlay');
-        if (overlay) overlay.style.display = 'none';
-    }}, 10000);
-    </script>
     """
     
     st.markdown(modal_html, unsafe_allow_html=True)
     
-    # НАТИВНАЯ кнопка закрытия Streamlit (гарантированно работает)
-    st.markdown('<div class="dino-close-streamlit">', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([3, 2, 3])
-    with col2:
-        if st.button("✖ Закрыть окно", key="dino_close_native_btn", use_container_width=True):
-            st.session_state.dino_modal_open = False
-            st.rerun()
+    # Кнопка закрытия ВНУТРИ модалки (через абсолютное позиционирование)
+    st.markdown('<div class="dino-close-native">', unsafe_allow_html=True)
+    if st.button("×", key="dino_close_btn", help="Закрыть"):
+        st.session_state.dino_modal_open = False
+        st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Звук "ррр"
+    # Звук "ррр" (работает при первом рендере)
     st.markdown(
         """
         <script>
