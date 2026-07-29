@@ -208,4 +208,99 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
     if not upcoming_holidays:
         return
     
-    st.markdown("### 🎉 Бли
+    st.markdown("### 🎉 Ближайшие праздники", unsafe_allow_html=True)
+    cols = st.columns([2, 1])
+    
+    with cols[0]:
+        html = '<div class="content-block fade-in"><ul style="padding-left: 20px; margin: 0; list-style-type: none;">'
+        for h in upcoming_holidays:
+            html += (
+                f'<li style="margin: 12px 0; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); '
+                f'display: flex; align-items: flex-start; gap: 10px;">'
+                f'<span style="font-size: 18px;">{h["emoji"]}</span>'
+                f'<span style="flex: 1;">{h["date"]} — {h["title"]}</span></li>'
+            )
+        html += '</ul></div>'
+        st.markdown(html, unsafe_allow_html=True)
+    
+    with cols[1]:
+        gif_path = os.path.join("assets", "animation.gif")
+        if os.path.exists(gif_path):
+            st.image(gif_path, width=250)
+        else:
+            st.markdown(
+                '<div style="display:flex;justify-content:center;align-items:center;'
+                'height:200px;background:#F8F9FA;border-radius:10px;">🎉</div>',
+                unsafe_allow_html=True,
+            )
+
+# =============================================================================
+# МАСКОТ (ДИНО) - УПРОЩЁННАЯ ВЕРСИЯ
+# =============================================================================
+def render_mascot(mascot_type: str = "dino", custom_text: str = None):
+    """
+    Отображает маскота (Дино) в левом нижнем углу.
+    Упрощённая версия без анимаций.
+    """
+    if not mascot_type:
+        return
+    
+    from config.mascots import get_mascot_emoji, get_mascot_text
+    
+    safe_type = make_key(mascot_type)
+    emoji = get_mascot_emoji(mascot_type)
+    state_key = f"mascot_show_{safe_type}"
+    text_key = f"mascot_text_{safe_type}"
+    
+    if state_key not in st.session_state:
+        st.session_state[state_key] = False
+    
+    if custom_text:
+        st.session_state[text_key] = custom_text
+    elif text_key not in st.session_state:
+        st.session_state[text_key] = get_mascot_text(mascot_type)
+    
+    show_bubble = st.session_state.get(state_key, False)
+    bubble_text = st.session_state.get(text_key, "")
+    
+    # Создаём контейнер для маскота
+    mascot_col, _ = st.columns([1, 10])
+    with mascot_col:
+        # Кнопка-динозавр
+        if st.button(emoji, key=f"mascot_btn_{safe_type}", use_container_width=True):
+            if not custom_text:
+                st.session_state[text_key] = get_mascot_text(mascot_type)
+            st.session_state[state_key] = True
+            st.rerun()
+        
+        # Облачко с текстом
+        if show_bubble:
+            st.markdown(
+                f"""<div style="background: white; padding: 12px 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 10px;">
+<p style="margin: 0; font-size: 14px; color: #2C3E50;">{bubble_text}</p>
+</div>"""
+            )
+            if st.button("✖ Закрыть", key=f"mascot_close_{safe_type}", use_container_width=True):
+                st.session_state[state_key] = False
+                st.rerun()
+
+# =============================================================================
+# ПОДВАЛ (FOOTER) С КНОПКОЙ-ДИНОЗАВРОМ
+# =============================================================================
+def render_footer():
+    """Подвал приложения с кнопкой-динозавром."""
+    from easter_eggs.dino import render_dino_button, render_dino_modal
+    
+    # Кнопка-динозавр (в левом углу, перед копирайтом)
+    render_dino_button()
+    
+    # Копирайт
+    st.markdown(
+        '<div style="text-align:center;padding:20px;opacity:0.7;">'
+        '<p style="margin:0;font-size:14px;">© 2026 Система формирования отчётов • Версия 1.0</p>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    
+    # Модальное окно (скрыто по умолчанию)
+    render_dino_modal()
