@@ -5,7 +5,7 @@ import streamlit as st
 from config.mascots import get_random_phrase
 
 def render_dino_footer():
-    """Рендерит кнопку и логику динозавра в подвале (обход защиты Streamlit на onclick)."""
+    """Рендерит кнопку и логику динозавра в подвале."""
     
     # 1. Инициализация состояния
     if "dino_modal_open" not in st.session_state:
@@ -13,27 +13,36 @@ def render_dino_footer():
     if "dino_phrase" not in st.session_state:
         st.session_state.dino_phrase = get_random_phrase()
 
-    # 2. Скрытые нативные кнопки Streamlit для управления состоянием
-    if st.button("open_dino_trigger", key="open_dino_trigger", style="display:none;"):
-        st.session_state.dino_modal_open = True
-        st.session_state.dino_phrase = get_random_phrase()  # Новая фраза при каждом открытии
-        st.rerun()
+    # 2. Скрытый виджет-триггер (чекбокс надежно меняет session_state при клике)
+    hidden_label = "🦖_HIDDEN_DINO_TRIGGER_999"
+    st.checkbox(hidden_label, key="dino_trigger", value=st.session_state.dino_modal_open)
 
-    if st.button("close_dino_trigger", key="close_dino_trigger", style="display:none;"):
-        st.session_state.dino_modal_open = False
-        st.rerun()
-
-    # 3. Видимая кнопка-эмодзи + JS, который "кликает" по скрытой кнопке Streamlit
+    # 3. Скрипт для скрытия виджета и обработки кликов по нашей кнопке
     st.markdown(
-        """
-        <div class="dino-footer-button">
-            <button class="dino-emoji-btn" id="dino-visual-btn" title="Нажми меня!">🦖</button>
-        </div>
+        f"""
+        <style>
+        /* Дополнительная страховка для скрытия через CSS */
+        div[data-testid="stCheckbox"]:has(span:contains("{hidden_label}")) {{
+            display: none !important;
+        }}
+        </style>
         <script>
-        document.addEventListener('click', function(e) {
-            if (e.target.id === 'dino-visual-btn' || e.target.closest('#dino-visual-btn')) {
+        // Скрываем виджет динозавра после загрузки страницы
+        setTimeout(() => {{
+            const labels = document.querySelectorAll('label');
+            labels.forEach(label => {{
+                if (label.textContent.includes('{hidden_label}')) {{
+                    const checkboxContainer = label.closest('div[data-testid="stCheckbox"]');
+                    if (checkboxContainer) checkboxContainer.style.display = 'none';
+                }}
+            }});
+        }}, 100);
+
+        // Обработка клика по видимой кнопке-эмодзи
+        document.addEventListener('click', function(e) {{
+            if (e.target.id === 'dino-visual-btn' || e.target.closest('#dino-visual-btn')) {{
                 // 1. Воспроизводим звук "ррр"
-                try {
+                try {{
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
@@ -46,20 +55,32 @@ def render_dino_footer():
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
                     oscillator.start(audioContext.currentTime);
                     oscillator.stop(audioContext.currentTime + 0.3);
-                } catch(err) {}
+                }} catch(err) {{}}
                 
-                // 2. Кликаем скрытую кнопку Streamlit для открытия модалки
-                const trigger = document.querySelector('button[key="open_dino_trigger"]');
-                if (trigger) trigger.click();
-            }
-        });
+                // 2. Находим скрытый чекбокс Streamlit и программно кликаем его
+                const labels = document.querySelectorAll('label');
+                labels.forEach(label => {{
+                    if (label.textContent.includes('{hidden_label}')) {{
+                        const checkbox = label.querySelector('input[type="checkbox"]');
+                        if (checkbox) {{
+                            checkbox.click(); // Это изменит session_state и вызовет rerun
+                        }}
+                    }}
+                }});
+            }}
+        }});
         </script>
+        
+        <div class="dino-footer-button">
+            <button class="dino-emoji-btn" id="dino-visual-btn" title="Нажми меня!">🦖</button>
+        </div>
         """,
         unsafe_allow_html=True
     )
 
-    # 4. Рендер модального окна, только если оно открыто
-    if st.session_state.dino_modal_open:
+    # 4. Если триггер активен (чекбокс отмечен), обновляем фразу и показываем модалку
+    if st.session_state.dino_trigger:
+        st.session_state.dino_phrase = get_random_phrase()
         _render_dino_modal_html()
 
 def _render_dino_modal_html():
@@ -86,25 +107,34 @@ def _render_dino_modal_html():
     </div>
     
     <script>
+    // Функция закрытия модалки
+    function closeDinoModal() {{
+        const labels = document.querySelectorAll('label');
+        labels.forEach(label => {{
+            if (label.textContent.includes('🦖_HIDDEN_DINO_TRIGGER_999')) {{
+                const checkbox = label.querySelector('input[type="checkbox"]');
+                // Если чекбокс отмечен, снимаем отметку (это вызовет rerun и закроет модалку)
+                if (checkbox && checkbox.checked) {{
+                    checkbox.click();
+                }}
+            }}
+        }});
+    }}
+
     // Закрытие по клику на крестик
-    document.getElementById('dino-close-btn').addEventListener('click', function() {{
-        const trigger = document.querySelector('button[key="close_dino_trigger"]');
-        if (trigger) trigger.click();
-    }});
+    document.getElementById('dino-close-btn').addEventListener('click', closeDinoModal);
     
     // Закрытие по клику вне окна (на затемненный фон)
     document.getElementById('dino-modal-overlay').addEventListener('click', function(e) {{
         if (e.target.id === 'dino-modal-overlay') {{
-            const trigger = document.querySelector('button[key="close_dino_trigger"]');
-            if (trigger) trigger.click();
+            closeDinoModal();
         }}
     }});
     
     // Закрытие по клавише Escape
     document.addEventListener('keydown', function(e) {{
         if (e.key === 'Escape') {{
-            const trigger = document.querySelector('button[key="close_dino_trigger"]');
-            if (trigger) trigger.click();
+            closeDinoModal();
         }}
     }});
     </script>
