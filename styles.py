@@ -45,27 +45,29 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }"
         "@keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }"
         "@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }"
+        "@keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }"
         "@keyframes mascotIdle { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(3deg); } }"
         "@keyframes mascotWave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-20deg); } 75% { transform: rotate(20deg); } }"
         ".fade-in { animation: fadeIn 0.6s ease-out; }"
         
-        # Стили для кнопки-динозавра
-        ".dino-button-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; }"
-        ".dino-button { width: 50px; height: 50px; border-radius: 50%; background: rgba(46, 204, 113, 0.9); border: 2px solid rgba(255, 255, 255, 0.3); font-size: 28px; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }"
-        ".dino-button:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); }"
+        # Стили для кнопки-динозавра в подвале (только эмодзи, без фона)
+        ".dino-footer-button { text-align: left; margin-bottom: 16px; padding-left: 8px; }"
+        ".dino-emoji-btn { background: none !important; border: none !important; font-size: 32px; cursor: pointer; padding: 8px 12px; transition: all 0.3s ease; border-radius: 8px; line-height: 1; }"
+        ".dino-emoji-btn:hover { transform: scale(1.2) rotate(-10deg); background: rgba(255,255,255,0.1) !important; }"
+        ".dino-emoji-btn:active { transform: scale(1.1); }"
         
         # Стили для модального окна
-        ".dino-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.7); animation: fadeIn 0.3s ease-out; }"
-        ".dino-modal-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 10% auto; padding: 0; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); position: relative; animation: fadeIn 0.4s ease-out; }"
-        ".dino-modal-close { position: absolute; right: 15px; top: 15px; color: white; font-size: 32px; font-weight: bold; cursor: pointer; z-index: 10; transition: all 0.3s ease; }"
-        ".dino-modal-close:hover { color: #FFD700; transform: scale(1.2); }"
+        ".dino-modal { display: none; position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); animation: fadeIn 0.3s ease-out; }"
+        ".dino-modal-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 8% auto; padding: 0; border-radius: 20px; width: 90%; max-width: 500px; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6); position: relative; animation: scaleIn 0.4s ease-out; }"
+        ".dino-modal-close { position: absolute; right: 20px; top: 15px; color: white; font-size: 36px; font-weight: bold; cursor: pointer; z-index: 10; transition: all 0.3s ease; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }"
+        ".dino-modal-close:hover { color: #FFD700; transform: scale(1.2); background: rgba(255,255,255,0.1); }"
         ".dino-gif-container { text-align: center; padding: 30px 20px 20px 20px; }"
         ".dino-gif { max-width: 100%; height: auto; border-radius: 15px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }"
-        ".dino-phrase { background: rgba(255, 255, 255, 0.95); padding: 20px; margin: 0 20px 20px 20px; border-radius: 12px; text-align: center; }"
-        ".dino-phrase p { margin: 0; font-size: 18px; color: #2C3E50; font-weight: 600; line-height: 1.5; }"
+        ".dino-phrase { background: rgba(255, 255, 255, 0.95); padding: 24px; margin: 0 20px 20px 20px; border-radius: 12px; text-align: center; }"
+        ".dino-phrase p { margin: 0; font-size: 20px; color: #2C3E50; font-weight: 600; line-height: 1.6; }"
         
         # Адаптивность для мобильных
-        "@media (max-width: 768px) { .dino-button-container { bottom: 100px; right: 20px; } .dino-button { width: 40px; height: 40px; font-size: 22px; } .dino-modal-content { width: 95%; margin: 15% auto; } .dino-phrase p { font-size: 16px; } }"
+        "@media (max-width: 768px) { .dino-emoji-btn { font-size: 28px; } .dino-modal-content { width: 95%; margin: 15% auto; } .dino-phrase p { font-size: 18px; } }"
         
         "</style>"
     )
