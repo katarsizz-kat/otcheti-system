@@ -2,7 +2,7 @@
 import streamlit as st
 
 # ВАЖНО: set_page_config должен быть ПЕРВЫМ вызовом streamlit!
-st.set_page_config(page_title="Система отчётов", page_icon="", layout="wide")
+st.set_page_config(page_title="Система отчётов", page_icon="🦖", layout="wide")
 
 # Импорты
 from config.greetings import get_current_greeting
