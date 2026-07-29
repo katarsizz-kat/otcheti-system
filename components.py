@@ -1,4 +1,4 @@
-"""Компоненты интерфейса: шапка, карточки, баннеры, кнопки, подвал."""
+"""Компоненты интерфейса: шапка, карточки, баннеры, кнопки, подвал, маскот."""
 import os
 import re
 import datetime
@@ -208,49 +208,4 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
     if not upcoming_holidays:
         return
     
-    st.markdown("### 🎉 Ближайшие праздники", unsafe_allow_html=True)
-    cols = st.columns([2, 1])
-    
-    with cols[0]:
-        html = '<div class="content-block fade-in"><ul style="padding-left: 20px; margin: 0; list-style-type: none;">'
-        for h in upcoming_holidays:
-            html += (
-                f'<li style="margin: 12px 0; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); '
-                f'display: flex; align-items: flex-start; gap: 10px;">'
-                f'<span style="font-size: 18px;">{h["emoji"]}</span>'
-                f'<span style="flex: 1;">{h["date"]} — {h["title"]}</span></li>'
-            )
-        html += '</ul></div>'
-        st.markdown(html, unsafe_allow_html=True)
-    
-    with cols[1]:
-        gif_path = os.path.join("assets", "animation.gif")
-        if os.path.exists(gif_path):
-            st.image(gif_path, width=250)
-        else:
-            st.markdown(
-                '<div style="display:flex;justify-content:center;align-items:center;'
-                'height:200px;background:#F8F9FA;border-radius:10px;">🎉</div>',
-                unsafe_allow_html=True,
-            )
-
-# =============================================================================
-# ПОДВАЛ (FOOTER) С КНОПКОЙ-ДИНОЗАВРОМ
-# =============================================================================
-def render_footer():
-    """Подвал приложения с кнопкой-динозавром."""
-    from easter_eggs.dino import render_dino_button, render_dino_modal
-    
-    # Кнопка-динозавр (в левом углу, перед копирайтом)
-    render_dino_button()
-    
-    # Копирайт
-    st.markdown(
-        '<div style="text-align:center;padding:20px;opacity:0.7;">'
-        '<p style="margin:0;font-size:14px;">© 2026 Система формирования отчётов • Версия 1.0</p>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    
-    # Модальное окно (скрыто по умолчанию)
-    render_dino_modal()
+    st.markdown("### 🎉 Бли
