@@ -6,18 +6,12 @@ import streamlit as st
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
 
-# =============================================================================
-# ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ
-# =============================================================================
 def make_key(text: str) -> str:
     """Превращает текст в безопасный ключ."""
     safe = re.sub(r'[^\w]', '', text)
     safe = re.sub(r'_+', '', safe)
     return safe.lower()
 
-# =============================================================================
-# ВЕРХНЯЯ ПАНЕЛЬ (ШАПКА)
-# =============================================================================
 def render_app_header():
     """Полноценная верхняя панель приложения."""
     greeting_data = get_current_greeting()
@@ -44,9 +38,6 @@ def _render_header_container(theme: str, icon: str):
     )
     st.markdown(html, unsafe_allow_html=True)
 
-# =============================================================================
-# ПРИВЕТСТВЕННЫЙ БЛОК
-# =============================================================================
 def render_welcome_block(icon: str, greeting: str, subtitle: str = ""):
     """Красивый приветственный блок."""
     st.markdown(
@@ -59,9 +50,6 @@ def render_welcome_block(icon: str, greeting: str, subtitle: str = ""):
         unsafe_allow_html=True,
     )
 
-# =============================================================================
-# ПРАЗДНИЧНЫЙ БАННЕР
-# =============================================================================
 def render_holiday_banner(holiday: dict):
     if not holiday:
         return
@@ -159,9 +147,6 @@ def _render_action_result(result: dict):
     elif result_type == "sound":
         st.warning(f"**{result.get('title', '')}**: {result.get('text', '')}\n\n{result.get('note', '')}")
 
-# =============================================================================
-# КАРТОЧКА ОТЧЁТА
-# =============================================================================
 def render_report_card(report: dict):
     st.markdown(
         f"""<a href="/{report['page']}" style="text-decoration:none;">
@@ -175,9 +160,6 @@ def render_report_card(report: dict):
         unsafe_allow_html=True,
     )
 
-# =============================================================================
-# БЛОК БЛИЖАЙШИХ ПРАЗДНИКОВ
-# =============================================================================
 def render_upcoming_holidays_section(upcoming_holidays: list):
     if not upcoming_holidays:
         return
@@ -208,17 +190,12 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
                 unsafe_allow_html=True,
             )
 
-# =============================================================================
-# ПОДВАЛ (FOOTER) С КНОПКОЙ-ДИНОЗАВРОМ
-# =============================================================================
 def render_footer():
     """Подвал приложения с кнопкой-динозавром."""
     from easter_eggs.dino import render_dino_footer
     
-    # Вызываем единую функцию, которая управляет и кнопкой, и модалкой
     render_dino_footer()
     
-    # Копирайт
     st.markdown(
         '<div style="text-align:center;padding:20px;opacity:0.7;">'
         '<p style="margin:0;font-size:14px;">© 2026 Система формирования отчётов • Версия 1.0</p>'
