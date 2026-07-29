@@ -427,17 +427,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Переключатель режима
-report_mode = st.radio(
-    "📋 Выберите режим отчёта:",
-    ["📝 Стандартный отчёт", " Пиццы по размерам"],
-    horizontal=True,
-    help="Стандартный - обычный отчёт с количеством и суммой\nПиццы по размерам - отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см"
-)
-
+# Описание работы
 st.markdown("""
 <div class="content-block">
-    <h3>📋 Как работает отчёт</h3>
+    <h3> Как работает отчёт</h3>
     
     <h4>📝 Стандартный режим:</h4>
     <ul>
@@ -457,9 +450,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Переключатель режима
+report_mode = st.radio(
+    "📋 Выберите режим отчёта:",
+    ["📝 Стандартный отчёт", "🍕 Пиццы по размерам"],
+    horizontal=True,
+    help="Стандартный - обычный отчёт с количеством и суммой\nПиццы по размерам - отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см"
+)
+
 # ПОЛЕ ВВОДА
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
-st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
+st.markdown("### ️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b></p>", unsafe_allow_html=True)
 
 if report_mode == "🍕 Пиццы по размерам":
@@ -483,7 +484,7 @@ else:
 rules_text = st.text_area(
     "Список позиций:",
     value="",
-    height=400 if report_mode == " Пиццы по размерам" else 300,
+    height=400 if report_mode == "🍕 Пиццы по размерам" else 300,
     key="rules_input",
     label_visibility="visible",
     placeholder=default_rules
@@ -517,14 +518,14 @@ if file_main:
                 if not rules:
                     st.error("❌ Введите хотя бы одну позицию в поле выше!")
                 else:
-                    if report_mode == "🍕 Пиццы по размерам":
+                    if report_mode == " Пиццы по размерам":
                         # Режим отчёта по пиццам с разбивкой по размерам
                         data = aggregate_pizza_by_size(df, rules_text)
                         wb = create_pizza_excel(data, period_str, rules)
                         
                         # Превью
                         st.success("✅ Отчёт сформирован!")
-                        st.subheader("📋 Превью (СПБ)")
+                        st.subheader(" Превью (СПБ)")
                         
                         preview_data = []
                         for rule in rules:
@@ -542,7 +543,7 @@ if file_main:
                         wb = create_excel(data, period_str, rules)
                         
                         st.success("✅ Отчёт сформирован!")
-                        st.subheader(" Превью (СПБ)")
+                        st.subheader("📋 Превью (СПБ)")
                         preview = pd.DataFrame([
                             {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
                             for rule in rules
