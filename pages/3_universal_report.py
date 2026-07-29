@@ -38,9 +38,35 @@ st.markdown("""
     margin-bottom: 24px;
     box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
 }
+
+/* Стили для текстового поля ввода */
+textarea {
+    border: 2px solid #4a90e2 !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    background-color: #ffffff !important;
+    min-height: 300px !important;
+}
+
+textarea:focus {
+    border-color: #2c5aa0 !important;
+    box-shadow: 0 0 8px rgba(74, 144, 226, 0.3) !important;
+    outline: none !important;
+}
+
+/* Стили для placeholder */
 textarea::placeholder {
     color: #6c757d !important;
     font-style: italic;
+    opacity: 0.8;
+}
+
+/* Стили для label поля ввода */
+[data-testid="stTextArea"] label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -447,7 +473,7 @@ else:
 rules_text = st.text_area(
     "Список позиций:",
     value="",
-    height=400 if report_mode == "🍕 Пиццы по размерам" else 300,
+    height=400 if report_mode == " Пиццы по размерам" else 300,
     key="rules_input",
     label_visibility="visible",
     placeholder=default_rules
@@ -481,7 +507,7 @@ if file_main:
                 if not rules:
                     st.error("❌ Введите хотя бы одну позицию в поле выше!")
                 else:
-                    if report_mode == " Пиццы по размерам":
+                    if report_mode == "🍕 Пиццы по размерам":
                         # Режим отчёта по пиццам с разбивкой по размерам
                         data = aggregate_pizza_by_size(df, rules_text)
                         wb = create_pizza_excel(data, period_str, rules)
@@ -506,7 +532,7 @@ if file_main:
                         wb = create_excel(data, period_str, rules)
                         
                         st.success("✅ Отчёт сформирован!")
-                        st.subheader("📋 Превью (СПБ)")
+                        st.subheader(" Превью (СПБ)")
                         preview = pd.DataFrame([
                             {'Позиция': rule, 'Количество': data['СПБ'][rule]['qty'], 'Сумма, ₽': data['СПБ'][rule]['sum']}
                             for rule in rules
