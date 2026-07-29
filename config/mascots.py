@@ -13,7 +13,7 @@ _phrases_cache = None
 def load_phrases():
     """Загружает фразы из JSON файла."""
     global _phrases_cache
-    if _phrases_cache is None:
+    if _phases_cache is None:
         try:
             with open(MASCOTS_FILE, 'r', encoding='utf-8') as f:
                 _phrases_cache = json.load(f)
@@ -44,12 +44,12 @@ def get_mascot_text(mascot_type: str = "dino") -> str:
     # Проверяем, нужно ли показать специальную фразу для Кристины
     # (каждое пятое открытие)
     click_count_key = f"{mascot_type}_click_count"
-    if click_count_key not in load_phrases():
-        load_phrases()[click_count_key] = 0
+    if click_count_key not in phrases:
+        phrases[click_count_key] = 0
     
-    load_phrases()[click_count_key] += 1
+    phrases[click_count_key] += 1
     
-    if load_phrases()[click_count_key] % 5 == 0:
+    if phrases[click_count_key] % 5 == 0:
         return phrases.get("kristina_special", "Кристина лучшая ❤️")
     
     # Случайный выбор категории
