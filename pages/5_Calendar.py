@@ -283,7 +283,8 @@ with st.sidebar:
                     elif location_code == "tyumen":
                         filtered_for_pdf = [e for e in filtered_for_pdf if e.get('location_type') in ['tyumen', 'all']]
                 
-                pdf_bytes = create_pdf_calendar(filtered_for_pdf, "Календарь событий")
+                # Стало (3 месяца):
+                pdf_bytes = create_pdf_calendar(filtered_for_pdf, "Календарь событий", months_ahea
                 
                 st.download_button(
                     label="📥 Скачать PDF",
