@@ -2,7 +2,7 @@
 import streamlit as st
 from datetime import datetime, date, timedelta
 from streamlit_calendar import calendar
-import utils.calendar_db as db
+import utils.supabase_db as db
 import config.calendar as cfg
 import pandas as pd
 from openpyxl import Workbook
