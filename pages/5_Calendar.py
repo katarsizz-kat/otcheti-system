@@ -145,10 +145,10 @@ with st.sidebar:
     
     # ИСПРАВЛЕНИЕ: увеличен диапазон до 2 лет для отображения повторяющихся событий
     date_range = st.date_input(
-        "Диапазон дат",
-        value=(date.today(), date.today() + timedelta(days=730)),  # 2 года вместо 1
-        key="sidebar_filter_date_range"
-    )
+    "Диапазон дат",
+    value=(date.today(), date.today() + timedelta(days=365 * 30)),
+    key="sidebar_filter_date_range"
+)
     
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start_date_filter, end_date_filter = date_range
