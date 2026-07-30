@@ -431,11 +431,12 @@ with tab_list:
             
             with col_checkbox:
                 is_selected = st.checkbox(
-                    "",
-                    value=event['id'] in st.session_state.events_to_delete,
-                    key=f"chk_{event['id']}",
-                    label_visibility="collapsed"
-                )
+    "Выбрать",
+    value=event['id'] in st.session_state.events_to_delete,
+    key=f"chk_{event['id']}",
+    label_visibility="visible"
+)
+
                 if is_selected and event['id'] not in st.session_state.events_to_delete:
                     st.session_state.events_to_delete.append(event['id'])
                 elif not is_selected and event['id'] in st.session_state.events_to_delete:
