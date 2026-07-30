@@ -123,25 +123,6 @@ def reset_form():
     st.session_state.show_edit_form = False
 
 # =============================================================================
-# ОТЛАДОЧНАЯ ИНФОРМАЦИЯ (временно)
-# =============================================================================
-
-with st.expander("🔧 Отладка", expanded=True):
-    st.write("**Текущая дата:**", date.today())
-    
-    all_events = get_cached_events()
-    st.write(f"**Всего событий в базе:** {len(all_events)}")
-    
-    if all_events:
-        st.write("**Последние 5 событий:**")
-        for e in all_events[-5:]:
-            st.write(f"- ID: {e['id']}, Название: {e['title']}, Дата: {e['start_date']} → {e['end_date']}")
-    
-    st.write("**Session state:**")
-    st.write(f"- edit_mode: {st.session_state.edit_mode}")
-    st.write(f"- show_edit_form: {st.session_state.show_edit_form}")
-
-# =============================================================================
 # Боковая панель с фильтрами
 # =============================================================================
 
