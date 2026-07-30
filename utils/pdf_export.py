@@ -2,231 +2,203 @@
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime, date, timedelta
 from typing import List, Dict
 import io
+import calendar
 import os
-
 
 def get_cyrillic_font():
     """Получить шрифт с поддержкой кириллицы."""
     # Пробуем зарегистрировать шрифты с поддержкой кириллицы
-    try:
-        # Пытаемся зарегистрировать DejaVu Sans (обычно есть в системе)
-        font_paths = [
-            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
-            '/usr/share/fonts/TTF/DejaVuSans.ttf',
-            'DejaVuSans.ttf',
-        ]
-        
-        for font_path in font_paths:
-            if os.path.exists(font_path):
-                try:
-                    pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
-                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_path.replace('DejaVuSans.ttf', 'DejaVuSans-Bold.ttf')))
-                    return 'DejaVuSans', 'DejaVuSans-Bold'
-                except:
-                    continue
-        
-        # Если DejaVu не найден, пробуем другие шрифты
-        alternative_fonts = [
-            'Arial',
-            'Times New Roman',
-            'LiberationSans',
-        ]
-        
-        for font_name in alternative_fonts:
-            try:
-                pdfmetrics.registerFont(TTFont(font_name, f'{font_name}.ttf'))
-                return font_name, f'{font_name}-Bold'
-            except:
-                continue
-                
-    except Exception as e:
-        print(f"Warning: Could not register custom fonts: {e}")
+    font_paths = [
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/TTF/DejaVuSans.ttf',
+        '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+    ]
     
-    # Если ничего не помогло, используем стандартный шрифт
-    # (но кириллица может не отображаться)
+    for font_path in font_paths:
+        if os.path.exists(font_path):
+            try:
+                bold_path = font_path.replace('DejaVuSans.ttf', 'DejaVuSans-Bold.ttf')
+                pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+                if os.path.exists(bold_path):
+                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', bold_path))
+                else:
+                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_path))
+                return 'DejaVuSans', 'DejaVuSans-Bold'
+            except Exception as e:
+                print(f"Font error: {e}")
+                continue
+    
+    # Если не получилось, используем стандартный (но кириллица не будет работать)
     return 'Helvetica', 'Helvetica-Bold'
 
+def create_month_calendar(events: List[Dict], year: int, month: int, font_name: str, font_name_bold: str) -> list:
+    """Создать календарную сетку для одного месяца."""
+    # Получаем календарь месяца
+    cal = calendar.monthcalendar(year, month)
+    month_name = [
+        '', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ]
+    
+    # Дни недели
+    weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+    
+    # Группируем события по дням
+    events_by_day = {}
+    for event in events:
+        try:
+            event_date = datetime.fromisoformat(str(event['start_date']).replace('Z', '+00:00')).date()
+            if event_date.year == year and event_date.month == month:
+                day = event_date.day
+                if day not in events_by_day:
+                    events_by_day[day] = []
+                events_by_day[day].append(event)
+        except:
+            pass
+    
+    # Создаем таблицу
+    table_data = []
+    
+    # Заголовок месяца
+    table_data.append([
+        Paragraph(f"<b>{month_name[month]} {year}</b>", 
+                 style=ParagraphStyle('MonthTitle', fontName=font_name_bold, fontSize=16, alignment=1))
+    ] * 7)
+    
+    # Дни недели
+    table_data.append([
+        Paragraph(f"<b>{day}</b>", 
+                 style=ParagraphStyle('Weekday', fontName=font_name_bold, fontSize=10, alignment=1))
+        for day in weekdays
+    ])
+    
+    # Дни месяца
+    for week in cal:
+        week_row = []
+        for day in week:
+            if day == 0:
+                week_row.append("")
+            else:
+                events_text = ""
+                if day in events_by_day:
+                    for event in events_by_day[day][:3]:  # Показываем до 3 событий
+                        title = event.get('title', '')[:20]
+                        events_text += f"• {title}\n"
+                    if len(events_by_day[day]) > 3:
+                        events_text += f"... ещё {len(events_by_day[day]) - 3}"
+                
+                cell_text = f"<b>{day}</b>\n{events_text}"
+                week_row.append(Paragraph(cell_text, 
+                    style=ParagraphStyle('DayCell', fontName=font_name, fontSize=9, alignment=0, leading=10)))
+        table_data.append(week_row)
+    
+    return table_data
 
 def create_pdf_calendar(events: List[Dict], title: str = "Календарь событий") -> bytes:
     """
-    Создать PDF файл с календарём событий.
-    
-    Args:
-        events: Список событий
-        title: Заголовок документа
-    
-    Returns:
-        bytes: PDF файл в виде байтов
+    Создать PDF файл с календарём по месяцам.
     """
     buffer = io.BytesIO()
     
-    # Создаём документ в альбомной ориентации
+    # Получаем шрифты
+    font_name, font_name_bold = get_cyrillic_font()
+    
+    # Создаём документ
     doc = SimpleDocTemplate(
         buffer,
         pagesize=landscape(A4),
         rightMargin=1*cm,
         leftMargin=1*cm,
-        topMargin=1*cm,
+        topMargin=1.5*cm,
         bottomMargin=1*cm
     )
     
-    # Получаем шрифты
-    font_name, font_name_bold = get_cyrillic_font()
-    
     # Стили
     styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle('Title', fontName=font_name_bold, fontSize=20, alignment=1, spaceAfter=20))
+    styles.add(ParagraphStyle('Subtitle', fontName=font_name, fontSize=10, alignment=1, spaceAfter=10))
     
-    # Создаём стили с поддержкой кириллицы
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=24,
-        spaceAfter=20,
-        alignment=1,  # Центр
-        textColor=colors.HexColor('#2C3E50'),
-        fontName=font_name_bold
-    )
-    
-    normal_style = ParagraphStyle(
-        'CustomNormal',
-        parent=styles['Normal'],
-        fontName=font_name,
-        fontSize=10
-    )
-    
-    # Элементы документа
     elements = []
     
     # Заголовок
-    elements.append(Paragraph(title, title_style))
-    elements.append(Spacer(1, 0.5*cm))
-    
-    # Информация о генерации
+    elements.append(Paragraph(title, styles['Title']))
     generated_date = datetime.now().strftime("%d.%m.%Y %H:%M")
-    elements.append(Paragraph(f"<i>Сгенерировано: {generated_date}</i>", normal_style))
+    elements.append(Paragraph(f"Сгенерировано: {generated_date}", styles['Subtitle']))
     elements.append(Spacer(1, 0.5*cm))
     
-    # Группируем события по датам
-    events_by_date = {}
-    for event in events:
-        event_date = event.get('start_date', '')
-        if event_date not in events_by_date:
-            events_by_date[event_date] = []
-        events_by_date[event_date].append(event)
-    
-    # Сортируем даты
-    sorted_dates = sorted(events_by_date.keys())
-    
-    # Создаём таблицу
-    table_data = [['Дата', 'Время', 'Событие', 'Категория', 'Локация']]
-    
-    for event_date in sorted_dates:
-        date_events = events_by_date[event_date]
-        
-        # Форматируем дату
-        try:
-            date_obj = datetime.fromisoformat(event_date.replace('Z', '+00:00'))
-            date_str = date_obj.strftime("%d.%m.%Y")
-            day_name = date_obj.strftime("%A")
-            
-            # Перевод дней недели на русский
-            day_names_ru = {
-                'Monday': 'Понедельник',
-                'Tuesday': 'Вторник',
-                'Wednesday': 'Среда',
-                'Thursday': 'Четверг',
-                'Friday': 'Пятница',
-                'Saturday': 'Суббота',
-                'Sunday': 'Воскресенье'
-            }
-            day_name_ru = day_names_ru.get(day_name, day_name)
-        except:
-            date_str = event_date
-            day_name_ru = ""
-        
-        # Добавляем дату как заголовок секции
-        header_text = f"<b>{date_str}</b>"
-        if day_name_ru:
-            header_text += f" {day_name_ru}"
-        
-        table_data.append([
-            header_text,
-            "",
-            "",
-            "",
-            ""
-        ])
-        
-        # Добавляем события
-        for event in date_events:
-            title_event = event.get('title', '')
-            category = event.get('category', '')
-            location = event.get('location_custom') or event.get('location_type', '')
-            
-            # Форматируем время
+    # Определяем диапазон месяцев
+    if not events:
+        # Если нет событий, показываем текущий месяц
+        today = date.today()
+        months_to_show = [(today.year, today.month)]
+    else:
+        # Получаем все уникальные месяцы из событий
+        months_set = set()
+        for event in events:
             try:
-                time_str = date_obj.strftime("%H:%M")
+                event_date = datetime.fromisoformat(str(event['start_date']).replace('Z', '+00:00')).date()
+                months_set.add((event_date.year, event_date.month))
             except:
-                time_str = ""
+                pass
+        
+        months_to_show = sorted(months_set)
+    
+    # Создаём календарь для каждого месяца
+    for idx, (year, month) in enumerate(months_to_show):
+        month_events = [e for e in events if 
+                       datetime.fromisoformat(str(e['start_date']).replace('Z', '+00:00')).year == year and
+                       datetime.fromisoformat(str(e['start_date']).replace('Z', '+00:00')).month == month]
+        
+        table_data = create_month_calendar(month_events, year, month, font_name, font_name_bold)
+        
+        table = Table(table_data, colWidths=[4.2*cm] * 7)
+        table.setStyle(TableStyle([
+            # Заголовок месяца
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0, 0), (-1, 0), font_name_bold),
+            ('FONTSIZE', (0, 0), (-1, 0), 16),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
             
-            table_data.append([
-                "",
-                time_str,
-                title_event,
-                category,
-                location
-            ])
+            # Дни недели
+            ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#2ECC71')),
+            ('TEXTCOLOR', (0, 1), (-1, 1), colors.white),
+            ('FONTNAME', (0, 1), (-1, 1), font_name_bold),
+            ('FONTSIZE', (0, 1), (-1, 1), 10),
+            ('ALIGN', (0, 1), (-1, 1), 'CENTER'),
+            
+            # Дни месяца
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 2), (-1, -1), [colors.white, colors.HexColor('#F8F9FA')]),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ]))
         
-        # Пустая строка между датами
-        table_data.append(["", "", "", "", ""])
-    
-    # Создаём таблицу
-    table = Table(table_data, colWidths=[3.5*cm, 2*cm, 7*cm, 3*cm, 4*cm])
-    
-    # Стили таблицы
-    table.setStyle(TableStyle([
-        # Заголовок
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), font_name_bold),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        elements.append(table)
         
-        # Чередование цветов строк
-        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#ECF0F1')),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor('#ECF0F1'), colors.white]),
-        
-        # Границы
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        
-        # Отступы
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        
-        # Выделение заголовков дат
-        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#2ECC71')),
-        ('FONTNAME', (0, 1), (-1, 1), font_name_bold),
-    ]))
-    
-    elements.append(table)
+        # Добавляем разрыв страницы после каждого месяца, кроме последнего
+        if idx < len(months_to_show) - 1:
+            elements.append(PageBreak())
     
     # Генерируем PDF
     try:
         doc.build(elements)
     except Exception as e:
         print(f"Error building PDF: {e}")
-        # Пытаемся построить с базовыми стилями
+        # Пробуем с базовыми настройками
         doc.build(elements, canvasmaker=None)
     
-    # Получаем PDF как байты
     pdf_bytes = buffer.getvalue()
     buffer.close()
     
