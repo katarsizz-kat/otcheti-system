@@ -19,10 +19,28 @@ def parse_date(d):
     """Безопасный парсинг даты из строки или объекта date."""
     if isinstance(d, date):
         return d
-    return date.fromisoformat(str(d))
+    if d is None:
+        return date.today()
+    
+    d_str = str(d).strip()
+    
+    # Убираем время и часовой пояс если есть
+    if 'T' in d_str:
+        d_str = d_str.split('T')[0]
+    if '+' in d_str[10:]:  # Убираем +00:00
+        d_str = d_str.split('+')[0]
+    if d_str.endswith('Z'):
+        d_str = d_str[:-1]
+    
+    try:
+        return date.fromisoformat(d_str)
+    except ValueError:
+        # Если не получается распарсить, возвращаем сегодня
+        st.warning(f"⚠️ Не удалось распарсить дату: {d}")
+        return date.today()
 
 def get_key_by_value(d: dict, target_val, default=None):
-    """Получить ключ словаря по его значению (для обратного маппинга)."""
+    """Получить ключ словаря по его значению."""
     for k, v in d.items():
         if v == target_val:
             return k
@@ -32,12 +50,12 @@ def get_key_by_value(d: dict, target_val, default=None):
 # Кэширование данных
 # =============================================================================
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def get_cached_events():
     """Получить все события с кэшированием."""
     return db.get_all_events()
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def get_cached_event_by_id(event_id):
     """Получить событие по ID с кэшированием."""
     return db.get_event_by_id(event_id)
@@ -56,15 +74,14 @@ if 'selected_event' not in st.session_state:
 if 'edit_mode' not in st.session_state:
     st.session_state.edit_mode = False
 if 'show_edit_form' not in st.session_state:
-    st.session_state.show_edit_form = False  # Флаг для показа формы редактирования
+    st.session_state.show_edit_form = False
 if 'events_to_delete' not in st.session_state:
     st.session_state.events_to_delete = []
 if 'delete_confirm_id' not in st.session_state:
-    st.session_state.delete_confirm_id = None  # ID события для подтверждения удаления
+    st.session_state.delete_confirm_id = None
 if 'success_message' not in st.session_state:
-    st.session_state.success_message = None  # Сообщение об успехе
+    st.session_state.success_message = None
 
-# Инициализация формы
 form_defaults = {
     'data_title': "",
     'data_start_date': date.today(),
@@ -90,7 +107,6 @@ for key, value in form_defaults.items():
 
 st.title("📅 Календарь событий")
 
-# Показ сообщения об успехе
 if st.session_state.success_message:
     st.success(st.session_state.success_message, icon="✅")
     st.session_state.success_message = None
@@ -141,7 +157,7 @@ with st.sidebar:
         start_date_filter = end_date_filter = date_range if isinstance(date_range, date) else date.today()
     
     st.divider()
-    st.header(" Экспорт")
+    st.header("📤 Экспорт")
     
     if st.button("Экспорт в Excel", use_container_width=True, key="btn_export"):
         with st.spinner("Генерация Excel..."):
@@ -217,7 +233,7 @@ with st.sidebar:
                 buffer.seek(0)
                 
                 st.download_button(
-                    label="📥 Скачать Excel",
+                    label=" Скачать Excel",
                     data=buffer,
                     file_name=f"calendar_events_{date.today()}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -303,12 +319,21 @@ with tab_calendar:
 with tab_list:
     st.subheader("📋 Список событий")
     
-    # Если активирован режим редактирования, показываем форму прямо здесь
+    # ОТЛАДКА: Показываем информацию о датах
+    with st.expander("🔧 Отладка дат", expanded=False):
+        st.write(f"**Текущая дата:** {date.today()}")
+        st.write(f"**Всего событий в базе:** {len(all_events)}")
+        st.write(f"**После фильтров:** {len(filtered_events)}")
+        
+        if filtered_events:
+            st.write("**Даты событий:**")
+            for e in filtered_events[:5]:
+                st.write(f"- {e['title']}: {e['start_date']} → {e['end_date']} (распарсено: {parse_date(e['start_date'])} → {parse_date(e['end_date'])})")
+    
     if st.session_state.show_edit_form and st.session_state.selected_event:
         st.divider()
         st.subheader(f"✏️ Редактирование: {st.session_state.selected_event['title']}")
         
-        # Форма редактирования (та же что во вкладке "Добавить")
         title = st.text_input("Название события", value=st.session_state.data_title, key="edit_input_title")
         
         col1, col2 = st.columns(2)
@@ -343,7 +368,7 @@ with tab_list:
         
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button("💾 Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
+            if st.button(" Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
                 if not title:
                     st.error("❌ Введите название события")
                 elif start_date > end_date:
@@ -382,14 +407,13 @@ with tab_list:
         
         st.divider()
     
-    # Подтверждение удаления
     if st.session_state.delete_confirm_id:
         event_to_delete = next((e for e in filtered_events if e['id'] == st.session_state.delete_confirm_id), None)
         if event_to_delete:
-            st.warning(f"⚠️ Вы уверены, что хотите удалить событие **'{event_to_delete['title']}'**?")
+            st.warning(f"️ Вы уверены, что хотите удалить событие **'{event_to_delete['title']}'**?")
             col_yes, col_no = st.columns(2)
             with col_yes:
-                if st.button("🗑️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
+                if st.button("️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
                     db.delete_event(st.session_state.delete_confirm_id)
                     clear_cache()
                     st.session_state.success_message = f"✅ Событие '{event_to_delete['title']}' удалено!"
@@ -433,11 +457,10 @@ with tab_list:
             with col_info:
                 location_display = event.get('location_custom') or event.get('location_type', 'Не указано')
                 st.markdown(f"**{event['title']}**")
-                st.caption(f" {event['start_date']} | {event['category']} | {location_display}")
+                st.caption(f"📅 {event['start_date']} | {event['category']} | {location_display}")
             
             with col_actions:
-                # Кнопка редактирования - теперь работает через флаг show_edit_form
-                if st.button("✏️", key=f"edit_{event['id']}", help="Редактировать"):
+                if st.button("️", key=f"edit_{event['id']}", help="Редактировать"):
                     st.session_state.selected_event = event
                     st.session_state.edit_mode = True
                     st.session_state.show_edit_form = True
@@ -466,14 +489,12 @@ with tab_list:
                     st.session_state.data_recurrence = get_key_by_value(cfg.RECURRENCE_TYPES, event.get('recurrence_type', 'none'), list(cfg.RECURRENCE_TYPES.values())[0])
                     st.rerun()
                 
-                # Кнопка удаления - теперь работает через флаг delete_confirm_id
-                if st.button("🗑️", key=f"delete_{event['id']}", help="Удалить"):
+                if st.button("️", key=f"delete_{event['id']}", help="Удалить"):
                     st.session_state.delete_confirm_id = event['id']
                     st.rerun()
             
             st.divider()
         
-        # Массовое удаление
         if st.session_state.events_to_delete:
             st.warning(f"🗑️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
             col_confirm, col_cancel = st.columns(2)
@@ -498,7 +519,7 @@ with tab_list:
 # =============================================================================
 
 with tab_add:
-    st.subheader(" Добавить новое событие")
+    st.subheader("➕ Добавить новое событие")
     
     title = st.text_input("Название события", value=st.session_state.data_title, key="input_title")
     
@@ -518,7 +539,7 @@ with tab_add:
     
     location_custom = None
     if location_type == "Выбрать конкретные":
-        location_custom_list = st.multiselect("📍 Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="input_location_custom")
+        location_custom_list = st.multiselect(" Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="input_location_custom")
         location_custom = ", ".join(location_custom_list) if location_custom_list else None
     
     st.divider()
@@ -539,7 +560,7 @@ with tab_add:
     with col_save:
         if st.button("💾 Сохранить", use_container_width=True, type="primary", key="btn_save_event"):
             if not title:
-                st.error("❌ Введите название события")
+                st.error(" Введите название события")
             elif start_date > end_date:
                 st.error(f"❌ Дата начала ({start_date}) не может быть позже даты окончания ({end_date})")
             else:
