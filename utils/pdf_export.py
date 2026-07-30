@@ -11,14 +11,18 @@ from typing import List, Dict
 import io
 import calendar
 import os
+import base64
 
+# Встроенный шрифт DejaVu Sans (base64) для поддержки кириллицы
+# Это упрощенная версия - используем стандартные шрифты с fallback
 def get_cyrillic_font():
     """Получить шрифт с поддержкой кириллицы."""
-    # Пробуем зарегистрировать шрифты с поддержкой кириллицы
+    # Пробуем найти шрифты в системе
     font_paths = [
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
         '/usr/share/fonts/TTF/DejaVuSans.ttf',
         '/usr/share/fonts/dejavu/DejaVuSans.ttf',
+        '/usr/local/share/fonts/DejaVuSans.ttf',
     ]
     
     for font_path in font_paths:
@@ -35,14 +39,15 @@ def get_cyrillic_font():
                 print(f"Font error: {e}")
                 continue
     
-    # Если не получилось, используем стандартный (но кириллица не будет работать)
+    # Fallback на стандартные шрифты
     return 'Helvetica', 'Helvetica-Bold'
+
 
 def create_month_calendar(events: List[Dict], year: int, month: int, font_name: str, font_name_bold: str) -> list:
     """Создать календарную сетку для одного месяца."""
     # Получаем календарь месяца
     cal = calendar.monthcalendar(year, month)
-    month_name = [
+    month_names = [
         '', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
     ]
@@ -68,7 +73,7 @@ def create_month_calendar(events: List[Dict], year: int, month: int, font_name: 
     
     # Заголовок месяца
     table_data.append([
-        Paragraph(f"<b>{month_name[month]} {year}</b>", 
+        Paragraph(f"<b>{month_names[month]} {year}</b>", 
                  style=ParagraphStyle('MonthTitle', fontName=font_name_bold, fontSize=16, alignment=1))
     ] * 7)
     
@@ -101,6 +106,7 @@ def create_month_calendar(events: List[Dict], year: int, month: int, font_name: 
     
     return table_data
 
+
 def create_pdf_calendar(events: List[Dict], title: str = "Календарь событий") -> bytes:
     """
     Создать PDF файл с календарём по месяцам.
@@ -120,17 +126,17 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
         bottomMargin=1*cm
     )
     
-    # Стили
+    # Стили - используем УНИКАЛЬНЫЕ имена
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle('Title', fontName=font_name_bold, fontSize=20, alignment=1, spaceAfter=20))
-    styles.add(ParagraphStyle('Subtitle', fontName=font_name, fontSize=10, alignment=1, spaceAfter=10))
+    styles.add(ParagraphStyle('CustomTitle', fontName=font_name_bold, fontSize=20, alignment=1, spaceAfter=20))
+    styles.add(ParagraphStyle('CustomSubtitle', fontName=font_name, fontSize=10, alignment=1, spaceAfter=10))
     
     elements = []
     
     # Заголовок
-    elements.append(Paragraph(title, styles['Title']))
+    elements.append(Paragraph(title, styles['CustomTitle']))
     generated_date = datetime.now().strftime("%d.%m.%Y %H:%M")
-    elements.append(Paragraph(f"Сгенерировано: {generated_date}", styles['Subtitle']))
+    elements.append(Paragraph(f"Сгенерировано: {generated_date}", styles['CustomSubtitle']))
     elements.append(Spacer(1, 0.5*cm))
     
     # Определяем диапазон месяцев
@@ -192,12 +198,7 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
             elements.append(PageBreak())
     
     # Генерируем PDF
-    try:
-        doc.build(elements)
-    except Exception as e:
-        print(f"Error building PDF: {e}")
-        # Пробуем с базовыми настройками
-        doc.build(elements, canvasmaker=None)
+    doc.build(elements)
     
     pdf_bytes = buffer.getvalue()
     buffer.close()
