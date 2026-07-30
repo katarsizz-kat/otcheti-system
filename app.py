@@ -78,88 +78,83 @@ render_welcome_block(
 # Блок "Ближайшие события"
 # =============================================================================
 
-st.markdown("###  Ближайшие события", unsafe_allow_html=True)
+st.markdown("### 📅 Ближайшие события", unsafe_allow_html=True)
 
 if upcoming_events:
     # Определяем количество колонок
     num_cols = min(3, len(upcoming_events))
     cols = st.columns(num_cols)
     
+    # Цвета категорий (используются для акцента на рамке)
+    category_colors = {
+        'Праздник': '#E74C3C',
+        'Мероприятие': '#3498DB',
+        'Встреча': '#9B59B6',
+        'Дедлайн': '#E67E22',
+        'Обучение': '#1ABC9C',
+    }
+    
     for idx, event in enumerate(upcoming_events):
         with cols[idx % num_cols]:
             # Парсим дату
-            event_date_str = event.get('start_date', '')
-            try:
-                if 'T' in event_date_str:
-                    event_date_str = event_date_str.split('T')[0]
-                event_date = datetime.fromisoformat(event_date_str)
-                date_display = event_date.strftime("%d.%m.%Y")
-                
-                # Вычисляем сколько дней осталось
-                days_left = (event_date.date() - date.today()).days
-                if days_left == 0:
-                    days_text = "🔴 Сегодня!"
-                    days_color = "#E74C3C"
-                elif days_left == 1:
-                    days_text = " Завтра"
-                    days_color = "#E67E22"
-                elif days_left <= 7:
-                    days_text = f" Через {days_left} дн."
-                    days_color = "#F39C12"
-                else:
-                    days_text = f"📆 Через {days_left} дн."
-                    days_color = "#27AE60"
-            except Exception:
-                date_display = event_date_str
-                days_text = ""
-                days_color = "#7F8C8D"
+            event_date = parse_event_date(event.get('start_date', ''))
+            days_left = (event_date - date.today()).days
+            
+            # Текст и цвет для дней
+            if days_left == 0:
+                days_text = "🔴 Сегодня!"
+                days_color = "#E74C3C"
+            elif days_left == 1:
+                days_text = "⏰ Завтра"
+                days_color = "#E67E22"
+            elif days_left <= 7:
+                days_text = f"⚡ Через {days_left} дн."
+                days_color = "#F39C12"
+            else:
+                days_text = f"📆 Через {days_left} дн."
+                days_color = "#27AE60"
             
             title = event.get('title', 'Без названия')
             category = event.get('category', '')
             location = event.get('location_custom') or event.get('location_type', '')
+            date_display = event_date.strftime("%d.%m.%Y")
             
-            # Карточка с рамкой
+            cat_color = category_colors.get(category, '#95A5A6')
+            
+            # 🎨 Карточка с рамкой, тенью и цветным акцентом слева
             st.markdown(f"""
             <div style="
-                background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
-                border: 2px solid #E0E0E0;
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-left: 5px solid {cat_color};
                 border-radius: 12px;
-                padding: 20px;
-                margin-bottom: 15px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                padding: 16px;
+                margin-bottom: 16px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                height: 100%;
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
             ">
-                <div style="font-size: 18px; font-weight: bold; color: #2C3E50; margin-bottom: 15px; border-bottom: 2px solid #3498DB; padding-bottom: 10px;">
+                <div style="font-size: 16px; font-weight: bold; color: #1E293B; margin-bottom: 12px; line-height: 1.3;">
                     {title}
                 </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 16px;">📅</span>
-                        <span style="font-size: 14px; color: #7F8C8D;">{date_display}</span>
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #475569;">
+                    <div>
+                        📅 {date_display} &nbsp; 
+                        <span style="color: {days_color}; font-weight: 600;">{days_text}</span>
                     </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 16px;"></span>
-                        <span style="font-size: 14px; font-weight: bold; color: {days_color};">{days_text}</span>
-                    </div>
-                    
-                    {f'<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">🏷️</span><span style="font-size: 14px; color: #3498DB; font-weight: 500;">{category}</span></div>' if category else ''}
-                    
-                    {f'<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">📍</span><span style="font-size: 14px; color: #7F8C8D;">{location}</span></div>' if location else ''}
+                    {f'<div>🏷️ <span style="color: {cat_color}; font-weight: 500;">{category}</span></div>' if category else ''}
+                    {f'<div>📍 {location}</div>' if location else ''}
                 </div>
             </div>
             """, unsafe_allow_html=True)
     
     # Кнопка перехода к полному календарю
-    st.markdown("---")
-    col_left, col_center, col_right = st.columns([1, 2, 1])
-    with col_center:
-        if st.button("📅 Открыть полный календарь", use_container_width=True, type="primary"):
-            st.switch_page("pages/5_Calendar.py")
+    st.markdown("<br>", unsafe_allow_html=True) # Небольшой отступ
+    if st.button("📅 Открыть полный календарь", use_container_width=True, type="primary"):
+        st.switch_page("pages/5_Calendar.py")
 else:
     st.info("ℹ️ На ближайшие 30 дней событий не запланировано")
-    
+
 # =============================================================================
 # Праздничный баннер (если есть праздник сегодня)
 # =============================================================================
