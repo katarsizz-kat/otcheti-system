@@ -1,3 +1,4 @@
+"""Страница календаря событий."""
 import streamlit as st
 from datetime import datetime, date, timedelta
 from streamlit_calendar import calendar
@@ -11,37 +12,51 @@ from functools import lru_cache
 
 st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
 
+# =============================================================================
 # Кэширование данных
+# =============================================================================
+
 @st.cache_data(ttl=60)
 def get_cached_events():
-    """Получить все события с кэшированием"""
+    """Получить все события с кэшированием."""
     return db.get_all_events()
 
 @st.cache_data(ttl=60)
 def get_cached_event_by_id(event_id):
-    """Получить событие по ID с кэшированием"""
+    """Получить событие по ID с кэшированием."""
     return db.get_event_by_id(event_id)
 
 def clear_cache():
-    """Очистить кэш"""
+    """Очистить кэш."""
     get_cached_events.clear()
     get_cached_event_by_id.clear()
 
+# =============================================================================
 # Инициализация session state
+# =============================================================================
+
 if 'selected_event' not in st.session_state:
     st.session_state.selected_event = None
+
 if 'edit_mode' not in st.session_state:
     st.session_state.edit_mode = False
+
 if 'is_indefinite' not in st.session_state:
     st.session_state.is_indefinite = True
+
 if 'location_type' not in st.session_state:
     st.session_state.location_type = "Все рестораны"
+
 if 'events_on_date' not in st.session_state:
     st.session_state.events_on_date = []
+
 if 'show_events_on_date' not in st.session_state:
     st.session_state.show_events_on_date = None
 
+# =============================================================================
 # Session state для формы
+# =============================================================================
+
 form_defaults = {
     'form_title': "",
     'form_start_date': date.today(),
@@ -61,10 +76,18 @@ for key, value in form_defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
+# =============================================================================
+# Заголовок страницы
+# =============================================================================
+
 st.title("📅 Календарь событий")
 
+# =============================================================================
 # Функция для сброса формы
+# =============================================================================
+
 def reset_form():
+    """Сбросить форму к значениям по умолчанию."""
     for key, value in form_defaults.items():
         st.session_state[key] = value
     st.session_state.is_indefinite = True
@@ -72,9 +95,12 @@ def reset_form():
     st.session_state.edit_mode = False
     st.session_state.selected_event = None
 
+# =============================================================================
 # Боковая панель с фильтрами
+# =============================================================================
+
 with st.sidebar:
-    st.header("🔍 Фильтры")
+    st.header(" Фильтры")
     
     selected_category = st.multiselect(
         "Категория",
@@ -105,10 +131,10 @@ with st.sidebar:
     st.divider()
     
     st.header("📤 Экспорт")
+    
     if st.button("Экспорт в Excel", use_container_width=True, key="btn_export"):
         with st.spinner("Генерация Excel..."):
             events = get_cached_events()
-            
             if events:
                 wb = Workbook()
                 ws = wb.active
@@ -139,6 +165,7 @@ with st.sidebar:
                         event['recurrence_type']
                     ])
                 
+                # Автоширина столбцов
                 for column in ws.columns:
                     max_length = 0
                     column_letter = column[0].column_letter
@@ -165,10 +192,16 @@ with st.sidebar:
             else:
                 st.warning("Нет событий для экспорта")
 
+# =============================================================================
 # Получение событий с кэшированием
+# =============================================================================
+
 all_events = get_cached_events()
 
+# =============================================================================
 # Применение фильтров
+# =============================================================================
+
 filtered_events = all_events
 
 if selected_category:
@@ -190,14 +223,20 @@ filtered_events = [
     and date.fromisoformat(e['end_date']) >= start_date_filter
 ]
 
+# =============================================================================
 # Вкладки
-tab_calendar, tab_list, tab_add = st.tabs([" Календарь", "📋 Список", "➕ Добавить событие"])
+# =============================================================================
+
+tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", "📋 Список", "➕ Добавить событие"])
+
+# =============================================================================
+# Вкладка 1: Календарь
+# =============================================================================
 
 with tab_calendar:
     calendar_events = []
     for event in filtered_events:
         color = cfg.EVENT_CATEGORIES.get(event['category'], '#808080')
-        
         calendar_events.append({
             "title": event['title'],
             "start": event['start_date'],
@@ -231,7 +270,10 @@ with tab_calendar:
     # Обработка клика на дату
     if cal_value and cal_value.get("dateClick"):
         clicked_date = cal_value["dateClick"]["date"]
-        events_on_day = [e for e in all_events if date.fromisoformat(e['start_date']) <= date.fromisoformat(clicked_date) <= date.fromisoformat(e['end_date'])]
+        events_on_day = [
+            e for e in all_events 
+            if date.fromisoformat(e['start_date']) <= date.fromisoformat(clicked_date) <= date.fromisoformat(e['end_date'])
+        ]
         st.session_state.events_on_date = events_on_day
         st.session_state.show_events_on_date = clicked_date
         st.rerun()
@@ -256,7 +298,6 @@ with tab_calendar:
                     with col1:
                         st.write(f"**Категория:** {event['category']}")
                         st.write(f"**Дата начала:** {event['start_date']}")
-                        
                         if event['start_date'] == event['end_date']:
                             st.write("**Дата окончания:** Однодневное событие")
                         else:
@@ -275,7 +316,6 @@ with tab_calendar:
                         if st.button(f"✏️ Редактировать", key=f"edit_{event['id']}", use_container_width=True):
                             st.session_state.selected_event = event
                             st.session_state.edit_mode = True
-                            
                             st.session_state.form_title = event['title']
                             st.session_state.form_start_date = date.fromisoformat(event['start_date'])
                             st.session_state.form_end_date = date.fromisoformat(event['end_date'])
@@ -300,7 +340,6 @@ with tab_calendar:
                             st.session_state.form_recurrence = event.get('recurrence_type', 'none')
                             st.session_state.is_indefinite = (event['start_date'] == event['end_date'])
                             st.session_state.location_type = event['location_type']
-                            
                             st.session_state.show_events_on_date = None
                             st.rerun()
                     
@@ -331,7 +370,6 @@ with tab_calendar:
         with col1:
             st.write(f"**Категория:** {st.session_state.selected_event['category']}")
             st.write(f"**Дата начала:** {st.session_state.selected_event['start_date']}")
-            
             if st.session_state.selected_event['start_date'] == st.session_state.selected_event['end_date']:
                 st.write("**Дата окончания:** Однодневное событие")
             else:
@@ -347,6 +385,7 @@ with tab_calendar:
         st.write("**🔔 Напоминания:**")
         reminders_list = []
         ev = st.session_state.selected_event
+        
         if ev.get('reminder_on_start_day'):
             reminders_list.append("• В день начала")
         if ev.get('reminder_days_before_start') and ev['reminder_days_before_start'] > 0:
@@ -377,14 +416,18 @@ with tab_calendar:
                 st.success("Событие удалено")
                 st.rerun()
 
+# =============================================================================
+# Вкладка 2: Список событий
+# =============================================================================
+
 with tab_list:
-    st.subheader(" Список событий")
+    st.subheader("📋 Список событий")
     
     if filtered_events:
         df_data = []
         for event in filtered_events:
             location_display = event['location_type']
-            if event['location_custom']:
+            if event.get('location_custom'):
                 location_display = event['location_custom']
             
             end_date_display = "Однодневное" if event['start_date'] == event['end_date'] else event['end_date']
@@ -403,6 +446,10 @@ with tab_list:
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("Нет событий для отображения")
+
+# =============================================================================
+# Вкладка 3: Добавить событие
+# =============================================================================
 
 with tab_add:
     st.subheader("➕ Добавить новое событие" if not st.session_state.edit_mode else "✏️ Редактировать событие")
@@ -454,6 +501,7 @@ with tab_add:
     )
     
     location_custom = None
+    
     if location_type == "Выбрать конкретные":
         location_custom_list = st.multiselect(
             "📍 Выберите рестораны",
@@ -466,6 +514,7 @@ with tab_add:
         location_custom = ", ".join(st.session_state.form_location_custom)
     
     st.divider()
+    
     st.subheader("🔔 Напоминания")
     st.caption("Выберите один или несколько способов напоминания")
     
@@ -476,7 +525,7 @@ with tab_add:
     )
     
     reminder_days_before_start = st.number_input(
-        " За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
+        "⏰ За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
         min_value=0,
         max_value=90,
         value=st.session_state.form_reminder_days_start,
@@ -498,6 +547,7 @@ with tab_add:
     )
     
     reminder_custom_date = None
+    
     if use_custom_date:
         reminder_custom_date = st.date_input(
             "Выберите дату напоминания",
@@ -516,7 +566,7 @@ with tab_add:
     
     with col_save:
         if st.button(
-            " Сохранить" if not st.session_state.edit_mode else "💾 Обновить",
+            "💾 Сохранить" if not st.session_state.edit_mode else "💾 Обновить",
             use_container_width=True,
             type="primary",
             key="btn_save_event"
@@ -574,6 +624,6 @@ with tab_add:
     
     with col_cancel:
         if st.session_state.edit_mode:
-            if st.button(" Отменить редактирование", use_container_width=True, key="btn_cancel_edit"):
+            if st.button("❌ Отменить редактирование", use_container_width=True, key="btn_cancel_edit"):
                 reset_form()
                 st.rerun()
