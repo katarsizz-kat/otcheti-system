@@ -7,8 +7,25 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import io
+from functools import lru_cache
 
 st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
+
+# Кэширование данных
+@st.cache_data(ttl=60)
+def get_cached_events():
+    """Получить все события с кэшированием"""
+    return db.get_all_events()
+
+@st.cache_data(ttl=60)
+def get_cached_event_by_id(event_id):
+    """Получить событие по ID с кэшированием"""
+    return db.get_event_by_id(event_id)
+
+def clear_cache():
+    """Очистить кэш"""
+    get_cached_events.clear()
+    get_cached_event_by_id.clear()
 
 # Инициализация session state
 if 'selected_event' not in st.session_state:
@@ -25,56 +42,35 @@ if 'show_events_on_date' not in st.session_state:
     st.session_state.show_events_on_date = None
 
 # Session state для формы
-if 'form_title' not in st.session_state:
-    st.session_state.form_title = ""
-if 'form_start_date' not in st.session_state:
-    st.session_state.form_start_date = date.today()
-if 'form_end_date' not in st.session_state:
-    st.session_state.form_end_date = date.today()
-if 'form_category' not in st.session_state:
-    st.session_state.form_category = list(cfg.EVENT_CATEGORIES.keys())[0]
-if 'form_location' not in st.session_state:
-    st.session_state.form_location = "Все рестораны"
-if 'form_location_custom' not in st.session_state:
-    st.session_state.form_location_custom = []
-if 'form_reminder_on_start' not in st.session_state:
-    st.session_state.form_reminder_on_start = True
-if 'form_reminder_days_start' not in st.session_state:
-    st.session_state.form_reminder_days_start = 0
-if 'form_reminder_days_end' not in st.session_state:
-    st.session_state.form_reminder_days_end = 0
-if 'form_use_custom_date' not in st.session_state:
-    st.session_state.form_use_custom_date = False
-if 'form_reminder_custom_date' not in st.session_state:
-    st.session_state.form_reminder_custom_date = date.today()
-if 'form_recurrence' not in st.session_state:
-    st.session_state.form_recurrence = 'none'
+form_defaults = {
+    'form_title': "",
+    'form_start_date': date.today(),
+    'form_end_date': date.today(),
+    'form_category': list(cfg.EVENT_CATEGORIES.keys())[0],
+    'form_location': "Все рестораны",
+    'form_location_custom': [],
+    'form_reminder_on_start': True,
+    'form_reminder_days_start': 0,
+    'form_reminder_days_end': 0,
+    'form_use_custom_date': False,
+    'form_reminder_custom_date': date.today(),
+    'form_recurrence': 'none'
+}
+
+for key, value in form_defaults.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 st.title("📅 Календарь событий")
 
 # Функция для сброса формы
 def reset_form():
-    st.session_state.form_title = ""
-    st.session_state.form_start_date = date.today()
-    st.session_state.form_end_date = date.today()
-    st.session_state.form_category = list(cfg.EVENT_CATEGORIES.keys())[0]
-    st.session_state.form_location = "Все рестораны"
-    st.session_state.form_location_custom = []
-    st.session_state.form_reminder_on_start = True
-    st.session_state.form_reminder_days_start = 0
-    st.session_state.form_reminder_days_end = 0
-    st.session_state.form_use_custom_date = False
-    st.session_state.form_reminder_custom_date = date.today()
-    st.session_state.form_recurrence = 'none'
+    for key, value in form_defaults.items():
+        st.session_state[key] = value
     st.session_state.is_indefinite = True
     st.session_state.location_type = "Все рестораны"
     st.session_state.edit_mode = False
     st.session_state.selected_event = None
-
-# Функция для принудительного обновления страницы
-def refresh_page():
-    st.query_params.clear()
-    st.rerun()
 
 # Боковая панель с фильтрами
 with st.sidebar:
@@ -83,20 +79,22 @@ with st.sidebar:
     selected_category = st.multiselect(
         "Категория",
         options=list(cfg.EVENT_CATEGORIES.keys()),
-        default=[]
+        default=[],
+        key="filter_category"
     )
     
     selected_location = st.selectbox(
         "Локация",
-        options=list(cfg.LOCATIONS.keys())
+        options=list(cfg.LOCATIONS.keys()),
+        key="filter_location"
     )
     
-    search_query = st.text_input("🔎 Поиск по названию")
+    search_query = st.text_input("🔎 Поиск по названию", key="filter_search")
     
     date_range = st.date_input(
         "Диапазон дат",
         value=(date.today(), date.today() + timedelta(days=30)),
-        key="date_range"
+        key="filter_date_range"
     )
     
     if len(date_range) == 2:
@@ -107,66 +105,70 @@ with st.sidebar:
     st.divider()
     
     st.header("📤 Экспорт")
-    if st.button("Экспорт в Excel", use_container_width=True):
-        events = db.get_all_events()
-        
-        if events:
-            wb = Workbook()
-            ws = wb.active
-            ws.title = "События"
+    if st.button("Экспорт в Excel", use_container_width=True, key="btn_export"):
+        with st.spinner("Генерация Excel..."):
+            events = get_cached_events()
             
-            headers = ["Название", "Дата начала", "Дата окончания", "Категория", "Локация", "Повторяемость"]
-            ws.append(headers)
-            
-            header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-            header_font = Font(bold=True, color="FFFFFF")
-            
-            for cell in ws[1]:
-                cell.fill = header_fill
-                cell.font = header_font
-                cell.alignment = Alignment(horizontal="center")
-            
-            for event in events:
-                location_display = event['location_type']
-                if event['location_custom']:
-                    location_display = event['location_custom']
+            if events:
+                wb = Workbook()
+                ws = wb.active
+                ws.title = "События"
                 
-                ws.append([
-                    event['title'],
-                    event['start_date'],
-                    event['end_date'],
-                    event['category'],
-                    location_display,
-                    event['recurrence_type']
-                ])
-            
-            for column in ws.columns:
-                max_length = 0
-                column_letter = column[0].column_letter
-                for cell in column:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = min(max_length + 2, 50)
-                ws.column_dimensions[column_letter].width = adjusted_width
-            
-            buffer = io.BytesIO()
-            wb.save(buffer)
-            buffer.seek(0)
-            
-            st.download_button(
-                label=" Скачать Excel",
-                data=buffer,
-                file_name=f"calendar_events_{date.today()}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.warning("Нет событий для экспорта")
+                headers = ["Название", "Дата начала", "Дата окончания", "Категория", "Локация", "Повторяемость"]
+                ws.append(headers)
+                
+                header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                header_font = Font(bold=True, color="FFFFFF")
+                
+                for cell in ws[1]:
+                    cell.fill = header_fill
+                    cell.font = header_font
+                    cell.alignment = Alignment(horizontal="center")
+                
+                for event in events:
+                    location_display = event['location_type']
+                    if event.get('location_custom'):
+                        location_display = event['location_custom']
+                    
+                    ws.append([
+                        event['title'],
+                        event['start_date'],
+                        event['end_date'],
+                        event['category'],
+                        location_display,
+                        event['recurrence_type']
+                    ])
+                
+                for column in ws.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    ws.column_dimensions[column_letter].width = adjusted_width
+                
+                buffer = io.BytesIO()
+                wb.save(buffer)
+                buffer.seek(0)
+                
+                st.download_button(
+                    label="📥 Скачать Excel",
+                    data=buffer,
+                    file_name=f"calendar_events_{date.today()}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="btn_download_excel"
+                )
+            else:
+                st.warning("Нет событий для экспорта")
 
-# Получение событий с учетом фильтров
-all_events = db.get_all_events()
+# Получение событий с кэшированием
+all_events = get_cached_events()
+
+# Применение фильтров
 filtered_events = all_events
 
 if selected_category:
@@ -189,7 +191,7 @@ filtered_events = [
 ]
 
 # Вкладки
-tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", "📋 Список", "➕ Добавить событие"])
+tab_calendar, tab_list, tab_add = st.tabs([" Календарь", "📋 Список", "➕ Добавить событие"])
 
 with tab_calendar:
     calendar_events = []
@@ -217,28 +219,29 @@ with tab_calendar:
         "headerToolbar": {
             "left": "prev,next today",
             "center": "title",
-            "right": "dayGridMonth,timeGridWeek"
+            "right": "dayGridMonth"
         },
         "initialView": "dayGridMonth",
-        "dayMaxEventRows": 4,
+        "dayMaxEventRows": 3,
+        "eventLimit": True,
     }
     
-    # Уникальный key для календаря
-    cal_value = calendar(events=calendar_events, options=calendar_options, key=f"calendar_{len(calendar_events)}")
+    cal_value = calendar(events=calendar_events, options=calendar_options, key="main_calendar")
     
-    # Обработка клика на дату (не на событие)
+    # Обработка клика на дату
     if cal_value and cal_value.get("dateClick"):
         clicked_date = cal_value["dateClick"]["date"]
-        # Получаем все события на эту дату
         events_on_day = [e for e in all_events if date.fromisoformat(e['start_date']) <= date.fromisoformat(clicked_date) <= date.fromisoformat(e['end_date'])]
         st.session_state.events_on_date = events_on_day
         st.session_state.show_events_on_date = clicked_date
+        st.rerun()
     
     # Обработка клика на событие
     if cal_value and cal_value.get("eventClick"):
         event_id = int(cal_value["eventClick"]["event"]["id"])
-        st.session_state.selected_event = db.get_event_by_id(event_id)
+        st.session_state.selected_event = get_cached_event_by_id(event_id)
         st.session_state.show_events_on_date = None
+        st.rerun()
     
     # Показываем все события на выбранную дату
     if st.session_state.show_events_on_date:
@@ -266,7 +269,6 @@ with tab_calendar:
                         st.write(f"**Локация:** {location_display}")
                         st.write(f"**Повторяемость:** {event['recurrence_type']}")
                     
-                    # Кнопки для каждого события
                     col_edit, col_delete = st.columns(2)
                     
                     with col_edit:
@@ -300,24 +302,24 @@ with tab_calendar:
                             st.session_state.location_type = event['location_type']
                             
                             st.session_state.show_events_on_date = None
-                            refresh_page()
+                            st.rerun()
                     
                     with col_delete:
                         if st.button(f"🗑️ Удалить", key=f"delete_{event['id']}", use_container_width=True, type="secondary"):
                             db.delete_event(event['id'])
+                            clear_cache()
                             st.success("Событие удалено")
-                            refresh_page()
+                            st.rerun()
             
-            # Кнопка закрыть
-            if st.button("❌ Закрыть", use_container_width=True):
+            if st.button("❌ Закрыть", use_container_width=True, key="btn_close_events"):
                 st.session_state.show_events_on_date = None
                 st.session_state.events_on_date = []
-                refresh_page()
+                st.rerun()
         else:
             st.info("Нет событий на эту дату")
-            if st.button("❌ Закрыть", use_container_width=True):
+            if st.button("❌ Закрыть", use_container_width=True, key="btn_close_no_events"):
                 st.session_state.show_events_on_date = None
-                refresh_page()
+                st.rerun()
     
     # Показываем одно выбранное событие
     if st.session_state.selected_event and not st.session_state.show_events_on_date:
@@ -363,19 +365,20 @@ with tab_calendar:
         col_edit, col_delete = st.columns(2)
         
         with col_edit:
-            if st.button("✏️ Редактировать", use_container_width=True):
+            if st.button("✏️ Редактировать", use_container_width=True, key="btn_edit_single"):
                 st.session_state.edit_mode = True
                 st.rerun()
         
         with col_delete:
-            if st.button("🗑️ Удалить", use_container_width=True, type="secondary"):
+            if st.button("🗑️ Удалить", use_container_width=True, type="secondary", key="btn_delete_single"):
                 db.delete_event(st.session_state.selected_event['id'])
+                clear_cache()
                 st.session_state.selected_event = None
                 st.success("Событие удалено")
-                refresh_page()
+                st.rerun()
 
 with tab_list:
-    st.subheader("📋 Список событий")
+    st.subheader(" Список событий")
     
     if filtered_events:
         df_data = []
@@ -402,9 +405,8 @@ with tab_list:
         st.info("Нет событий для отображения")
 
 with tab_add:
-    st.subheader("➕ Добавить новое событие" if not st.session_state.edit_mode else "️ Редактировать событие")
+    st.subheader("➕ Добавить новое событие" if not st.session_state.edit_mode else "✏️ Редактировать событие")
     
-    # Основные поля
     title = st.text_input(
         "Название события",
         value=st.session_state.form_title,
@@ -464,7 +466,7 @@ with tab_add:
         location_custom = ", ".join(st.session_state.form_location_custom)
     
     st.divider()
-    st.subheader(" Напоминания")
+    st.subheader("🔔 Напоминания")
     st.caption("Выберите один или несколько способов напоминания")
     
     reminder_on_start_day = st.checkbox(
@@ -510,14 +512,14 @@ with tab_add:
         key="select_recurrence"
     )
     
-    # Кнопка сохранения
     col_save, col_cancel = st.columns(2)
     
     with col_save:
         if st.button(
-            "💾 Сохранить" if not st.session_state.edit_mode else " Обновить",
+            " Сохранить" if not st.session_state.edit_mode else "💾 Обновить",
             use_container_width=True,
-            type="primary"
+            type="primary",
+            key="btn_save_event"
         ):
             if not title:
                 st.error("❌ Введите название события")
@@ -545,9 +547,10 @@ with tab_add:
                             reminder_custom_date=reminder_custom_date,
                             recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
                         )
+                        clear_cache()
                         st.success("✅ Событие обновлено!")
                         reset_form()
-                        refresh_page()
+                        st.rerun()
                     else:
                         event_id = db.add_event(
                             title=title,
@@ -562,14 +565,15 @@ with tab_add:
                             reminder_custom_date=reminder_custom_date,
                             recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
                         )
+                        clear_cache()
                         st.success(f"✅ Событие добавлено! ID: {event_id}")
                         reset_form()
-                        refresh_page()
+                        st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Ошибка при сохранении: {str(e)}")
+                    st.error(f" Ошибка при сохранении: {str(e)}")
     
     with col_cancel:
         if st.session_state.edit_mode:
-            if st.button(" Отменить редактирование", use_container_width=True):
+            if st.button(" Отменить редактирование", use_container_width=True, key="btn_cancel_edit"):
                 reset_form()
-                refresh_page()
+                st.rerun()
