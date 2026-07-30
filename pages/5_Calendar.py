@@ -167,7 +167,7 @@ with st.sidebar:
     
     search_query = st.text_input("Поиск по названию", key="sidebar_filter_search")
     
-    # Увеличен диапазон до 30 лет для отображения повторяющихся событий
+    # Диапазон 30 лет для повторяющихся событий
     date_range = st.date_input(
         "Диапазон дат",
         value=(date.today(), date.today() + timedelta(days=365 * 30)),
@@ -182,7 +182,8 @@ with st.sidebar:
     st.divider()
     st.header("📤 Экспорт")
     
-    if st.button("📊 Экспорт в Excel", use_container_width=True, key="btn_export"):
+    # Экспорт в Excel
+    if st.button("📊 Экспорт в Excel", width="stretch", key="btn_export"):
         with st.spinner("Генерация Excel..."):
             events = get_cached_events()
             if events:
@@ -265,8 +266,18 @@ with st.sidebar:
             else:
                 st.warning("Нет событий для экспорта")
     
-    # Экспорт в PDF
-    if st.button("📄 Экспорт в PDF", use_container_width=True, key="btn_export_pdf"):
+    # Экспорт в PDF с выбором количества месяцев
+    st.subheader("📄 Экспорт в PDF")
+    pdf_months = st.number_input(
+        "Количество месяцев",
+        min_value=1,
+        max_value=12,
+        value=3,
+        help="На сколько месяцев вперёд выгрузить календарь",
+        key="pdf_months_input"
+    )
+    
+    if st.button("📄 Экспорт в PDF", width="stretch", key="btn_export_pdf"):
         with st.spinner("Генерация PDF..."):
             try:
                 from utils.pdf_export import create_pdf_calendar
@@ -283,8 +294,11 @@ with st.sidebar:
                     elif location_code == "tyumen":
                         filtered_for_pdf = [e for e in filtered_for_pdf if e.get('location_type') in ['tyumen', 'all']]
                 
-                # Стало (3 месяца):
-                pdf_bytes = create_pdf_calendar(filtered_for_pdf, "Календарь событий", months_ahea
+                pdf_bytes = create_pdf_calendar(
+                    filtered_for_pdf, 
+                    "Календарь событий",
+                    months_ahead=pdf_months
+                )
                 
                 st.download_button(
                     label="📥 Скачать PDF",
@@ -301,7 +315,7 @@ with st.sidebar:
     st.divider()
     st.header("🔔 Telegram уведомления")
     
-    if st.button("📱 Тест Telegram", use_container_width=True, key="btn_test_telegram"):
+    if st.button("📱 Тест Telegram", width="stretch", key="btn_test_telegram"):
         try:
             from utils.telegram_bot import test_telegram_connection
             if test_telegram_connection():
@@ -313,7 +327,7 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Ошибка: {str(e)}")
     
-    if st.button("🔔 Отправить напоминания", use_container_width=True, key="btn_send_reminders"):
+    if st.button(" Отправить напоминания", width="stretch", key="btn_send_reminders"):
         try:
             from utils.telegram_bot import send_reminder_notification
             
@@ -402,14 +416,14 @@ with tab_calendar:
     }
     
     calendar(events=calendar_events, options=calendar_options, key="main_calendar")
-    st.info("️ Для управления событиями перейдите во вкладку **📋 Список**")
+    st.info("ℹ️ Для управления событиями перейдите во вкладку **📋 Список**")
 
 # =============================================================================
 # Вкладка 2: Список событий
 # =============================================================================
 
 with tab_list:
-    st.subheader(" Список событий")
+    st.subheader("📋 Список событий")
     
     if st.session_state.show_edit_form and st.session_state.selected_event:
         st.divider()
@@ -432,7 +446,7 @@ with tab_list:
         
         location_custom = None
         if location_type == "Выбрать конкретные":
-            location_custom_list = st.multiselect(" Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="edit_input_location_custom")
+            location_custom_list = st.multiselect("📍 Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="edit_input_location_custom")
             location_custom = ", ".join(location_custom_list) if location_custom_list else None
         
         st.divider()
@@ -451,7 +465,7 @@ with tab_list:
         
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button("💾 Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
+            if st.button("💾 Сохранить изменения", width="stretch", type="primary", key="btn_save_edit"):
                 if not title:
                     st.error("❌ Введите название события")
                 elif start_date > end_date:
@@ -484,7 +498,7 @@ with tab_list:
                         st.error(f"❌ Ошибка при сохранении: {str(e)}")
         
         with col_cancel:
-            if st.button("❌ Отменить", use_container_width=True, key="btn_cancel_edit_inline"):
+            if st.button("❌ Отменить", width="stretch", key="btn_cancel_edit_inline"):
                 reset_form()
                 st.rerun()
         
@@ -496,14 +510,14 @@ with tab_list:
             st.warning(f"⚠️ Вы уверены, что хотите удалить событие **'{event_to_delete['title']}'**?")
             col_yes, col_no = st.columns(2)
             with col_yes:
-                if st.button("🗑️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
+                if st.button("🗑️ Да, удалить", width="stretch", type="primary", key="confirm_delete_yes"):
                     db.delete_event(st.session_state.delete_confirm_id)
                     clear_cache()
                     st.session_state.success_message = f"✅ Событие '{event_to_delete['title']}' удалено!"
                     st.session_state.delete_confirm_id = None
                     st.rerun()
             with col_no:
-                if st.button("❌ Отмена", use_container_width=True, key="confirm_delete_no"):
+                if st.button(" Отмена", width="stretch", key="confirm_delete_no"):
                     st.session_state.delete_confirm_id = None
                     st.rerun()
             st.divider()
@@ -542,7 +556,7 @@ with tab_list:
                 st.caption(f"📅 {event['start_date']} | {event['category']} | {location_display}")
             
             with col_actions:
-                if st.button("️", key=f"edit_{event['id']}", help="Редактировать"):
+                if st.button("✏️", key=f"edit_{event['id']}", help="Редактировать"):
                     st.session_state.selected_event = event
                     st.session_state.edit_mode = True
                     st.session_state.show_edit_form = True
@@ -571,14 +585,14 @@ with tab_list:
                     st.session_state.data_recurrence = get_recurrence_key(event.get('recurrence_type', 'none'))
                     st.rerun()
                 
-                if st.button("🗑️", key=f"delete_{event['id']}", help="Удалить"):
+                if st.button("️", key=f"delete_{event['id']}", help="Удалить"):
                     st.session_state.delete_confirm_id = event['id']
                     st.rerun()
             
             st.divider()
         
         if st.session_state.events_to_delete:
-            st.warning(f"️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
+            st.warning(f"🗑️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
             col_confirm, col_cancel = st.columns(2)
             with col_confirm:
                 if st.button("✅ Подтвердить удаление", type="primary", key="confirm_bulk_delete"):
@@ -642,7 +656,7 @@ with tab_add:
     
     col_save, col_cancel = st.columns(2)
     with col_save:
-        if st.button(" Сохранить", use_container_width=True, type="primary", key="btn_save_event"):
+        if st.button("💾 Сохранить", width="stretch", type="primary", key="btn_save_event"):
             if not title:
                 st.error("❌ Введите название события")
             elif start_date > end_date:
@@ -674,6 +688,6 @@ with tab_add:
                     st.error(f"❌ Ошибка при сохранении: {str(e)}")
     
     with col_cancel:
-        if st.button("🔄 Очистить форму", use_container_width=True, key="btn_clear_form"):
+        if st.button("🔄 Очистить форму", width="stretch", key="btn_clear_form"):
             reset_form()
             st.rerun()
