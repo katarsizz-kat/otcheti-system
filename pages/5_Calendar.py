@@ -27,7 +27,7 @@ def parse_date(d):
     # Убираем время и часовой пояс если есть
     if 'T' in d_str:
         d_str = d_str.split('T')[0]
-    if '+' in d_str[10:]:  # Убираем +00:00
+    if '+' in d_str[10:]:
         d_str = d_str.split('+')[0]
     if d_str.endswith('Z'):
         d_str = d_str[:-1]
@@ -35,7 +35,6 @@ def parse_date(d):
     try:
         return date.fromisoformat(d_str)
     except ValueError:
-        # Если не получается распарсить, возвращаем сегодня
         st.warning(f"⚠️ Не удалось распарсить дату: {d}")
         return date.today()
 
@@ -50,12 +49,12 @@ def get_key_by_value(d: dict, target_val, default=None):
 # Кэширование данных
 # =============================================================================
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=10)
 def get_cached_events():
     """Получить все события с кэшированием."""
     return db.get_all_events()
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=10)
 def get_cached_event_by_id(event_id):
     """Получить событие по ID с кэшированием."""
     return db.get_event_by_id(event_id)
@@ -124,11 +123,30 @@ def reset_form():
     st.session_state.show_edit_form = False
 
 # =============================================================================
+# ОТЛАДОЧНАЯ ИНФОРМАЦИЯ (временно)
+# =============================================================================
+
+with st.expander("🔧 Отладка", expanded=True):
+    st.write("**Текущая дата:**", date.today())
+    
+    all_events = get_cached_events()
+    st.write(f"**Всего событий в базе:** {len(all_events)}")
+    
+    if all_events:
+        st.write("**Последние 5 событий:**")
+        for e in all_events[-5:]:
+            st.write(f"- ID: {e['id']}, Название: {e['title']}, Дата: {e['start_date']} → {e['end_date']}")
+    
+    st.write("**Session state:**")
+    st.write(f"- edit_mode: {st.session_state.edit_mode}")
+    st.write(f"- show_edit_form: {st.session_state.show_edit_form}")
+
+# =============================================================================
 # Боковая панель с фильтрами
 # =============================================================================
 
 with st.sidebar:
-    st.header("🔍 Фильтры")
+    st.header(" Фильтры")
     
     selected_category = st.multiselect(
         "Категория",
@@ -147,7 +165,7 @@ with st.sidebar:
     
     date_range = st.date_input(
         "Диапазон дат",
-        value=(date.today(), date.today() + timedelta(days=30)),
+        value=(date.today(), date.today() + timedelta(days=365)),
         key="sidebar_filter_date_range"
     )
     
@@ -157,7 +175,7 @@ with st.sidebar:
         start_date_filter = end_date_filter = date_range if isinstance(date_range, date) else date.today()
     
     st.divider()
-    st.header("📤 Экспорт")
+    st.header(" Экспорт")
     
     if st.button("Экспорт в Excel", use_container_width=True, key="btn_export"):
         with st.spinner("Генерация Excel..."):
@@ -233,7 +251,7 @@ with st.sidebar:
                 buffer.seek(0)
                 
                 st.download_button(
-                    label=" Скачать Excel",
+                    label="📥 Скачать Excel",
                     data=buffer,
                     file_name=f"calendar_events_{date.today()}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -310,25 +328,14 @@ with tab_calendar:
     }
     
     calendar(events=calendar_events, options=calendar_options, key="main_calendar")
-    st.info("ℹ️ Для управления событиями перейдите во вкладку **📋 Список**")
+    st.info("️ Для управления событиями перейдите во вкладку **📋 Список**")
 
 # =============================================================================
 # Вкладка 2: Список событий
 # =============================================================================
 
 with tab_list:
-    st.subheader("📋 Список событий")
-    
-    # ОТЛАДКА: Показываем информацию о датах
-    with st.expander("🔧 Отладка дат", expanded=False):
-        st.write(f"**Текущая дата:** {date.today()}")
-        st.write(f"**Всего событий в базе:** {len(all_events)}")
-        st.write(f"**После фильтров:** {len(filtered_events)}")
-        
-        if filtered_events:
-            st.write("**Даты событий:**")
-            for e in filtered_events[:5]:
-                st.write(f"- {e['title']}: {e['start_date']} → {e['end_date']} (распарсено: {parse_date(e['start_date'])} → {parse_date(e['end_date'])})")
+    st.subheader(" Список событий")
     
     if st.session_state.show_edit_form and st.session_state.selected_event:
         st.divider()
@@ -355,7 +362,7 @@ with tab_list:
             location_custom = ", ".join(location_custom_list) if location_custom_list else None
         
         st.divider()
-        st.subheader(" Напоминания")
+        st.subheader("🔔 Напоминания")
         reminder_on_start_day = st.checkbox("Напомнить в день начала события", value=st.session_state.data_reminder_on_start, key="edit_input_reminder_start")
         reminder_days_before_start = st.number_input("За сколько дней до НАЧАЛА напомнить", min_value=0, max_value=90, value=st.session_state.data_reminder_days_start, key="edit_input_reminder_days_start")
         reminder_days_before_end = st.number_input("За сколько дней до ОКОНЧАНИЯ напомнить", min_value=0, max_value=90, value=st.session_state.data_reminder_days_end, key="edit_input_reminder_days_end")
@@ -368,7 +375,7 @@ with tab_list:
         
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button(" Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
+            if st.button("💾 Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
                 if not title:
                     st.error("❌ Введите название события")
                 elif start_date > end_date:
@@ -410,10 +417,10 @@ with tab_list:
     if st.session_state.delete_confirm_id:
         event_to_delete = next((e for e in filtered_events if e['id'] == st.session_state.delete_confirm_id), None)
         if event_to_delete:
-            st.warning(f"️ Вы уверены, что хотите удалить событие **'{event_to_delete['title']}'**?")
+            st.warning(f"⚠️ Вы уверены, что хотите удалить событие **'{event_to_delete['title']}'**?")
             col_yes, col_no = st.columns(2)
             with col_yes:
-                if st.button("️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
+                if st.button("🗑️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
                     db.delete_event(st.session_state.delete_confirm_id)
                     clear_cache()
                     st.session_state.success_message = f"✅ Событие '{event_to_delete['title']}' удалено!"
@@ -425,7 +432,6 @@ with tab_list:
                     st.rerun()
             st.divider()
     
-    # Фильтруем только БУДУЩИЕ события и сортируем
     today = date.today()
     future_events = [e for e in filtered_events if parse_date(e['end_date']) >= today]
     future_events.sort(key=lambda x: parse_date(x['start_date']))
@@ -460,7 +466,7 @@ with tab_list:
                 st.caption(f"📅 {event['start_date']} | {event['category']} | {location_display}")
             
             with col_actions:
-                if st.button("️", key=f"edit_{event['id']}", help="Редактировать"):
+                if st.button("✏️", key=f"edit_{event['id']}", help="Редактировать"):
                     st.session_state.selected_event = event
                     st.session_state.edit_mode = True
                     st.session_state.show_edit_form = True
@@ -489,14 +495,14 @@ with tab_list:
                     st.session_state.data_recurrence = get_key_by_value(cfg.RECURRENCE_TYPES, event.get('recurrence_type', 'none'), list(cfg.RECURRENCE_TYPES.values())[0])
                     st.rerun()
                 
-                if st.button("️", key=f"delete_{event['id']}", help="Удалить"):
+                if st.button("🗑️", key=f"delete_{event['id']}", help="Удалить"):
                     st.session_state.delete_confirm_id = event['id']
                     st.rerun()
             
             st.divider()
         
         if st.session_state.events_to_delete:
-            st.warning(f"🗑️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
+            st.warning(f"️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
             col_confirm, col_cancel = st.columns(2)
             with col_confirm:
                 if st.button("✅ Подтвердить удаление", type="primary", key="confirm_bulk_delete"):
@@ -539,7 +545,7 @@ with tab_add:
     
     location_custom = None
     if location_type == "Выбрать конкретные":
-        location_custom_list = st.multiselect(" Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="input_location_custom")
+        location_custom_list = st.multiselect("📍 Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="input_location_custom")
         location_custom = ", ".join(location_custom_list) if location_custom_list else None
     
     st.divider()
@@ -560,7 +566,7 @@ with tab_add:
     with col_save:
         if st.button("💾 Сохранить", use_container_width=True, type="primary", key="btn_save_event"):
             if not title:
-                st.error(" Введите название события")
+                st.error("❌ Введите название события")
             elif start_date > end_date:
                 st.error(f"❌ Дата начала ({start_date}) не может быть позже даты окончания ({end_date})")
             else:
@@ -569,7 +575,14 @@ with tab_add:
                     reminder_custom_date = None
                 
                 try:
-                    db.add_event(
+                    st.write(f"**Отладка:** Пытаемся сохранить событие...")
+                    st.write(f"- title: {title}")
+                    st.write(f"- start_date: {start_date}")
+                    st.write(f"- end_date: {end_date}")
+                    st.write(f"- category: {category}")
+                    st.write(f"- location_type: {location_code}")
+                    
+                    event_id = db.add_event(
                         title=title,
                         start_date=start_date,
                         end_date=end_date,
@@ -582,12 +595,17 @@ with tab_add:
                         reminder_custom_date=reminder_custom_date,
                         recurrence_type=cfg.RECURRENCE_TYPES.get(recurrence_type, 'none')
                     )
+                    
+                    st.write(f"✅ Событие сохранено с ID: {event_id}")
+                    
                     clear_cache()
                     st.session_state.success_message = f"✅ Событие '{title}' успешно добавлено!"
                     reset_form()
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ Ошибка при сохранении: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
     
     with col_cancel:
         if st.button("🔄 Очистить форму", use_container_width=True, key="btn_clear_form"):
