@@ -8,9 +8,8 @@ import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import io
-from functools import lru_cache
 
-st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
+st.set_page_config(page_title="Календарь событий", page_icon="", layout="wide")
 
 # =============================================================================
 # Кэширование данных
@@ -100,7 +99,7 @@ def reset_form():
 # =============================================================================
 
 with st.sidebar:
-    st.header(" Фильтры")
+    st.header("🔍 Фильтры")
     
     selected_category = st.multiselect(
         "Категория",
@@ -115,7 +114,7 @@ with st.sidebar:
         key="filter_location"
     )
     
-    search_query = st.text_input("🔎 Поиск по названию", key="filter_search")
+    search_query = st.text_input(" Поиск по названию", key="filter_search")
     
     date_range = st.date_input(
         "Диапазон дат",
@@ -270,6 +269,9 @@ with tab_calendar:
     # Обработка клика на дату
     if cal_value and cal_value.get("dateClick"):
         clicked_date = cal_value["dateClick"]["date"]
+        # Исправляем парсинг даты (убираем время если есть)
+        if 'T' in clicked_date:
+            clicked_date = clicked_date.split('T')[0]
         events_on_day = [
             e for e in all_events 
             if date.fromisoformat(e['start_date']) <= date.fromisoformat(clicked_date) <= date.fromisoformat(e['end_date'])
@@ -310,6 +312,7 @@ with tab_calendar:
                         st.write(f"**Локация:** {location_display}")
                         st.write(f"**Повторяемость:** {event['recurrence_type']}")
                     
+                    # Кнопки редактирования и удаления
                     col_edit, col_delete = st.columns(2)
                     
                     with col_edit:
@@ -347,7 +350,8 @@ with tab_calendar:
                         if st.button(f"🗑️ Удалить", key=f"delete_{event['id']}", use_container_width=True, type="secondary"):
                             db.delete_event(event['id'])
                             clear_cache()
-                            st.success("Событие удалено")
+                            st.toast("️ Событие удалено", icon="✅")
+                            st.session_state.events_on_date = [e for e in st.session_state.events_on_date if e['id'] != event['id']]
                             st.rerun()
             
             if st.button("❌ Закрыть", use_container_width=True, key="btn_close_events"):
@@ -409,11 +413,11 @@ with tab_calendar:
                 st.rerun()
         
         with col_delete:
-            if st.button("🗑️ Удалить", use_container_width=True, type="secondary", key="btn_delete_single"):
+            if st.button("️ Удалить", use_container_width=True, type="secondary", key="btn_delete_single"):
                 db.delete_event(st.session_state.selected_event['id'])
                 clear_cache()
+                st.toast("🗑️ Событие удалено", icon="✅")
                 st.session_state.selected_event = None
-                st.success("Событие удалено")
                 st.rerun()
 
 # =============================================================================
@@ -519,7 +523,7 @@ with tab_add:
     st.caption("Выберите один или несколько способов напоминания")
     
     reminder_on_start_day = st.checkbox(
-        "📌 Напомнить в день начала события",
+        " Напомнить в день начала события",
         value=st.session_state.form_reminder_on_start,
         key="checkbox_reminder_start"
     )
@@ -533,7 +537,7 @@ with tab_add:
     )
     
     reminder_days_before_end = st.number_input(
-        "⏰ За сколько дней до ОКОНЧАНИЯ напомнить (0 = не напоминать)",
+        " За сколько дней до ОКОНЧАНИЯ напомнить (0 = не напоминать)",
         min_value=0,
         max_value=90,
         value=st.session_state.form_reminder_days_end,
@@ -598,7 +602,7 @@ with tab_add:
                             recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
                         )
                         clear_cache()
-                        st.success("✅ Событие обновлено!")
+                        st.toast("✅ Событие обновлено!", icon="🎉")
                         reset_form()
                         st.rerun()
                     else:
@@ -616,11 +620,11 @@ with tab_add:
                             recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
                         )
                         clear_cache()
-                        st.success(f"✅ Событие добавлено! ID: {event_id}")
+                        st.toast(f"✅ Событие добавлено!", icon="🎉")
                         reset_form()
                         st.rerun()
                 except Exception as e:
-                    st.error(f" Ошибка при сохранении: {str(e)}")
+                    st.error(f"❌ Ошибка при сохранении: {str(e)}")
     
     with col_cancel:
         if st.session_state.edit_mode:
