@@ -8,7 +8,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import io
 
-st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
+st.set_page_config(page_title="Календарь событий", page_icon="", layout="wide")
 
 # Инициализация session state
 if 'selected_event' not in st.session_state:
@@ -20,7 +20,50 @@ if 'is_indefinite' not in st.session_state:
 if 'location_type' not in st.session_state:
     st.session_state.location_type = "Все рестораны"
 
-st.title(" Календарь событий")
+# Session state для формы
+if 'form_title' not in st.session_state:
+    st.session_state.form_title = ""
+if 'form_start_date' not in st.session_state:
+    st.session_state.form_start_date = date.today()
+if 'form_end_date' not in st.session_state:
+    st.session_state.form_end_date = date.today()
+if 'form_category' not in st.session_state:
+    st.session_state.form_category = list(cfg.EVENT_CATEGORIES.keys())[0]
+if 'form_location' not in st.session_state:
+    st.session_state.form_location = "Все рестораны"
+if 'form_location_custom' not in st.session_state:
+    st.session_state.form_location_custom = []
+if 'form_reminder_on_start' not in st.session_state:
+    st.session_state.form_reminder_on_start = True
+if 'form_reminder_days_start' not in st.session_state:
+    st.session_state.form_reminder_days_start = 0
+if 'form_reminder_days_end' not in st.session_state:
+    st.session_state.form_reminder_days_end = 0
+if 'form_use_custom_date' not in st.session_state:
+    st.session_state.form_use_custom_date = False
+if 'form_reminder_custom_date' not in st.session_state:
+    st.session_state.form_reminder_custom_date = date.today()
+if 'form_recurrence' not in st.session_state:
+    st.session_state.form_recurrence = 'none'
+
+st.title("📅 Календарь событий")
+
+# Функция для сброса формы
+def reset_form():
+    st.session_state.form_title = ""
+    st.session_state.form_start_date = date.today()
+    st.session_state.form_end_date = date.today()
+    st.session_state.form_category = list(cfg.EVENT_CATEGORIES.keys())[0]
+    st.session_state.form_location = "Все рестораны"
+    st.session_state.form_location_custom = []
+    st.session_state.form_reminder_on_start = True
+    st.session_state.form_reminder_days_start = 0
+    st.session_state.form_reminder_days_end = 0
+    st.session_state.form_use_custom_date = False
+    st.session_state.form_reminder_custom_date = date.today()
+    st.session_state.form_recurrence = 'none'
+    st.session_state.is_indefinite = True
+    st.session_state.location_type = "Все рестораны"
 
 # Боковая панель с фильтрами
 with st.sidebar:
@@ -135,7 +178,7 @@ filtered_events = [
 ]
 
 # Вкладки
-tab_calendar, tab_list, tab_add = st.tabs([" Календарь", "📋 Список", "➕ Добавить событие"])
+tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", "📋 Список", "➕ Добавить событие"])
 
 with tab_calendar:
     calendar_events = []
@@ -177,7 +220,7 @@ with tab_calendar:
     
     if st.session_state.selected_event:
         st.divider()
-        st.subheader(f" {st.session_state.selected_event['title']}")
+        st.subheader(f"📌 {st.session_state.selected_event['title']}")
         
         col1, col2 = st.columns(2)
         
@@ -220,12 +263,38 @@ with tab_calendar:
         with col_edit:
             if st.button("✏️ Редактировать", use_container_width=True):
                 st.session_state.edit_mode = True
+                st.session_state.selected_event = db.get_event_by_id(st.session_state.selected_event['id'])
+                
+                # Заполняем форму данными события
+                st.session_state.form_title = st.session_state.selected_event['title']
+                st.session_state.form_start_date = date.fromisoformat(st.session_state.selected_event['start_date'])
+                st.session_state.form_end_date = date.fromisoformat(st.session_state.selected_event['end_date'])
+                st.session_state.form_category = st.session_state.selected_event['category']
+                st.session_state.form_location = st.session_state.selected_event['location_type']
+                
+                if st.session_state.selected_event.get('location_custom'):
+                    st.session_state.form_location_custom = [r.strip() for r in st.session_state.selected_event['location_custom'].split(',')]
+                else:
+                    st.session_state.form_location_custom = []
+                
+                st.session_state.form_reminder_on_start = bool(st.session_state.selected_event.get('reminder_on_start_day', True))
+                st.session_state.form_reminder_days_start = st.session_state.selected_event.get('reminder_days_before_start', 0)
+                st.session_state.form_reminder_days_end = st.session_state.selected_event.get('reminder_days_before_end', 0)
+                
+                if st.session_state.selected_event.get('reminder_custom_date'):
+                    st.session_state.form_use_custom_date = True
+                    st.session_state.form_reminder_custom_date = date.fromisoformat(st.session_state.selected_event['reminder_custom_date'])
+                else:
+                    st.session_state.form_use_custom_date = False
+                
+                st.session_state.form_recurrence = st.session_state.selected_event.get('recurrence_type', 'none')
                 st.session_state.is_indefinite = (st.session_state.selected_event['start_date'] == st.session_state.selected_event['end_date'])
                 st.session_state.location_type = st.session_state.selected_event['location_type']
+                
                 st.rerun()
         
         with col_delete:
-            if st.button("🗑️ Удалить", use_container_width=True, type="secondary"):
+            if st.button("️ Удалить", use_container_width=True, type="secondary"):
                 db.delete_event(st.session_state.selected_event['id'])
                 st.session_state.selected_event = None
                 st.success("Событие удалено")
@@ -261,36 +330,11 @@ with tab_list:
 with tab_add:
     st.subheader("➕ Добавить новое событие" if not st.session_state.edit_mode else "✏️ Редактировать событие")
     
-    # Сброс session state при входе на вкладку
-    if st.session_state.edit_mode and st.session_state.selected_event:
-        default_title = st.session_state.selected_event['title']
-        default_start = date.fromisoformat(st.session_state.selected_event['start_date'])
-        default_end = date.fromisoformat(st.session_state.selected_event['end_date'])
-        default_category = st.session_state.selected_event['category']
-        default_location = st.session_state.selected_event['location_type']
-        default_location_custom = st.session_state.selected_event.get('location_custom')
-        default_reminder_on_start = bool(st.session_state.selected_event.get('reminder_on_start_day', True))
-        default_reminder_days_start = st.session_state.selected_event.get('reminder_days_before_start', 0)
-        default_reminder_days_end = st.session_state.selected_event.get('reminder_days_before_end', 0)
-        default_reminder_custom = st.session_state.selected_event.get('reminder_custom_date')
-        default_recurrence = st.session_state.selected_event.get('recurrence_type', 'none')
-    else:
-        default_title = ""
-        default_start = date.today()
-        default_end = date.today()
-        default_category = list(cfg.EVENT_CATEGORIES.keys())[0]
-        default_location = "Все рестораны"
-        default_location_custom = None
-        default_reminder_on_start = True
-        default_reminder_days_start = 0
-        default_reminder_days_end = 0
-        default_reminder_custom = None
-        default_recurrence = 'none'
-    
     # Основные поля
     title = st.text_input(
         "Название события",
-        value=default_title
+        value=st.session_state.form_title,
+        key="input_title"
     )
     
     col1, col2 = st.columns(2)
@@ -298,21 +342,16 @@ with tab_add:
     with col1:
         start_date = st.date_input(
             "Дата начала",
-            value=default_start
+            value=st.session_state.form_start_date,
+            key="input_start_date"
         )
     
     with col2:
-        # Чекбокс "Однодневное событие"
         is_indefinite = st.checkbox(
             "♾️ Однодневное событие",
-            value=st.session_state.is_indefinite if st.session_state.edit_mode else True,
-            key="indefinite_checkbox"
+            value=st.session_state.is_indefinite,
+            key="checkbox_indefinite"
         )
-        
-        # Обновляем session state
-        if st.session_state.is_indefinite != is_indefinite:
-            st.session_state.is_indefinite = is_indefinite
-            st.rerun()
         
         if is_indefinite:
             end_date = start_date
@@ -320,82 +359,81 @@ with tab_add:
         else:
             end_date = st.date_input(
                 "Дата окончания",
-                value=default_end if not st.session_state.edit_mode else default_end
+                value=st.session_state.form_end_date,
+                key="input_end_date"
             )
     
     category = st.selectbox(
         "Категория",
         options=list(cfg.EVENT_CATEGORIES.keys()),
-        index=list(cfg.EVENT_CATEGORIES.keys()).index(default_category) if default_category in cfg.EVENT_CATEGORIES.keys() else 0
+        index=list(cfg.EVENT_CATEGORIES.keys()).index(st.session_state.form_category) if st.session_state.form_category in cfg.EVENT_CATEGORIES.keys() else 0,
+        key="select_category"
     )
     
     location_type = st.selectbox(
         "Локация",
         options=list(cfg.LOCATIONS.keys()),
-        index=list(cfg.LOCATIONS.keys()).index(default_location) if default_location in cfg.LOCATIONS.keys() else 0,
-        key="location_select"
+        index=list(cfg.LOCATIONS.keys()).index(st.session_state.form_location) if st.session_state.form_location in cfg.LOCATIONS.keys() else 0,
+        key="select_location"
     )
-    
-    # Обновляем session state для локации
-    if st.session_state.location_type != location_type:
-        st.session_state.location_type = location_type
-        st.rerun()
     
     location_custom = None
     if location_type == "Выбрать конкретные":
-        default_restaurants = []
-        if default_location_custom:
-            default_restaurants = [r.strip() for r in default_location_custom.split(',')]
-        
         location_custom_list = st.multiselect(
             "📍 Выберите рестораны",
             options=cfg.ALL_RESTAURANTS,
-            default=default_restaurants,
-            key="restaurant_select"
+            default=st.session_state.form_location_custom,
+            key="multiselect_restaurants"
         )
         location_custom = ", ".join(location_custom_list) if location_custom_list else None
-    elif default_location_custom:
-        location_custom = default_location_custom
+    elif st.session_state.form_location_custom:
+        location_custom = ", ".join(st.session_state.form_location_custom)
     
     st.divider()
     st.subheader("🔔 Напоминания")
     st.caption("Выберите один или несколько способов напоминания")
     
     reminder_on_start_day = st.checkbox(
-        "📌 Напомнить в день начала события",
-        value=default_reminder_on_start
+        " Напомнить в день начала события",
+        value=st.session_state.form_reminder_on_start,
+        key="checkbox_reminder_start"
     )
     
     reminder_days_before_start = st.number_input(
         "⏰ За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
         min_value=0,
         max_value=90,
-        value=default_reminder_days_start
+        value=st.session_state.form_reminder_days_start,
+        key="number_reminder_days_start"
     )
     
     reminder_days_before_end = st.number_input(
         "⏰ За сколько дней до ОКОНЧАНИЯ напомнить (0 = не напоминать)",
         min_value=0,
         max_value=90,
-        value=default_reminder_days_end
+        value=st.session_state.form_reminder_days_end,
+        key="number_reminder_days_end"
     )
     
     use_custom_date = st.checkbox(
         "📅 Напомнить в конкретную дату",
-        value=default_reminder_custom is not None
+        value=st.session_state.form_use_custom_date,
+        key="checkbox_custom_date"
     )
     
     reminder_custom_date = None
     if use_custom_date:
         reminder_custom_date = st.date_input(
             "Выберите дату напоминания",
-            value=date.fromisoformat(default_reminder_custom) if default_reminder_custom else date.today()
+            value=st.session_state.form_reminder_custom_date,
+            key="date_reminder_custom"
         )
     
     recurrence_type = st.selectbox(
         "Повторяемость",
         options=list(cfg.RECURRENCE_TYPES.keys()),
-        index=list(cfg.RECURRENCE_TYPES.values()).index(default_recurrence) if default_recurrence in cfg.RECURRENCE_TYPES.values() else 0
+        index=list(cfg.RECURRENCE_TYPES.values()).index(st.session_state.form_recurrence) if st.session_state.form_recurrence in cfg.RECURRENCE_TYPES.values() else 0,
+        key="select_recurrence"
     )
     
     # Кнопка сохранения
@@ -436,7 +474,7 @@ with tab_add:
                         st.success("✅ Событие обновлено!")
                         st.session_state.edit_mode = False
                         st.session_state.selected_event = None
-                        st.session_state.is_indefinite = True
+                        reset_form()
                         st.rerun()
                     else:
                         event_id = db.add_event(
@@ -453,7 +491,7 @@ with tab_add:
                             recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
                         )
                         st.success(f"✅ Событие добавлено! ID: {event_id}")
-                        st.session_state.is_indefinite = True
+                        reset_form()
                         st.rerun()
                 except Exception as e:
                     st.error(f"❌ Ошибка при сохранении: {str(e)}")
@@ -463,5 +501,5 @@ with tab_add:
             if st.button("❌ Отменить редактирование", use_container_width=True):
                 st.session_state.edit_mode = False
                 st.session_state.selected_event = None
-                st.session_state.is_indefinite = True
+                reset_form()
                 st.rerun()
