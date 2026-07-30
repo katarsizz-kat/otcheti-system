@@ -20,7 +20,7 @@ st.title("📅 Календарь событий")
 
 # Боковая панель с фильтрами
 with st.sidebar:
-    st.header("🔍 Фильтры")
+    st.header(" Фильтры")
     
     selected_category = st.multiselect(
         "Категория",
@@ -131,7 +131,7 @@ filtered_events = [
 ]
 
 # Вкладки
-tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", "📋 Список", "➕ Добавить событие"])
+tab_calendar, tab_list, tab_add = st.tabs([" Календарь", "📋 Список", "➕ Добавить событие"])
 
 with tab_calendar:
     calendar_events = []
@@ -180,7 +180,12 @@ with tab_calendar:
         with col1:
             st.write(f"**Категория:** {st.session_state.selected_event['category']}")
             st.write(f"**Дата начала:** {st.session_state.selected_event['start_date']}")
-            st.write(f"**Дата окончания:** {st.session_state.selected_event['end_date']}")
+            
+            # Показываем "Бессрочно" если даты совпадают
+            if st.session_state.selected_event['start_date'] == st.session_state.selected_event['end_date']:
+                st.write("**Дата окончания:** Бессрочно (однодневное)")
+            else:
+                st.write(f"**Дата окончания:** {st.session_state.selected_event['end_date']}")
         
         with col2:
             location_display = st.session_state.selected_event['location_type']
@@ -232,11 +237,14 @@ with tab_list:
             if event['location_custom']:
                 location_display = event['location_custom']
             
+            # Показываем "Бессрочно" если даты совпадают
+            end_date_display = "Бессрочно" if event['start_date'] == event['end_date'] else event['end_date']
+            
             df_data.append({
                 "ID": event['id'],
                 "Название": event['title'],
                 "Дата начала": event['start_date'],
-                "Дата окончания": event['end_date'],
+                "Дата окончания": end_date_display,
                 "Категория": event['category'],
                 "Локация": location_display,
                 "Повторяемость": event['recurrence_type']
@@ -254,7 +262,7 @@ with tab_add:
     if st.session_state.edit_mode and st.session_state.selected_event:
         default_values = st.session_state.selected_event
     
-    with st.form("event_form"):
+    with st.form("event_form", clear_on_submit=True):
         title = st.text_input(
             "Название события",
             value=default_values.get('title', '')
@@ -269,10 +277,20 @@ with tab_add:
             )
         
         with col2:
-            end_date = st.date_input(
-                "Дата окончания",
-                value=date.fromisoformat(default_values['end_date']) if 'end_date' in default_values else date.today()
+            # Чекбокс "Бессрочное событие"
+            is_indefinite = st.checkbox(
+                "♾️ Бессрочное (однодневное событие)",
+                value=default_values.get('start_date') == default_values.get('end_date') if default_values else False
             )
+            
+            if is_indefinite:
+                end_date = start_date  # Для однодневных событий дата окончания = дате начала
+                st.info("Дата окончания будет установлена автоматически как дата начала")
+            else:
+                end_date = st.date_input(
+                    "Дата окончания",
+                    value=date.fromisoformat(default_values['end_date']) if 'end_date' in default_values else date.today()
+                )
         
         category = st.selectbox(
             "Категория",
@@ -305,21 +323,22 @@ with tab_add:
             value=bool(default_values.get('reminder_on_start_day', False))
         )
         
+        # Увеличено с 30 до 90 дней
         reminder_days_before_start = st.number_input(
-            "⏰ За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
+            " За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
             min_value=0,
-            max_value=30,
+            max_value=90,
             value=default_values.get('reminder_days_before_start', 0) if default_values else 0
         )
         
+        # Увеличено с 30 до 90 дней
         reminder_days_before_end = st.number_input(
             "⏰ За сколько дней до ОКОНЧАНИЯ напомнить (0 = не напоминать)",
             min_value=0,
-            max_value=30,
+            max_value=90,
             value=default_values.get('reminder_days_before_end', 0) if default_values else 0
         )
         
-        # 🆕 Конкретная дата напоминания
         use_custom_date = st.checkbox(
             "📅 Напомнить в конкретную дату",
             value=default_values.get('reminder_custom_date') is not None if default_values else False
@@ -346,51 +365,61 @@ with tab_add:
         )
         
         if submitted:
+            # Отладочная информация
+            st.write(f"**Отладка:**")
+            st.write(f"- Название: {title}")
+            st.write(f"- Дата начала: {start_date}")
+            st.write(f"- Дата окончания: {end_date}")
+            st.write(f"- Бессрочное: {is_indefinite}")
+            
             if not title:
-                st.error("Введите название события")
+                st.error("❌ Введите название события")
             elif start_date > end_date:
-                st.error("Дата начала не может быть позже даты окончания")
+                st.error(f"❌ Дата начала ({start_date}) не может быть позже даты окончания ({end_date})")
             else:
                 location_code = cfg.LOCATIONS[location_type]
                 
                 if not use_custom_date:
                     reminder_custom_date = None
                 
-                if st.session_state.edit_mode and st.session_state.selected_event:
-                    db.update_event(
-                        event_id=st.session_state.selected_event['id'],
-                        title=title,
-                        start_date=start_date,
-                        end_date=end_date,
-                        category=category,
-                        location_type=location_code,
-                        location_custom=location_custom,
-                        reminder_days_before_start=reminder_days_before_start,
-                        reminder_on_start_day=1 if reminder_on_start_day else 0,
-                        reminder_days_before_end=reminder_days_before_end,
-                        reminder_custom_date=reminder_custom_date,
-                        recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
-                    )
-                    st.success("✅ Событие обновлено!")
-                    st.session_state.edit_mode = False
-                    st.session_state.selected_event = None
-                else:
-                    db.add_event(
-                        title=title,
-                        start_date=start_date,
-                        end_date=end_date,
-                        category=category,
-                        location_type=location_code,
-                        location_custom=location_custom,
-                        reminder_days_before_start=reminder_days_before_start,
-                        reminder_on_start_day=1 if reminder_on_start_day else 0,
-                        reminder_days_before_end=reminder_days_before_end,
-                        reminder_custom_date=reminder_custom_date,
-                        recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
-                    )
-                    st.success("✅ Событие добавлено!")
-                
-                st.rerun()
+                try:
+                    if st.session_state.edit_mode and st.session_state.selected_event:
+                        db.update_event(
+                            event_id=st.session_state.selected_event['id'],
+                            title=title,
+                            start_date=start_date,
+                            end_date=end_date,
+                            category=category,
+                            location_type=location_code,
+                            location_custom=location_custom,
+                            reminder_days_before_start=reminder_days_before_start,
+                            reminder_on_start_day=1 if reminder_on_start_day else 0,
+                            reminder_days_before_end=reminder_days_before_end,
+                            reminder_custom_date=reminder_custom_date,
+                            recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
+                        )
+                        st.success("✅ Событие обновлено!")
+                        st.session_state.edit_mode = False
+                        st.session_state.selected_event = None
+                    else:
+                        event_id = db.add_event(
+                            title=title,
+                            start_date=start_date,
+                            end_date=end_date,
+                            category=category,
+                            location_type=location_code,
+                            location_custom=location_custom,
+                            reminder_days_before_start=reminder_days_before_start,
+                            reminder_on_start_day=1 if reminder_on_start_day else 0,
+                            reminder_days_before_end=reminder_days_before_end,
+                            reminder_custom_date=reminder_custom_date,
+                            recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
+                        )
+                        st.success(f"✅ Событие добавлено! ID: {event_id}")
+                    
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Ошибка при сохранении: {str(e)}")
         
         if st.session_state.edit_mode:
             if st.button("❌ Отменить редактирование", use_container_width=True):
