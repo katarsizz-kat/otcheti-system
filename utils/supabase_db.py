@@ -127,4 +127,242 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
     
     return recurring_events
 
-# ... остальной код остаётся без изменений ...
+def add_event(
+    title: str,
+    start_date: date,
+    end_date: date,
+    category: str,
+    location_type: str,
+    location_custom: Optional[str] = None,
+    reminder_days_before_start: int = 0,
+    reminder_on_start_day: int = 1,
+    reminder_days_before_end: int = 0,
+    reminder_custom_date: Optional[date] = None,
+    recurrence_type: str = 'none'
+) -> int:
+    """Добавить новое событие."""
+    supabase = get_supabase_client()
+    
+    # Нормализация recurrence_type перед сохранением
+    recurrence_type = str(recurrence_type).strip().lower()
+    if recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual']:
+        recurrence_type = 'yearly'
+    elif recurrence_type in ['monthly', 'ежемесячно', 'every month']:
+        recurrence_type = 'monthly'
+    elif recurrence_type in ['weekly', 'еженедельно', 'every week']:
+        recurrence_type = 'weekly'
+    elif recurrence_type in ['daily', 'ежедневно', 'every day']:
+        recurrence_type = 'daily'
+    else:
+        recurrence_type = 'none'
+    
+    data = {
+        "title": title,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "category": category,
+        "location_type": location_type,
+        "location_custom": location_custom,
+        "reminder_days_before_start": reminder_days_before_start,
+        "reminder_on_start_day": reminder_on_start_day,
+        "reminder_days_before_end": reminder_days_before_end,
+        "reminder_custom_date": reminder_custom_date.isoformat() if reminder_custom_date else None,
+        "recurrence_type": recurrence_type
+    }
+    
+    response = supabase.table("events").insert(data).execute()
+    return response.data[0]["id"]
+
+def get_all_events() -> List[Dict]:
+    """Получить все события с генерацией повторяющихся вхождений."""
+    supabase = get_supabase_client()
+    response = supabase.table("events").select("*").order("start_date").execute()
+    
+    events = []
+    for row in response.data:
+        event = {
+            "id": row["id"],
+            "title": row["title"],
+            "start_date": row["start_date"],
+            "end_date": row["end_date"],
+            "category": row["category"],
+            "location_type": row["location_type"],
+            "location_custom": row.get("location_custom"),
+            "reminder_days_before_start": row.get("reminder_days_before_start", 0),
+            "reminder_on_start_day": row.get("reminder_on_start_day", 1),
+            "reminder_days_before_end": row.get("reminder_days_before_end", 0),
+            "reminder_custom_date": row.get("reminder_custom_date"),
+            "recurrence_type": row.get("recurrence_type", "none"),
+            "created_at": row.get("created_at"),
+            "is_occurrence": False
+        }
+        events.append(event)
+    
+    events_with_occurrences = generate_recurring_events(events)
+    
+    return events_with_occurrences
+
+def get_event_by_id(event_id) -> Optional[Dict]:
+    """Получить событие по ID."""
+    supabase = get_supabase_client()
+    original_id = extract_original_id(event_id)
+    response = supabase.table("events").select("*").eq("id", original_id).execute()
+    
+    if response.data:
+        row = response.data[0]
+        return {
+            "id": row["id"],
+            "title": row["title"],
+            "start_date": row["start_date"],
+            "end_date": row["end_date"],
+            "category": row["category"],
+            "location_type": row["location_type"],
+            "location_custom": row.get("location_custom"),
+            "reminder_days_before_start": row.get("reminder_days_before_start", 0),
+            "reminder_on_start_day": row.get("reminder_on_start_day", 1),
+            "reminder_days_before_end": row.get("reminder_days_before_end", 0),
+            "reminder_custom_date": row.get("reminder_custom_date"),
+            "recurrence_type": row.get("recurrence_type", "none"),
+            "created_at": row.get("created_at")
+        }
+    return None
+
+def update_event(
+    event_id,
+    title: str,
+    start_date: date,
+    end_date: date,
+    category: str,
+    location_type: str,
+    location_custom: Optional[str] = None,
+    reminder_days_before_start: int = 0,
+    reminder_on_start_day: int = 1,
+    reminder_days_before_end: int = 0,
+    reminder_custom_date: Optional[date] = None,
+    recurrence_type: str = 'none'
+):
+    """Обновить событие."""
+    supabase = get_supabase_client()
+    original_id = extract_original_id(event_id)
+    
+    # Нормализация
+    recurrence_type = str(recurrence_type).strip().lower()
+    if recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual']:
+        recurrence_type = 'yearly'
+    elif recurrence_type in ['monthly', 'ежемесячно', 'every month']:
+        recurrence_type = 'monthly'
+    elif recurrence_type in ['weekly', 'еженедельно', 'every week']:
+        recurrence_type = 'weekly'
+    elif recurrence_type in ['daily', 'ежедневно', 'every day']:
+        recurrence_type = 'daily'
+    else:
+        recurrence_type = 'none'
+    
+    data = {
+        "title": title,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "category": category,
+        "location_type": location_type,
+        "location_custom": location_custom,
+        "reminder_days_before_start": reminder_days_before_start,
+        "reminder_on_start_day": reminder_on_start_day,
+        "reminder_days_before_end": reminder_days_before_end,
+        "reminder_custom_date": reminder_custom_date.isoformat() if reminder_custom_date else None,
+        "recurrence_type": recurrence_type
+    }
+    
+    supabase.table("events").update(data).eq("id", original_id).execute()
+
+def delete_event(event_id):
+    """Удалить событие."""
+    supabase = get_supabase_client()
+    original_id = extract_original_id(event_id)
+    supabase.table("events").delete().eq("id", original_id).execute()
+
+def get_events_for_date(target_date: date) -> List[Dict]:
+    """Получить события для конкретной даты."""
+    all_events = get_all_events()
+    return [
+        e for e in all_events 
+        if parse_date(e['start_date']) <= target_date <= parse_date(e['end_date'])
+    ]
+
+def get_events_for_date_range(start_date: date, end_date: date) -> List[Dict]:
+    """Получить события в диапазоне дат."""
+    all_events = get_all_events()
+    return [
+        e for e in all_events 
+        if parse_date(e['start_date']) <= end_date and parse_date(e['end_date']) >= start_date
+    ]
+
+def search_events(query: str) -> List[Dict]:
+    """Поиск событий по названию."""
+    all_events = get_all_events()
+    return [e for e in all_events if query.lower() in e['title'].lower()]
+
+def get_events_by_category(category: str) -> List[Dict]:
+    """Получить события по категории."""
+    all_events = get_all_events()
+    return [e for e in all_events if e['category'] == category]
+
+def get_upcoming_reminders(target_date: date) -> List[Dict]:
+    """Получить события, о которых нужно напомнить на указанную дату."""
+    all_events = get_all_events()
+    reminders = []
+    target_str = target_date.isoformat()
+    
+    for event in all_events:
+        if event.get('is_occurrence', False):
+            continue
+        
+        if event['start_date'] == target_str and event.get('reminder_on_start_day', 1):
+            reminders.append(event)
+            continue
+        
+        days_before = event.get('reminder_days_before_start', 0)
+        if days_before > 0:
+            reminder_date = (datetime.fromisoformat(event['start_date']) - timedelta(days=days_before)).date().isoformat()
+            if reminder_date == target_str:
+                reminders.append(event)
+                continue
+        
+        days_before_end = event.get('reminder_days_before_end', 0)
+        if days_before_end > 0:
+            reminder_date = (datetime.fromisoformat(event['end_date']) - timedelta(days=days_before_end)).date().isoformat()
+            if reminder_date == target_str:
+                reminders.append(event)
+                continue
+        
+        if event.get('reminder_custom_date') == target_str:
+            reminders.append(event)
+    
+    seen_ids = set()
+    unique_reminders = []
+    for r in reminders:
+        if r['id'] not in seen_ids:
+            seen_ids.add(r['id'])
+            unique_reminders.append(r)
+    
+    return unique_reminders
+
+def get_upcoming_events(days_ahead: int = 30) -> List[Dict]:
+    """Получить ближайшие события (для блока на главной странице)."""
+    today = date.today()
+    end_date = today + timedelta(days=days_ahead)
+    
+    all_events = get_all_events()
+    
+    upcoming = []
+    for event in all_events:
+        event_start = parse_date(event['start_date'])
+        event_end = parse_date(event['end_date'])
+        
+        # Событие попадает в диапазон [today, today + days_ahead]
+        if event_start <= end_date and event_end >= today:
+            upcoming.append(event)
+    
+    # Сортировка по дате начала
+    upcoming.sort(key=lambda x: parse_date(x['start_date']))
+    
+    return upcoming[:50]  # Максимум 50 событий, чтобы не перегружать
