@@ -8,7 +8,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment
 import io
 
-st.set_page_config(page_title="Календарь событий", page_icon="", layout="wide")
+st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
 
 # Инициализация session state
 if 'selected_event' not in st.session_state:
@@ -19,6 +19,10 @@ if 'is_indefinite' not in st.session_state:
     st.session_state.is_indefinite = True
 if 'location_type' not in st.session_state:
     st.session_state.location_type = "Все рестораны"
+if 'events_on_date' not in st.session_state:
+    st.session_state.events_on_date = []
+if 'show_events_on_date' not in st.session_state:
+    st.session_state.show_events_on_date = None
 
 # Session state для формы
 if 'form_title' not in st.session_state:
@@ -64,6 +68,13 @@ def reset_form():
     st.session_state.form_recurrence = 'none'
     st.session_state.is_indefinite = True
     st.session_state.location_type = "Все рестораны"
+    st.session_state.edit_mode = False
+    st.session_state.selected_event = None
+
+# Функция для принудительного обновления страницы
+def refresh_page():
+    st.query_params.clear()
+    st.rerun()
 
 # Боковая панель с фильтрами
 with st.sidebar:
@@ -209,16 +220,107 @@ with tab_calendar:
             "right": "dayGridMonth,timeGridWeek"
         },
         "initialView": "dayGridMonth",
+        "dayMaxEventRows": 4,
     }
     
-    cal_value = calendar(events=calendar_events, options=calendar_options, key="calendar")
+    # Уникальный key для календаря
+    cal_value = calendar(events=calendar_events, options=calendar_options, key=f"calendar_{len(calendar_events)}")
     
+    # Обработка клика на дату (не на событие)
+    if cal_value and cal_value.get("dateClick"):
+        clicked_date = cal_value["dateClick"]["date"]
+        # Получаем все события на эту дату
+        events_on_day = [e for e in all_events if date.fromisoformat(e['start_date']) <= date.fromisoformat(clicked_date) <= date.fromisoformat(e['end_date'])]
+        st.session_state.events_on_date = events_on_day
+        st.session_state.show_events_on_date = clicked_date
+    
+    # Обработка клика на событие
     if cal_value and cal_value.get("eventClick"):
         event_id = int(cal_value["eventClick"]["event"]["id"])
         st.session_state.selected_event = db.get_event_by_id(event_id)
-        st.rerun()
+        st.session_state.show_events_on_date = None
     
-    if st.session_state.selected_event:
+    # Показываем все события на выбранную дату
+    if st.session_state.show_events_on_date:
+        st.divider()
+        st.subheader(f"📌 События на {st.session_state.show_events_on_date}")
+        
+        if st.session_state.events_on_date:
+            for idx, event in enumerate(st.session_state.events_on_date):
+                with st.expander(f"{event['title']} ({event['category']})", expanded=(idx==0)):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write(f"**Категория:** {event['category']}")
+                        st.write(f"**Дата начала:** {event['start_date']}")
+                        
+                        if event['start_date'] == event['end_date']:
+                            st.write("**Дата окончания:** Однодневное событие")
+                        else:
+                            st.write(f"**Дата окончания:** {event['end_date']}")
+                    
+                    with col2:
+                        location_display = event['location_type']
+                        if event.get('location_custom'):
+                            location_display = event['location_custom']
+                        st.write(f"**Локация:** {location_display}")
+                        st.write(f"**Повторяемость:** {event['recurrence_type']}")
+                    
+                    # Кнопки для каждого события
+                    col_edit, col_delete = st.columns(2)
+                    
+                    with col_edit:
+                        if st.button(f"✏️ Редактировать", key=f"edit_{event['id']}", use_container_width=True):
+                            st.session_state.selected_event = event
+                            st.session_state.edit_mode = True
+                            
+                            st.session_state.form_title = event['title']
+                            st.session_state.form_start_date = date.fromisoformat(event['start_date'])
+                            st.session_state.form_end_date = date.fromisoformat(event['end_date'])
+                            st.session_state.form_category = event['category']
+                            st.session_state.form_location = event['location_type']
+                            
+                            if event.get('location_custom'):
+                                st.session_state.form_location_custom = [r.strip() for r in event['location_custom'].split(',')]
+                            else:
+                                st.session_state.form_location_custom = []
+                            
+                            st.session_state.form_reminder_on_start = bool(event.get('reminder_on_start_day', True))
+                            st.session_state.form_reminder_days_start = event.get('reminder_days_before_start', 0)
+                            st.session_state.form_reminder_days_end = event.get('reminder_days_before_end', 0)
+                            
+                            if event.get('reminder_custom_date'):
+                                st.session_state.form_use_custom_date = True
+                                st.session_state.form_reminder_custom_date = date.fromisoformat(event['reminder_custom_date'])
+                            else:
+                                st.session_state.form_use_custom_date = False
+                            
+                            st.session_state.form_recurrence = event.get('recurrence_type', 'none')
+                            st.session_state.is_indefinite = (event['start_date'] == event['end_date'])
+                            st.session_state.location_type = event['location_type']
+                            
+                            st.session_state.show_events_on_date = None
+                            refresh_page()
+                    
+                    with col_delete:
+                        if st.button(f"🗑️ Удалить", key=f"delete_{event['id']}", use_container_width=True, type="secondary"):
+                            db.delete_event(event['id'])
+                            st.success("Событие удалено")
+                            refresh_page()
+            
+            # Кнопка закрыть
+            if st.button("❌ Закрыть", use_container_width=True):
+                st.session_state.show_events_on_date = None
+                st.session_state.events_on_date = []
+                refresh_page()
+        else:
+            st.info("Нет событий на эту дату")
+            if st.button("❌ Закрыть", use_container_width=True):
+                st.session_state.show_events_on_date = None
+                refresh_page()
+    
+    # Показываем одно выбранное событие
+    if st.session_state.selected_event and not st.session_state.show_events_on_date:
         st.divider()
         st.subheader(f"📌 {st.session_state.selected_event['title']}")
         
@@ -235,7 +337,7 @@ with tab_calendar:
         
         with col2:
             location_display = st.session_state.selected_event['location_type']
-            if st.session_state.selected_event['location_custom']:
+            if st.session_state.selected_event.get('location_custom'):
                 location_display = st.session_state.selected_event['location_custom']
             st.write(f"**Локация:** {location_display}")
             st.write(f"**Повторяемость:** {st.session_state.selected_event['recurrence_type']}")
@@ -263,42 +365,14 @@ with tab_calendar:
         with col_edit:
             if st.button("✏️ Редактировать", use_container_width=True):
                 st.session_state.edit_mode = True
-                st.session_state.selected_event = db.get_event_by_id(st.session_state.selected_event['id'])
-                
-                # Заполняем форму данными события
-                st.session_state.form_title = st.session_state.selected_event['title']
-                st.session_state.form_start_date = date.fromisoformat(st.session_state.selected_event['start_date'])
-                st.session_state.form_end_date = date.fromisoformat(st.session_state.selected_event['end_date'])
-                st.session_state.form_category = st.session_state.selected_event['category']
-                st.session_state.form_location = st.session_state.selected_event['location_type']
-                
-                if st.session_state.selected_event.get('location_custom'):
-                    st.session_state.form_location_custom = [r.strip() for r in st.session_state.selected_event['location_custom'].split(',')]
-                else:
-                    st.session_state.form_location_custom = []
-                
-                st.session_state.form_reminder_on_start = bool(st.session_state.selected_event.get('reminder_on_start_day', True))
-                st.session_state.form_reminder_days_start = st.session_state.selected_event.get('reminder_days_before_start', 0)
-                st.session_state.form_reminder_days_end = st.session_state.selected_event.get('reminder_days_before_end', 0)
-                
-                if st.session_state.selected_event.get('reminder_custom_date'):
-                    st.session_state.form_use_custom_date = True
-                    st.session_state.form_reminder_custom_date = date.fromisoformat(st.session_state.selected_event['reminder_custom_date'])
-                else:
-                    st.session_state.form_use_custom_date = False
-                
-                st.session_state.form_recurrence = st.session_state.selected_event.get('recurrence_type', 'none')
-                st.session_state.is_indefinite = (st.session_state.selected_event['start_date'] == st.session_state.selected_event['end_date'])
-                st.session_state.location_type = st.session_state.selected_event['location_type']
-                
                 st.rerun()
         
         with col_delete:
-            if st.button("️ Удалить", use_container_width=True, type="secondary"):
+            if st.button("🗑️ Удалить", use_container_width=True, type="secondary"):
                 db.delete_event(st.session_state.selected_event['id'])
                 st.session_state.selected_event = None
                 st.success("Событие удалено")
-                st.rerun()
+                refresh_page()
 
 with tab_list:
     st.subheader("📋 Список событий")
@@ -328,7 +402,7 @@ with tab_list:
         st.info("Нет событий для отображения")
 
 with tab_add:
-    st.subheader("➕ Добавить новое событие" if not st.session_state.edit_mode else "✏️ Редактировать событие")
+    st.subheader("➕ Добавить новое событие" if not st.session_state.edit_mode else "️ Редактировать событие")
     
     # Основные поля
     title = st.text_input(
@@ -390,17 +464,17 @@ with tab_add:
         location_custom = ", ".join(st.session_state.form_location_custom)
     
     st.divider()
-    st.subheader("🔔 Напоминания")
+    st.subheader(" Напоминания")
     st.caption("Выберите один или несколько способов напоминания")
     
     reminder_on_start_day = st.checkbox(
-        " Напомнить в день начала события",
+        "📌 Напомнить в день начала события",
         value=st.session_state.form_reminder_on_start,
         key="checkbox_reminder_start"
     )
     
     reminder_days_before_start = st.number_input(
-        "⏰ За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
+        " За сколько дней до НАЧАЛА напомнить (0 = не напоминать)",
         min_value=0,
         max_value=90,
         value=st.session_state.form_reminder_days_start,
@@ -441,7 +515,7 @@ with tab_add:
     
     with col_save:
         if st.button(
-            "💾 Сохранить" if not st.session_state.edit_mode else "💾 Обновить",
+            "💾 Сохранить" if not st.session_state.edit_mode else " Обновить",
             use_container_width=True,
             type="primary"
         ):
@@ -472,10 +546,8 @@ with tab_add:
                             recurrence_type=cfg.RECURRENCE_TYPES[recurrence_type]
                         )
                         st.success("✅ Событие обновлено!")
-                        st.session_state.edit_mode = False
-                        st.session_state.selected_event = None
                         reset_form()
-                        st.rerun()
+                        refresh_page()
                     else:
                         event_id = db.add_event(
                             title=title,
@@ -492,14 +564,12 @@ with tab_add:
                         )
                         st.success(f"✅ Событие добавлено! ID: {event_id}")
                         reset_form()
-                        st.rerun()
+                        refresh_page()
                 except Exception as e:
                     st.error(f"❌ Ошибка при сохранении: {str(e)}")
     
     with col_cancel:
         if st.session_state.edit_mode:
-            if st.button("❌ Отменить редактирование", use_container_width=True):
-                st.session_state.edit_mode = False
-                st.session_state.selected_event = None
+            if st.button(" Отменить редактирование", use_container_width=True):
                 reset_form()
-                st.rerun()
+                refresh_page()
