@@ -7,9 +7,24 @@ import streamlit as st
 def get_supabase_client() -> Client:
     """Получить клиент Supabase."""
     if 'supabase_client' not in st.session_state:
-        supabase_url = st.secrets["supabase"]["url"]
-        supabase_key = st.secrets["supabase"]["key"]
-        st.session_state.supabase_client = create_client(supabase_url, supabase_key)
+        try:
+            supabase_url = st.secrets["supabase"]["url"].strip()
+            supabase_key = st.secrets["supabase"]["key"].strip()
+            
+            # Проверка корректности URL
+            if not supabase_url.startswith("https://"):
+                raise ValueError(f"Неверный URL: {supabase_url}")
+            
+            # Проверка корректности ключа
+            if not supabase_key.startswith("eyJ"):
+                raise ValueError(f"Неверный ключ (должен начинаться с eyJ): {supabase_key[:20]}...")
+            
+            st.session_state.supabase_client = create_client(supabase_url, supabase_key)
+        except KeyError as e:
+            raise Exception(f" Не найдены secrets в Streamlit. Проверьте раздел Settings → Secrets. Ошибка: {e}")
+        except Exception as e:
+            raise Exception(f"❌ Ошибка подключения к Supabase: {str(e)}\n\nПроверьте:\n1. Secrets добавлены в Streamlit\n2. URL и ключ скопированы полностью\n3. Нет лишних пробелов")
+    
     return st.session_state.supabase_client
 
 def add_event(
