@@ -5,6 +5,9 @@ from typing import List, Dict, Optional
 import streamlit as st
 import calendar
 
+# Горизонт планирования - 30 лет
+PLANNING_YEARS = 30
+
 def get_supabase_client() -> Client:
     """Получить клиент Supabase."""
     if 'supabase_client' not in st.session_state:
@@ -42,11 +45,19 @@ def extract_original_id(event_id) -> int:
     return int(id_str)
 
 def generate_recurring_events(events: List[Dict], max_date: Optional[date] = None) -> List[Dict]:
-    """Генерирует вхождения повторяющихся событий."""
+    """Генерирует вхождения повторяющихся событий на 30 лет вперёд."""
     if max_date is None:
-        max_date = date.today() + timedelta(days=730)
+        max_date = date.today() + timedelta(days=365 * PLANNING_YEARS)
     
     recurring_events = []
+    
+    # Лимиты вхождений по типу повторяемости (для производительности)
+    occurrence_limits = {
+        'yearly': PLANNING_YEARS + 5,      # 35 вхождений
+        'monthly': PLANNING_YEARS * 12 + 12,  # 372 вхождения
+        'weekly': PLANNING_YEARS * 52 + 10,   # 1570 вхождений
+        'daily': 365  # Только 1 год для ежедневных (иначе будет 10000+)
+    }
     
     for event in events:
         recurrence_type = str(event.get('recurrence_type', 'none')).strip().lower()
@@ -63,7 +74,6 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
         elif recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual', 'annually']:
             recurrence_type = 'yearly'
         
-        # Обновляем значение в словаре
         event['recurrence_type'] = recurrence_type
         
         if recurrence_type == 'none':
@@ -76,7 +86,7 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
         
         current_date = start_date
         occurrence_count = 0
-        max_occurrences = 100
+        max_occurrences = occurrence_limits.get(recurrence_type, 100)
         
         while current_date <= max_date and occurrence_count < max_occurrences:
             occurrence = event.copy()
@@ -132,7 +142,6 @@ def add_event(
     """Добавить новое событие."""
     supabase = get_supabase_client()
     
-    # Нормализация recurrence_type перед сохранением
     recurrence_type = str(recurrence_type).strip().lower()
     if recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual']:
         recurrence_type = 'yearly'
@@ -234,7 +243,6 @@ def update_event(
     supabase = get_supabase_client()
     original_id = extract_original_id(event_id)
     
-    # Нормализация
     recurrence_type = str(recurrence_type).strip().lower()
     if recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual']:
         recurrence_type = 'yearly'
@@ -335,3 +343,23 @@ def get_upcoming_reminders(target_date: date) -> List[Dict]:
     
     return unique_reminders
 
+def get_upcoming_events(days_ahead: int = 30) -> List[Dict]:
+    """Получить ближайшие события (для блока на главной странице)."""
+    today = date.today()
+    end_date = today + timedelta(days=days_ahead)
+    
+    all_events = get_all_events()
+    
+    upcoming = []
+    for event in all_events:
+        event_start = parse_date(event['start_date'])
+        event_end = parse_date(event['end_date'])
+        
+        # Событие попадает в диапазон [today, today + days_ahead]
+        if event_start <= end_date and event_end >= today:
+            upcoming.append(event)
+    
+    # Сортировка по дате начала
+    upcoming.sort(key=lambda x: parse_date(x['start_date']))
+    
+    return upcoming[:50]  # Максимум 50 событий, чтобы не перегружать
