@@ -1,3 +1,4 @@
+"""Модуль работы с базой данных календаря."""
 import sqlite3
 from datetime import datetime, date
 from typing import List, Dict, Optional
@@ -5,17 +6,16 @@ import config.calendar as cfg
 
 
 def get_connection():
-    """Получить соединение с базой данных"""
+    """Получить соединение с базой данных."""
     conn = sqlite3.connect(cfg.DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-    """Создать базу данных, если её ещё нет"""
+    """Создать базу данных, если её ещё нет."""
     conn = get_connection()
     cursor = conn.cursor()
-    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,14 +33,12 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
     # Если база уже была создана раньше, добавляем новое поле
     try:
         cursor.execute('ALTER TABLE events ADD COLUMN reminder_custom_date DATE')
         conn.commit()
     except sqlite3.OperationalError:
         pass  # Поле уже есть
-    
     conn.close()
 
 
@@ -57,10 +55,9 @@ def add_event(
     reminder_custom_date: Optional[date] = None,
     recurrence_type: str = 'none'
 ) -> int:
-    """Добавить новое событие"""
+    """Добавить новое событие."""
     conn = get_connection()
     cursor = conn.cursor()
-    
     cursor.execute('''
         INSERT INTO events (
             title, start_date, end_date, category, location_type,
@@ -72,16 +69,14 @@ def add_event(
         location_custom, reminder_days_before_start, reminder_on_start_day,
         reminder_days_before_end, reminder_custom_date, recurrence_type
     ))
-    
     event_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    
     return event_id
 
 
 def get_all_events() -> List[Dict]:
-    """Получить все события"""
+    """Получить все события."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM events ORDER BY start_date')
@@ -92,7 +87,7 @@ def get_all_events() -> List[Dict]:
 
 
 def get_event_by_id(event_id: int) -> Optional[Dict]:
-    """Получить событие по ID"""
+    """Получить событие по ID."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM events WHERE id = ?', (event_id,))
@@ -115,10 +110,9 @@ def update_event(
     reminder_custom_date: Optional[date] = None,
     recurrence_type: str = 'none'
 ):
-    """Обновить событие"""
+    """Обновить событие."""
     conn = get_connection()
     cursor = conn.cursor()
-    
     cursor.execute('''
         UPDATE events SET
             title = ?, start_date = ?, end_date = ?, category = ?,
@@ -132,13 +126,12 @@ def update_event(
         location_custom, reminder_days_before_start, reminder_on_start_day,
         reminder_days_before_end, reminder_custom_date, recurrence_type, event_id
     ))
-    
     conn.commit()
     conn.close()
 
 
 def delete_event(event_id: int):
-    """Удалить событие"""
+    """Удалить событие."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM events WHERE id = ?', (event_id,))
@@ -147,7 +140,7 @@ def delete_event(event_id: int):
 
 
 def get_events_for_date(target_date: date) -> List[Dict]:
-    """Получить события для конкретной даты"""
+    """Получить события для конкретной даты."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -162,7 +155,7 @@ def get_events_for_date(target_date: date) -> List[Dict]:
 
 
 def get_events_for_date_range(start_date: date, end_date: date) -> List[Dict]:
-    """Получить события в диапазоне дат"""
+    """Получить события в диапазоне дат."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -177,7 +170,7 @@ def get_events_for_date_range(start_date: date, end_date: date) -> List[Dict]:
 
 
 def search_events(query: str) -> List[Dict]:
-    """Поиск событий по названию"""
+    """Поиск событий по названию."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -192,7 +185,7 @@ def search_events(query: str) -> List[Dict]:
 
 
 def get_events_by_category(category: str) -> List[Dict]:
-    """Получить события по категории"""
+    """Получить события по категории."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -207,7 +200,7 @@ def get_events_by_category(category: str) -> List[Dict]:
 
 
 def get_upcoming_reminders(target_date: date) -> List[Dict]:
-    """Получить события, о которых нужно напомнить на указанную дату"""
+    """Получить события, о которых нужно напомнить на указанную дату."""
     conn = get_connection()
     cursor = conn.cursor()
     reminders = []
@@ -251,7 +244,6 @@ def get_upcoming_reminders(target_date: date) -> List[Dict]:
         if r['id'] not in seen_ids:
             seen_ids.add(r['id'])
             unique_reminders.append(r)
-    
     return unique_reminders
 
 
