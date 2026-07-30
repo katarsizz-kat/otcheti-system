@@ -9,7 +9,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 import io
 
-st.set_page_config(page_title="Календарь событий", page_icon="", layout="wide")
+st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
 
 # =============================================================================
 # Вспомогательные функции
@@ -34,8 +34,8 @@ def parse_date(d):
     try:
         return date.fromisoformat(d_str)
     except ValueError:
-        st.warning(f"⚠️ Не удалось распарсить дату: {d}")
         return date.today()
+
 
 def get_key_by_value(d: dict, target_val, default=None):
     """Получить ключ словаря по его значению."""
@@ -43,6 +43,27 @@ def get_key_by_value(d: dict, target_val, default=None):
         if v == target_val:
             return k
     return default if default else list(d.keys())[0]
+
+
+def get_recurrence_key(recurrence_value):
+    """Получить ключ повторяемости по значению из базы данных."""
+    recurrence_value = str(recurrence_value).strip().lower()
+    
+    mapping = {
+        'none': 'Не повторяется',
+        'не повторяется': 'Не повторяется',
+        'daily': 'Ежедневно',
+        'ежедневно': 'Ежедневно',
+        'weekly': 'Еженедельно',
+        'еженедельно': 'Еженедельно',
+        'monthly': 'Ежемесячно',
+        'ежемесячно': 'Ежемесячно',
+        'yearly': 'Ежегодно',
+        'ежегодно': 'Ежегодно'
+    }
+    
+    return mapping.get(recurrence_value, 'Не повторяется')
+
 
 # =============================================================================
 # Кэширование данных
@@ -53,15 +74,18 @@ def get_cached_events():
     """Получить все события с кэшированием."""
     return db.get_all_events()
 
+
 @st.cache_data(ttl=10)
 def get_cached_event_by_id(event_id):
     """Получить событие по ID с кэшированием."""
     return db.get_event_by_id(event_id)
 
+
 def clear_cache():
     """Очистить кэш."""
     get_cached_events.clear()
     get_cached_event_by_id.clear()
+
 
 # =============================================================================
 # Инициализация session state
@@ -92,7 +116,7 @@ form_defaults = {
     'data_reminder_days_end': 0,
     'data_use_custom_date': False,
     'data_reminder_custom_date': date.today(),
-    'data_recurrence': list(cfg.RECURRENCE_TYPES.values())[0] if cfg.RECURRENCE_TYPES else 'none'
+    'data_recurrence': 'Не повторяется'
 }
 
 for key, value in form_defaults.items():
@@ -126,7 +150,7 @@ def reset_form():
 # =============================================================================
 
 with st.sidebar:
-    st.header(" Фильтры")
+    st.header("🔍 Фильтры")
     
     selected_category = st.multiselect(
         "Категория",
@@ -143,12 +167,12 @@ with st.sidebar:
     
     search_query = st.text_input("Поиск по названию", key="sidebar_filter_search")
     
-    # ИСПРАВЛЕНИЕ: увеличен диапазон до 2 лет для отображения повторяющихся событий
+    # Увеличен диапазон до 30 лет для отображения повторяющихся событий
     date_range = st.date_input(
-    "Диапазон дат",
-    value=(date.today(), date.today() + timedelta(days=365 * 30)),
-    key="sidebar_filter_date_range"
-)
+        "Диапазон дат",
+        value=(date.today(), date.today() + timedelta(days=365 * 30)),
+        key="sidebar_filter_date_range"
+    )
     
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start_date_filter, end_date_filter = date_range
@@ -156,9 +180,9 @@ with st.sidebar:
         start_date_filter = end_date_filter = date_range if isinstance(date_range, date) else date.today()
     
     st.divider()
-    st.header(" Экспорт")
+    st.header("📤 Экспорт")
     
-    if st.button("Экспорт в Excel", use_container_width=True, key="btn_export"):
+    if st.button("📊 Экспорт в Excel", use_container_width=True, key="btn_export"):
         with st.spinner("Генерация Excel..."):
             events = get_cached_events()
             if events:
@@ -240,6 +264,74 @@ with st.sidebar:
                 )
             else:
                 st.warning("Нет событий для экспорта")
+    
+    # Экспорт в PDF
+    if st.button("📄 Экспорт в PDF", use_container_width=True, key="btn_export_pdf"):
+        with st.spinner("Генерация PDF..."):
+            try:
+                from utils.pdf_export import create_pdf_calendar
+                
+                all_events_for_pdf = get_cached_events()
+                
+                filtered_for_pdf = all_events_for_pdf
+                if selected_category:
+                    filtered_for_pdf = [e for e in filtered_for_pdf if e['category'] in selected_category]
+                if selected_location != "Все рестораны":
+                    location_code = cfg.LOCATIONS.get(selected_location, "all")
+                    if location_code == "spb":
+                        filtered_for_pdf = [e for e in filtered_for_pdf if e.get('location_type') in ['spb', 'all']]
+                    elif location_code == "tyumen":
+                        filtered_for_pdf = [e for e in filtered_for_pdf if e.get('location_type') in ['tyumen', 'all']]
+                
+                pdf_bytes = create_pdf_calendar(filtered_for_pdf, "Календарь событий")
+                
+                st.download_button(
+                    label="📥 Скачать PDF",
+                    data=pdf_bytes,
+                    file_name=f"calendar_{date.today()}.pdf",
+                    mime="application/pdf",
+                    key="btn_download_pdf"
+                )
+            except ImportError:
+                st.error("❌ Модуль PDF не установлен. Добавьте reportlab в requirements.txt")
+            except Exception as e:
+                st.error(f"❌ Ошибка создания PDF: {str(e)}")
+    
+    st.divider()
+    st.header("🔔 Telegram уведомления")
+    
+    if st.button("📱 Тест Telegram", use_container_width=True, key="btn_test_telegram"):
+        try:
+            from utils.telegram_bot import test_telegram_connection
+            if test_telegram_connection():
+                st.success("✅ Telegram работает!")
+            else:
+                st.error("❌ Ошибка подключения")
+        except ImportError:
+            st.error("❌ Модуль Telegram не установлен")
+        except Exception as e:
+            st.error(f"❌ Ошибка: {str(e)}")
+    
+    if st.button("🔔 Отправить напоминания", use_container_width=True, key="btn_send_reminders"):
+        try:
+            from utils.telegram_bot import send_reminder_notification
+            
+            today = date.today()
+            reminders = db.get_upcoming_reminders(today)
+            
+            if reminders:
+                count = 0
+                for event in reminders:
+                    if send_reminder_notification(event):
+                        count += 1
+                
+                st.success(f"✅ Отправлено {count} напоминаний")
+            else:
+                st.info("ℹ️ Нет событий для напоминания сегодня")
+        except ImportError:
+            st.error("❌ Модуль Telegram не установлен")
+        except Exception as e:
+            st.error(f"❌ Ошибка: {str(e)}")
 
 # =============================================================================
 # Получение и фильтрация событий
@@ -261,7 +353,6 @@ if selected_location != "Все рестораны":
 if search_query:
     filtered_events = [e for e in filtered_events if search_query.lower() in str(e['title']).lower()]
 
-# Фильтрация по дате (теперь диапазон 2 года)
 filtered_events = [
     e for e in filtered_events
     if parse_date(e['start_date']) <= end_date_filter
@@ -272,7 +363,7 @@ filtered_events = [
 # Вкладки
 # =============================================================================
 
-tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", " Список", "➕ Добавить событие"])
+tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", "📋 Список", "➕ Добавить событие"])
 
 # =============================================================================
 # Вкладка 1: Календарь
@@ -310,14 +401,14 @@ with tab_calendar:
     }
     
     calendar(events=calendar_events, options=calendar_options, key="main_calendar")
-    st.info("ℹ️ Для управления событиями перейдите во вкладку **📋 Список**")
+    st.info("️ Для управления событиями перейдите во вкладку **📋 Список**")
 
 # =============================================================================
 # Вкладка 2: Список событий
 # =============================================================================
 
 with tab_list:
-    st.subheader("📋 Список событий")
+    st.subheader(" Список событий")
     
     if st.session_state.show_edit_form and st.session_state.selected_event:
         st.divider()
@@ -340,7 +431,7 @@ with tab_list:
         
         location_custom = None
         if location_type == "Выбрать конкретные":
-            location_custom_list = st.multiselect("📍 Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="edit_input_location_custom")
+            location_custom_list = st.multiselect(" Выберите рестораны", options=getattr(cfg, 'ALL_RESTAURANTS', []), default=st.session_state.data_location_custom, key="edit_input_location_custom")
             location_custom = ", ".join(location_custom_list) if location_custom_list else None
         
         st.divider()
@@ -353,11 +444,13 @@ with tab_list:
         if use_custom_date:
             reminder_custom_date = st.date_input("Выберите дату напоминания", value=st.session_state.data_reminder_custom_date, key="edit_input_reminder_custom")
         
-        recurrence_type = st.selectbox("Повторяемость", options=list(cfg.RECURRENCE_TYPES.keys()), index=list(cfg.RECURRENCE_TYPES.values()).index(st.session_state.data_recurrence) if st.session_state.data_recurrence in cfg.RECURRENCE_TYPES.values() else 0, key="edit_input_recurrence")
+        recurrence_options = list(cfg.RECURRENCE_TYPES.keys())
+        recurrence_index = recurrence_options.index(st.session_state.data_recurrence) if st.session_state.data_recurrence in recurrence_options else 0
+        recurrence_type = st.selectbox("Повторяемость", options=recurrence_options, index=recurrence_index, key="edit_input_recurrence")
         
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button(" Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
+            if st.button("💾 Сохранить изменения", use_container_width=True, type="primary", key="btn_save_edit"):
                 if not title:
                     st.error("❌ Введите название события")
                 elif start_date > end_date:
@@ -448,7 +541,7 @@ with tab_list:
                 st.caption(f"📅 {event['start_date']} | {event['category']} | {location_display}")
             
             with col_actions:
-                if st.button("✏️", key=f"edit_{event['id']}", help="Редактировать"):
+                if st.button("️", key=f"edit_{event['id']}", help="Редактировать"):
                     st.session_state.selected_event = event
                     st.session_state.edit_mode = True
                     st.session_state.show_edit_form = True
@@ -474,17 +567,17 @@ with tab_list:
                     else:
                         st.session_state.data_use_custom_date = False
                     
-                    st.session_state.data_recurrence = get_key_by_value(cfg.RECURRENCE_TYPES, event.get('recurrence_type', 'none'), list(cfg.RECURRENCE_TYPES.values())[0])
+                    st.session_state.data_recurrence = get_recurrence_key(event.get('recurrence_type', 'none'))
                     st.rerun()
                 
-                if st.button("️", key=f"delete_{event['id']}", help="Удалить"):
+                if st.button("🗑️", key=f"delete_{event['id']}", help="Удалить"):
                     st.session_state.delete_confirm_id = event['id']
                     st.rerun()
             
             st.divider()
         
         if st.session_state.events_to_delete:
-            st.warning(f"🗑️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
+            st.warning(f"️ Выбрано событий для удаления: {len(st.session_state.events_to_delete)}")
             col_confirm, col_cancel = st.columns(2)
             with col_confirm:
                 if st.button("✅ Подтвердить удаление", type="primary", key="confirm_bulk_delete"):
@@ -542,11 +635,13 @@ with tab_add:
     if use_custom_date:
         reminder_custom_date = st.date_input("Выберите дату напоминания", value=st.session_state.data_reminder_custom_date, key="input_reminder_custom")
     
-    recurrence_type = st.selectbox("Повторяемость", options=list(cfg.RECURRENCE_TYPES.keys()), index=list(cfg.RECURRENCE_TYPES.values()).index(st.session_state.data_recurrence) if st.session_state.data_recurrence in cfg.RECURRENCE_TYPES.values() else 0, key="input_recurrence")
+    recurrence_options = list(cfg.RECURRENCE_TYPES.keys())
+    recurrence_index = recurrence_options.index(st.session_state.data_recurrence) if st.session_state.data_recurrence in recurrence_options else 0
+    recurrence_type = st.selectbox("Повторяемость", options=recurrence_options, index=recurrence_index, key="input_recurrence")
     
     col_save, col_cancel = st.columns(2)
     with col_save:
-        if st.button("💾 Сохранить", use_container_width=True, type="primary", key="btn_save_event"):
+        if st.button(" Сохранить", use_container_width=True, type="primary", key="btn_save_event"):
             if not title:
                 st.error("❌ Введите название события")
             elif start_date > end_date:
@@ -557,7 +652,7 @@ with tab_add:
                     reminder_custom_date = None
                 
                 try:
-                    event_id = db.add_event(
+                    db.add_event(
                         title=title,
                         start_date=start_date,
                         end_date=end_date,
