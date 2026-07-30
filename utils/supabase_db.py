@@ -1,9 +1,8 @@
 """Модуль работы с базой данных через Supabase."""
 from supabase import create_client, Client
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Dict, Optional
 import streamlit as st
-import config.calendar as cfg
 
 def get_supabase_client() -> Client:
     """Получить клиент Supabase."""
@@ -12,12 +11,6 @@ def get_supabase_client() -> Client:
         supabase_key = st.secrets["supabase"]["key"]
         st.session_state.supabase_client = create_client(supabase_url, supabase_key)
     return st.session_state.supabase_client
-
-def init_db():
-    """Инициализация таблицы (выполняется один раз при создании проекта)."""
-    # Эта функция нужна только для первого запуска
-    # Таблица создается через SQL Editor в Supabase
-    pass
 
 def add_event(
     title: str,
@@ -173,34 +166,27 @@ def get_upcoming_reminders(target_date: date) -> List[Dict]:
     target_str = target_date.isoformat()
     
     for event in all_events:
-        # 1. События, которые начинаются сегодня
         if event['start_date'] == target_str and event.get('reminder_on_start_day', 1):
             reminders.append(event)
             continue
         
-        # 2. За N дней до начала
         days_before = event.get('reminder_days_before_start', 0)
         if days_before > 0:
-            from datetime import timedelta
             reminder_date = (datetime.fromisoformat(event['start_date']) - timedelta(days=days_before)).date().isoformat()
             if reminder_date == target_str:
                 reminders.append(event)
                 continue
         
-        # 3. За N дней до конца
         days_before_end = event.get('reminder_days_before_end', 0)
         if days_before_end > 0:
-            from datetime import timedelta
             reminder_date = (datetime.fromisoformat(event['end_date']) - timedelta(days=days_before_end)).date().isoformat()
             if reminder_date == target_str:
                 reminders.append(event)
                 continue
         
-        # 4. В конкретную дату
         if event.get('reminder_custom_date') == target_str:
             reminders.append(event)
     
-    # Убираем дубликаты
     seen_ids = set()
     unique_reminders = []
     for r in reminders:
