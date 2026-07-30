@@ -9,20 +9,49 @@ from reportlab.pdfbase.ttfonts import TTFont
 from datetime import datetime, date, timedelta
 from typing import List, Dict
 import io
+import os
 
 
-def register_russian_fonts():
-    """Зарегистрировать шрифты с поддержкой кириллицы."""
-    # Используем встроенные шрифты с поддержкой кириллицы
+def get_cyrillic_font():
+    """Получить шрифт с поддержкой кириллицы."""
+    # Пробуем зарегистрировать шрифты с поддержкой кириллицы
     try:
-        # Пробуем зарегистрировать DejaVu Sans (если есть в системе)
-        pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
-        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'DejaVuSans-Bold.ttf'))
-        return 'DejaVuSans', 'DejaVuSans-Bold'
-    except:
-        # Если не получилось, используем стандартные шрифты
-        # Они могут не поддерживать кириллицу, но это лучше чем ничего
-        return 'Helvetica', 'Helvetica-Bold'
+        # Пытаемся зарегистрировать DejaVu Sans (обычно есть в системе)
+        font_paths = [
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            '/usr/share/fonts/TTF/DejaVuSans.ttf',
+            'DejaVuSans.ttf',
+        ]
+        
+        for font_path in font_paths:
+            if os.path.exists(font_path):
+                try:
+                    pdfmetrics.registerFont(TTFont('DejaVuSans', font_path))
+                    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', font_path.replace('DejaVuSans.ttf', 'DejaVuSans-Bold.ttf')))
+                    return 'DejaVuSans', 'DejaVuSans-Bold'
+                except:
+                    continue
+        
+        # Если DejaVu не найден, пробуем другие шрифты
+        alternative_fonts = [
+            'Arial',
+            'Times New Roman',
+            'LiberationSans',
+        ]
+        
+        for font_name in alternative_fonts:
+            try:
+                pdfmetrics.registerFont(TTFont(font_name, f'{font_name}.ttf'))
+                return font_name, f'{font_name}-Bold'
+            except:
+                continue
+                
+    except Exception as e:
+        print(f"Warning: Could not register custom fonts: {e}")
+    
+    # Если ничего не помогло, используем стандартный шрифт
+    # (но кириллица может не отображаться)
+    return 'Helvetica', 'Helvetica-Bold'
 
 
 def create_pdf_calendar(events: List[Dict], title: str = "Календарь событий") -> bytes:
@@ -48,6 +77,9 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
         bottomMargin=1*cm
     )
     
+    # Получаем шрифты
+    font_name, font_name_bold = get_cyrillic_font()
+    
     # Стили
     styles = getSampleStyleSheet()
     
@@ -58,15 +90,15 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
         fontSize=24,
         spaceAfter=20,
         alignment=1,  # Центр
-        textColor=colors.HexColor('#2C3E50')
+        textColor=colors.HexColor('#2C3E50'),
+        fontName=font_name_bold
     )
     
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontSize=14,
-        spaceAfter=10,
-        textColor=colors.HexColor('#34495E')
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontName=font_name,
+        fontSize=10
     )
     
     # Элементы документа
@@ -78,7 +110,7 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
     
     # Информация о генерации
     generated_date = datetime.now().strftime("%d.%m.%Y %H:%M")
-    elements.append(Paragraph(f"<i>Сгенерировано: {generated_date}</i>", styles['Normal']))
+    elements.append(Paragraph(f"<i>Сгенерировано: {generated_date}</i>", normal_style))
     elements.append(Spacer(1, 0.5*cm))
     
     # Группируем события по датам
@@ -120,8 +152,12 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
             day_name_ru = ""
         
         # Добавляем дату как заголовок секции
+        header_text = f"<b>{date_str}</b>"
+        if day_name_ru:
+            header_text += f" {day_name_ru}"
+        
         table_data.append([
-            f"<b>{date_str}</b> {day_name_ru}" if day_name_ru else f"<b>{date_str}</b>",
+            header_text,
             "",
             "",
             "",
@@ -160,7 +196,7 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), font_name_bold),
         ('FONTSIZE', (0, 0), (-1, 0), 12),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         
@@ -177,59 +213,20 @@ def create_pdf_calendar(events: List[Dict], title: str = "Календарь с�
         
         # Выделение заголовков дат
         ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#2ECC71')),
-        ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 1), (-1, 1), font_name_bold),
     ]))
     
     elements.append(table)
     
     # Генерируем PDF
-    doc.build(elements)
+    try:
+        doc.build(elements)
+    except Exception as e:
+        print(f"Error building PDF: {e}")
+        # Пытаемся построить с базовыми стилями
+        doc.build(elements, canvasmaker=None)
     
     # Получаем PDF как байты
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    
-    return pdf_bytes
-
-
-def create_pdf_summary(events: List[Dict], days: int = 30) -> bytes:
-    """
-    Создать PDF с краткой сводкой событий.
-    
-    Args:
-        events: Список событий
-        days: Количество дней для сводки
-    
-    Returns:
-        bytes: PDF файл
-    """
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    
-    elements = []
-    styles = getSampleStyleSheet()
-    
-    # Заголовок
-    title = Paragraph(f"События на ближайшие {days} дней", styles['Heading1'])
-    elements.append(title)
-    elements.append(Spacer(1, 1*cm))
-    
-    # Статистика
-    total_events = len(events)
-    categories = {}
-    for event in events:
-        cat = event.get('category', 'Другое')
-        categories[cat] = categories.get(cat, 0) + 1
-    
-    elements.append(Paragraph(f"<b>Всего событий:</b> {total_events}", styles['Normal']))
-    elements.append(Spacer(1, 0.5*cm))
-    
-    elements.append(Paragraph("<b>По категориям:</b>", styles['Normal']))
-    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
-        elements.append(Paragraph(f"• {cat}: {count}", styles['Normal']))
-    
-    doc.build(elements)
-    
     pdf_bytes = buffer.getvalue()
     buffer.close()
     
