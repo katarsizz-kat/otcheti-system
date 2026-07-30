@@ -330,7 +330,6 @@ def create_excel(data, period_str, rules):
     ws.column_dimensions['G'].width = 15
     
     return wb
-
 def create_pizza_excel(data, period_str, rules):
     """Создает Excel с разбивкой пицц по размерам как на скриншоте"""
     wb = Workbook()
@@ -344,7 +343,7 @@ def create_pizza_excel(data, period_str, rules):
     gray_fill = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')
     
     # Заголовок периода
-    ws.merge_cells('A1:G1')
+    ws.merge_cells('A1:Q1')  # Увеличил диапазон для двух городов
     c = ws.cell(1, 1, period_str)
     c.font = Font(bold=True, size=16)
     c.alignment = Alignment(horizontal='center')
@@ -357,9 +356,24 @@ def create_pizza_excel(data, period_str, rules):
     c.alignment = Alignment(horizontal='center')
     c.fill = blue_fill
     
-    # Заголовки колонок
+    # Заголовок города (Тюмень) - с отступом в 3 столбца
+    ws.merge_cells('K2:Q2')
+    c = ws.cell(2, 11, "Тюмень")
+    c.font = Font(bold=True, size=14)
+    c.alignment = Alignment(horizontal='center')
+    c.fill = blue_fill
+    
+    # Заголовки колонок для СПБ
     headers = ['Пиццы', '15 см', '23 см', '30 см', '35 см', '40 см', 'Всего']
     for col, header in enumerate(headers, 1):
+        c = ws.cell(3, col, header)
+        c.font = Font(bold=True, size=11)
+        c.border = thick_border
+        c.alignment = Alignment(horizontal='center')
+        c.fill = gray_fill
+    
+    # Заголовки колонок для Тюмени (начинаются с 11 столбца)
+    for col, header in enumerate(headers, 11):
         c = ws.cell(3, col, header)
         c.font = Font(bold=True, size=11)
         c.border = thick_border
@@ -369,28 +383,47 @@ def create_pizza_excel(data, period_str, rules):
     # Данные
     row = 4
     for rule in rules:
-        # Название пиццы
+        # Название пиццы для СПБ
         c = ws.cell(row, 1, rule)
         c.border = border
         c.alignment = Alignment(horizontal='left')
         
-        # Размеры
+        # Размеры для СПБ
         for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 2):
             qty = data['СПБ'][rule][size]['qty']
             c = ws.cell(row, col_idx, qty)
             c.border = border
             c.alignment = Alignment(horizontal='center')
         
-        # Итого
-        total_qty = data['СПБ'][rule]['Всего']['qty']
-        c = ws.cell(row, 7, total_qty)
+        # Итого для СПБ
+        total_qty_spb = data['СПБ'][rule]['Всего']['qty']
+        c = ws.cell(row, 7, total_qty_spb)
+        c.font = Font(bold=True)
+        c.border = thick_border
+        c.alignment = Alignment(horizontal='center')
+        
+        # Название пиццы для Тюмени
+        c = ws.cell(row, 11, rule)
+        c.border = border
+        c.alignment = Alignment(horizontal='left')
+        
+        # Размеры для Тюмени
+        for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 12):
+            qty = data['Тюмень'][rule][size]['qty']
+            c = ws.cell(row, col_idx, qty)
+            c.border = border
+            c.alignment = Alignment(horizontal='center')
+        
+        # Итого для Тюмени
+        total_qty_tyumen = data['Тюмень'][rule]['Всего']['qty']
+        c = ws.cell(row, 17, total_qty_tyumen)
         c.font = Font(bold=True)
         c.border = thick_border
         c.alignment = Alignment(horizontal='center')
         
         row += 1
     
-    # Итого строка
+    # Итого строка для СПБ
     ws.cell(row, 1, 'Итого')
     ws.cell(row, 1).font = Font(bold=True, size=11)
     ws.cell(row, 1).border = thick_border
@@ -402,11 +435,27 @@ def create_pizza_excel(data, period_str, rules):
         c.border = thick_border
         c.alignment = Alignment(horizontal='center')
     
-    # Общая сумма
     ws.cell(row, 7, f"=SUM(G4:G{row-1})")
     ws.cell(row, 7).font = Font(bold=True, size=11)
     ws.cell(row, 7).border = thick_border
     ws.cell(row, 7).alignment = Alignment(horizontal='center')
+    
+    # Итого строка для Тюмени
+    ws.cell(row, 11, 'Итого')
+    ws.cell(row, 11).font = Font(bold=True, size=11)
+    ws.cell(row, 11).border = thick_border
+    
+    for col_idx, size in enumerate(['15', '23', '30', '35', '40'], 12):
+        col_letter = get_column_letter(col_idx)
+        c = ws.cell(row, col_idx, f"=SUM({col_letter}4:{col_letter}{row-1})")
+        c.font = Font(bold=True, size=11)
+        c.border = thick_border
+        c.alignment = Alignment(horizontal='center')
+    
+    ws.cell(row, 17, f"=SUM(Q4:Q{row-1})")
+    ws.cell(row, 17).font = Font(bold=True, size=11)
+    ws.cell(row, 17).border = thick_border
+    ws.cell(row, 17).alignment = Alignment(horizontal='center')
     
     # Ширина колонок
     ws.column_dimensions['A'].width = 45
@@ -416,8 +465,20 @@ def create_pizza_excel(data, period_str, rules):
     ws.column_dimensions['E'].width = 10
     ws.column_dimensions['F'].width = 10
     ws.column_dimensions['G'].width = 10
+    # Столбцы H, I, J - пустые (отступ 3 столбца)
+    ws.column_dimensions['H'].width = 3
+    ws.column_dimensions['I'].width = 3
+    ws.column_dimensions['J'].width = 3
+    ws.column_dimensions['K'].width = 45
+    ws.column_dimensions['L'].width = 10
+    ws.column_dimensions['M'].width = 10
+    ws.column_dimensions['N'].width = 10
+    ws.column_dimensions['O'].width = 10
+    ws.column_dimensions['P'].width = 10
+    ws.column_dimensions['Q'].width = 10
     
     return wb
+
 
 # Интерфейс
 st.markdown("""
