@@ -44,13 +44,14 @@ def extract_original_id(event_id) -> int:
 def generate_recurring_events(events: List[Dict], max_date: Optional[date] = None) -> List[Dict]:
     """Генерирует вхождения повторяющихся событий."""
     if max_date is None:
-        max_date = date.today() + timedelta(days=730)
+        max_date = date.today() + timedelta(days=730)  # 2 года вперед
     
     recurring_events = []
     
     for event in events:
         recurrence_type = event.get('recurrence_type', 'none')
         
+        # Если событие не повторяющееся - добавляем как есть
         if recurrence_type == 'none':
             recurring_events.append(event)
             continue
@@ -62,7 +63,11 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
         current_date = start_date
         occurrence_count = 0
         
-        while current_date <= max_date:
+        # Ограничиваем количество вхождений для безопасности
+        max_occurrences = 100
+        
+        while current_date <= max_date and occurrence_count < max_occurrences:
+            # Создаем копию события для каждого вхождения
             occurrence = event.copy()
             occurrence['start_date'] = current_date.isoformat()
             occurrence['end_date'] = (current_date + timedelta(days=duration)).isoformat()
@@ -74,27 +79,40 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
             recurring_events.append(occurrence)
             occurrence_count += 1
             
+            # Переходим к следующей дате в зависимости от типа повторения
             if recurrence_type == 'daily':
                 current_date += timedelta(days=1)
             elif recurrence_type == 'weekly':
                 current_date += timedelta(weeks=1)
             elif recurrence_type == 'monthly':
+                # Добавляем 1 месяц
                 if current_date.month == 12:
                     current_date = current_date.replace(year=current_date.year + 1, month=1)
                 else:
                     current_date = current_date.replace(month=current_date.month + 1)
                 
+                # Если день выходит за пределы месяца, берем последний день
                 last_day = calendar.monthrange(current_date.year, current_date.month)[1]
                 if start_date.day > last_day:
                     current_date = current_date.replace(day=last_day)
                 else:
                     current_date = current_date.replace(day=start_date.day)
             elif recurrence_type == 'yearly':
-                current_date = current_date.replace(year=current_date.year + 1)
-                
-                if start_date.month == 2 and start_date.day == 29:
-                    if not calendar.isleap(current_date.year):
-                        current_date = current_date.replace(day=28)
+                # Добавляем 1 год
+                try:
+                    current_date = current_date.replace(year=current_date.year + 1)
+                    
+                    # Обработка 29 февраля для невисокосных годов
+                    if start_date.month == 2 and start_date.day == 29:
+                        if not calendar.isleap(current_date.year):
+                            current_date = current_date.replace(day=28)
+                except ValueError:
+                    # Если произошла ошибка (например, 29 февраля в невисокосном году)
+                    break
+        
+        # ОТЛАДКА: выводим информацию о генерации
+        if recurrence_type != 'none':
+            st.write(f"🔧 Сгенерировано {occurrence_count} вхождений для '{event['title']}' ({recurrence_type})")
     
     return recurring_events
 
@@ -156,15 +174,15 @@ def get_all_events() -> List[Dict]:
         }
         events.append(event)
     
+    # Генерируем вхождения для повторяющихся событий
     events_with_occurrences = generate_recurring_events(events)
     
     return events_with_occurrences
 
 def get_event_by_id(event_id) -> Optional[Dict]:
-    """Получить событие по ID (работает и с обычными ID, и с ID вхождений)."""
+    """Получить событие по ID."""
     supabase = get_supabase_client()
     
-    # Извлекаем оригинальный числовой ID
     original_id = extract_original_id(event_id)
     
     response = supabase.table("events").select("*").eq("id", original_id).execute()
@@ -202,10 +220,9 @@ def update_event(
     reminder_custom_date: Optional[date] = None,
     recurrence_type: str = 'none'
 ):
-    """Обновить событие (работает и с обычными ID, и с ID вхождений)."""
+    """Обновить событие."""
     supabase = get_supabase_client()
     
-    # Извлекаем оригинальный числовой ID
     original_id = extract_original_id(event_id)
     
     data = {
@@ -225,10 +242,9 @@ def update_event(
     supabase.table("events").update(data).eq("id", original_id).execute()
 
 def delete_event(event_id):
-    """Удалить событие (работает и с обычными ID, и с ID вхождений)."""
+    """Удалить событие."""
     supabase = get_supabase_client()
     
-    # Извлекаем оригинальный числовой ID
     original_id = extract_original_id(event_id)
     
     supabase.table("events").delete().eq("id", original_id).execute()
@@ -298,3 +314,4 @@ def get_upcoming_reminders(target_date: date) -> List[Dict]:
             unique_reminders.append(r)
     
     return unique_reminders
+
