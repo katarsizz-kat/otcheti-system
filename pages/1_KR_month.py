@@ -10,122 +10,18 @@ warnings.filterwarnings("ignore")
 # ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом streamlit в файле!
 st.set_page_config(page_title="КР месяц", page_icon="📅", layout="wide")
 
-# ==========================================================
-# ДИНАМИЧЕСКИЕ СТИЛИ (НЕБО ПО ВРЕМЕНИ СУТОК)
-# ==========================================================
-def get_sky_gradient():
-    """Возвращает градиент неба в зависимости от времени суток."""
-    hour = datetime.now().hour
-    # Утро (5:00 - 12:00) - восход: оранжевый → голубой
-    if 5 <= hour < 12:
-        return {
-            "header": "linear-gradient(135deg, #FF8C42 0%, #5DADE2 100%)",
-            "block": "linear-gradient(135deg, #FFF5EB 0%, #EBF5FB 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "button_bg": "#FF6B35"
-        }
-    # День (12:00 - 18:00) - ясное небо: голубой → белый
-    elif 12 <= hour < 18:
-        return {
-            "header": "linear-gradient(135deg, #3498DB 0%, #EBF5FB 100%)",
-            "block": "linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "button_bg": "#2E86C1"
-        }
-    # Вечер (18:00 - 23:00) - закат: сине-голубой → оранжевый
-    elif 18 <= hour < 23:
-        return {
-            "header": "linear-gradient(135deg, #2874A6 0%, #F39C12 100%)",
-            "block": "linear-gradient(135deg, #FDEBD0 0%, #D4E6F1 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "button_bg": "#D68910"
-        }
-    # Ночь (23:00 - 5:00) - ночь: тёмно-синий → светло-голубой (СВЕТЛЫЙ БЛОК!)
-    else:
-        return {
-            "header": "linear-gradient(135deg, #1B4F72 0%, #5DADE2 100%)",
-            "block": "linear-gradient(135deg, #D6EAF8 0%, #FFFFFF 100%)",  # СВЕТЛЫЙ!
-            "text": "#FFFFFF",
-            "button_text": "#1B4F72",  # Тёмный текст на светлом фоне
-            "button_bg": "#2E86C1"
-        }
+from styles import apply_theme
+from config.greetings import get_current_greeting
+from config.holidays import get_today_holiday
+from components import render_footer
 
-def apply_dynamic_styles():
-    """Применяет динамические стили с учётом времени суток."""
-    sky = get_sky_gradient()
-    st.markdown(f"""
-    <style>
-        /* Основной фон приложения */
-        .stApp {{
-            background: {sky['block']} !important;
-        }}
-        /* Заголовок */
-        .header-block {{
-            background: {sky['header']};
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-            border: 2px solid rgba(255,255,255,0.3);
-        }}
-        .header-block h1 {{
-            margin: 0;
-            color: {sky['text']};
-            font-size: 36px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }}
-        .header-block p {{
-            margin-top: 8px;
-            margin-bottom: 0;
-            font-size: 18px;
-            color: {sky['text']};
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }}
-        /* Блоки с контентом */
-        .content-block {{
-            background: rgba(255, 255, 255, 0.95);
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border: 1px solid #D6EAF8;
-        }}
-        /* Кнопки */
-        .stButton>button {{
-            background: {sky['button_bg']} !important;
-            color: {sky['button_text']} !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: bold !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
-            transition: all 0.3s ease !important;
-        }}
-        .stButton>button:hover {{
-            filter: brightness(1.1) !important;
-            transform: translateY(-2px) !important;
-        }}
-        /* Поля ввода и селекторы */
-        .stSelectbox > div > div, .stNumberInput > div > div > input {{
-            border: 1px solid #D6EAF8 !important;
-            border-radius: 8px !important;
-        }}
-        /* Загрузчики файлов */
-        .stFileUploader {{
-            background: #F8F9F9;
-            padding: 15px;
-            border-radius: 10px;
-            border: 2px dashed #D6EAF8;
-        }}
-        hr {{
-            border: none;
-            border-top: 2px solid #D6EAF8;
-            margin: 24px 0;
-        }}
-    </style>
-    """, unsafe_allow_html=True)
+# ==========================================================
+# ПРИМЕНЯЕМ ОБЩУЮ ТЕМУ
+# ==========================================================
+greeting_data = get_current_greeting()
+holiday = get_today_holiday()
+holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
+apply_theme(greeting_data["theme"], holiday_effects)
 
 # ==========================================================
 # НАСТРОЙКИ
@@ -171,7 +67,7 @@ POSITIVE_KEYWORDS = {
 }
 
 # ==========================================================
-# СТИЛИ EXCEL (ИСПРАВЛЕНО - убраны лишние пробелы)
+# СТИЛИ EXCEL
 # ==========================================================
 THIN_BORDER = Border(
     left=Side(style='thin'), right=Side(style='thin'),
@@ -182,12 +78,8 @@ GROUP_FONT = Font(name="Calibri", size=12, bold=True)
 SUBHEADER_FONT = Font(name="Calibri", size=10, bold=True)
 DATA_FONT = Font(name="Calibri", size=10)
 TOTAL_FONT = Font(name="Calibri", size=10, bold=True)
-
-# ✅ ИСПРАВЛЕНО: убраны пробелы внутри кавычек
 GREEN_FILL = PatternFill(fill_type="solid", start_color="D9EAD3", end_color="D9EAD3")
 YELLOW_FILL = PatternFill(fill_type="solid", start_color="FFF2CC", end_color="FFF2CC")
-
-# ✅ ИСПРАВЛЕНО: убраны пробелы внутри кавычек
 CENTER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
 LEFT_ALIGN = Alignment(horizontal="left", vertical="center")
 
@@ -213,8 +105,8 @@ def map_restaurant_address(val):
 
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return "️ Доброе утро!"
-    if 12 <= hour < 18: return "🌤 Добрый день!"
+    if 5 <= hour < 12: return "🌅 Доброе утро!"
+    if 12 <= hour < 18: return "️ Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌜 Доброй ночи!"
 
@@ -504,10 +396,10 @@ def write_common_block(ws, start_row, row_map_site, row_map_agg, row_map_geo):
         geo_row = row_map_geo[restaurant]
         write_common_restaurant_row(ws, start_row, restaurant, 11, site_row, agg_row, geo_row)
         start_row += 1
-    write_common_total_row(ws, start_row, "СПб", 11, 
-                           row_map_site["Итого СПб:"], 
-                           row_map_agg["Итого СПб:"], 
-                           row_map_geo["Итого СПб:"])
+    write_common_total_row(ws, start_row, "СПб", 11,
+        row_map_site["Итого СПб:"],
+        row_map_agg["Итого СПб:"],
+        row_map_geo["Итого СПб:"])
     start_row += 2
     ws.merge_cells(start_row=start_row, start_column=12, end_row=start_row, end_column=16)
     cell = ws.cell(row=start_row, column=12, value="Кол-во поставленных звезд")
@@ -524,9 +416,9 @@ def write_common_block(ws, start_row, row_map_site, row_map_agg, row_map_geo):
         write_common_restaurant_row(ws, start_row, restaurant, 11, site_row, agg_row, geo_row)
         start_row += 1
     write_common_total_row(ws, start_row, "Тюмень", 11,
-                           row_map_site["Итого Тюмень:"],
-                           row_map_agg["Итого Тюмень:"],
-                           row_map_geo["Итого Тюмень:"])
+        row_map_site["Итого Тюмень:"],
+        row_map_agg["Итого Тюмень:"],
+        row_map_geo["Итого Тюмень:"])
     return start_row
 
 def write_analysis_sheet(writer, comp_all, pos_all):
@@ -570,68 +462,50 @@ def write_analysis_sheet(writer, comp_all, pos_all):
         ws.column_dimensions[get_column_letter(col_idx)].width = 18
 
 # ==========================================================
-# ПРИМЕНЯЕМ СТИЛИ И РИСУЕМ ИНТЕРФЕЙС
+# СТИЛИ ЗАГРУЗЧИКОВ (УПРОЩЁННЫЕ - БЕЗ ВЛОЖЕННЫХ РАМОК)
 # ==========================================================
-apply_dynamic_styles()
-sky = get_sky_gradient()
 st.markdown("""
 <style>
-/* Контейнеры загрузчиков */
+/* Убираем все лишние обёртки вокруг загрузчиков */
 .element-container:has( > .stFileUploader) {
-    background: white;
-    border-radius: 12px;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Единое поле загрузки */
+.stFileUploader {
+    background: rgba(255, 255, 255, 0.9);
     padding: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    border: 2px solid transparent;
+    border-radius: 12px;
+    border: 2px dashed rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
 }
 
-.element-container:has( > .stFileUploader):hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-}
-
-/* Сайт/приложение - голубой */
-.element-container:nth-child(2):has( > .stFileUploader) {
+.stFileUploader:hover {
     border-color: #3498DB;
-    background: linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%);
-}
-
-/* Агрегаторы - ЖЁЛТЫЙ */
-.element-container:nth-child(3):has( > .stFileUploader) {
-    border-color: #F1C40F;
-    background: linear-gradient(135deg, #FEF9E7 0%, #FFFFFF 100%);
-}
-
-/* Геосервисы - зелёный */
-.element-container:nth-child(4):has( > .stFileUploader) {
-    border-color: #27AE60;
-    background: linear-gradient(135deg, #E8F8F5 0%, #FFFFFF 100%);
-}
-
-/* Кнопка Upload */
-.stFileUploader [data-testid="stFileUploader"] {
-    background: white;
-    border-radius: 8px;
-    padding: 10px;
-}
-
-.stFileUploader label {
-    font-weight: bold;
-    color: #2C3E50;
+    background: rgba(255, 255, 255, 1);
 }
 
 /* Зона drag & drop */
 .stFileUploader > div > div {
-    border: 2px dashed rgba(0,0,0,0.2) !important;
-    border-radius: 8px !important;
-    background: rgba(255,255,255,0.8) !important;
-    transition: all 0.3s ease !important;
+    border: none !important;
+    background: transparent !important;
 }
 
-.stFileUploader > div > div:hover {
-    border-color: #3498DB !important;
-    background: rgba(255,255,255,1) !important;
+/* Кнопка Upload */
+.stFileUploader button {
+    background: #3498DB !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+}
+
+.stFileUploader button:hover {
+    background: #2980B9 !important;
 }
 
 /* Текст под кнопкой */
@@ -639,8 +513,18 @@ st.markdown("""
     color: #7F8C8D;
     font-size: 12px;
 }
+
+/* Заголовки над загрузчиками */
+.stMarkdown h4 {
+    margin-bottom: 12px;
+    color: var(--text-primary, #2C3E50);
+}
 </style>
 """, unsafe_allow_html=True)
+
+# ==========================================================
+# РИСУЕМ ИНТЕРФЕЙС
+# ==========================================================
 st.markdown(f"""
 <div class="header-block">
     <h1>📅 КР месяц</h1>
@@ -648,22 +532,26 @@ st.markdown(f"""
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Формирование ежемесячного отчёта по отзывам из трёх источников</p>
 </div>
 """, unsafe_allow_html=True)
-st.markdown('<div class="content-block">', unsafe_allow_html=True)
+
 st.markdown("### 📂 Загрузка файлов")
 col1, col2, col3 = st.columns(3)
+
 with col1:
-    st.markdown("#### 📱 Сайт / приложение")
+    st.markdown("####  Сайт / приложение")
     file1 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="site", label_visibility="collapsed")
+
 with col2:
     st.markdown("#### 🛵 Агрегаторы")
     file2 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="agg", label_visibility="collapsed")
+
 with col3:
     st.markdown("#### 📍 Геосервисы")
     file3 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="geo", label_visibility="collapsed")
-st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('<div class="content-block">', unsafe_allow_html=True)
+
+st.markdown("---")
 st.subheader("⚙️ Настройки")
 col_a, col_b, col_c = st.columns(3)
+
 with col_a:
     month_names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
                    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
@@ -675,13 +563,15 @@ with col_a:
         default_month = month_names[current_month_idx - 1]
         default_year = datetime.now().year
     selected_month = st.selectbox("Месяц отчёта", month_names, index=month_names.index(default_month))
+
 with col_b:
     selected_year = st.number_input("Год", value=default_year, min_value=2020, max_value=2030, step=1)
+
 with col_c:
     price_threshold = st.number_input("Минимальная сумма заказа", value=749, step=10)
-st.markdown("")
+
+st.markdown(" ")
 generate_report = st.button("🚀 Сформировать отчёт", use_container_width=True, type="primary")
-st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================================
 # ОБРАБОТКА ДАННЫХ
@@ -690,7 +580,9 @@ if generate_report:
     if not (file1 and file2 and file3):
         st.error("⚠️ Пожалуйста, загрузите все три Excel-файла.")
         st.stop()
+    
     month_year = f"{selected_month} ({selected_year}г)"
+    
     with st.spinner("⏳ Обработка данных..."):
         try:
             # --- Сайт ---
@@ -698,14 +590,16 @@ if generate_report:
             df1["Ресторан"] = df1["Ресторан"].apply(map_restaurant_file1)
             df1["Сумма"] = df1["Сумма заказа со скидкой"].apply(parse_price)
             df1["Рейтинг"] = pd.to_numeric(df1["Рейтинг"], errors="coerce")
-            df1["Текст"] = df1["Комментарий"].fillna("")
+            df1["Текст"] = df1["Комментарий"].fillna(" ")
             df1 = df1[["Ресторан", "Рейтинг", "Текст", "Сумма"]].dropna(subset=["Ресторан", "Рейтинг"])
+            
             # --- Агрегаторы ---
             df2 = pd.read_excel(file2)
             df2["Ресторан"] = df2["Адрес"].apply(map_restaurant_address)
             df2["Рейтинг"] = pd.to_numeric(df2["Оценка"], errors="coerce")
-            df2["Текст"] = df2["Отзыв"].fillna("")
+            df2["Текст"] = df2["Отзыв"].fillna(" ")
             df2 = df2[["Ресторан", "Рейтинг", "Текст"]].dropna(subset=["Ресторан", "Рейтинг"])
+            
             # --- Геосервисы ---
             df3 = pd.read_excel(file3)
             if "Статус отзыва" in df3.columns:
@@ -717,19 +611,22 @@ if generate_report:
             else:
                 df3["Ресторан"] = None
             df3["Рейтинг"] = pd.to_numeric(df3["Оценка"], errors="coerce")
-            df3["Текст"] = df3["Текст отзыва"].fillna("")
+            df3["Текст"] = df3["Текст отзыва"].fillna(" ")
             df3 = df3[["Ресторан", "Рейтинг", "Текст"]].dropna(subset=["Ресторан", "Рейтинг"])
+            
             # --- Таблицы оценок ---
             stats1 = calc_stats_site(df1, price_threshold)
             stats2 = calc_stats_standard(df2)
             stats3 = calc_stats_standard(df3)
             low_counts = {rest: len(df1[(df1["Ресторан"] == rest) & (df1["Рейтинг"] == 5) & (df1["Сумма"] <= price_threshold)]) for rest in ALL_RESTAURANTS}
+            
             # --- Анализ отзывов ---
             df_all_texts = pd.concat([df1[["Ресторан", "Текст"]], df2[["Ресторан", "Текст"]], df3[["Ресторан", "Текст"]]], ignore_index=True)
             comp_all = calc_summary_fast(df_all_texts, COMPLAINT_KEYWORDS)
             pos_all = calc_summary_fast(df_all_texts, POSITIVE_KEYWORDS)
             comp_all = add_summary_totals(add_summary_totals(comp_all, "СПб", COMPLAINT_KEYWORDS), "Тюмень", COMPLAINT_KEYWORDS)
             pos_all = add_summary_totals(add_summary_totals(pos_all, "СПб", POSITIVE_KEYWORDS), "Тюмень", POSITIVE_KEYWORDS)
+            
             # =====================================================
             # СОХРАНЕНИЕ EXCEL С ФОРМУЛАМИ
             # =====================================================
@@ -764,14 +661,15 @@ if generate_report:
                 if "Sheet" in workbook.sheetnames:
                     del workbook["Sheet"]
             output.seek(0)
+            
             st.success(f"✅ Отчёт за {month_year} успешно сформирован!")
             st.download_button(
                 "📥 Скачать Excel", output,
                 file_name=f"КР_{selected_month}_{selected_year}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-            st.markdown('<div class="content-block">', unsafe_allow_html=True)
-            st.subheader(" Общий итог")
+            
+            st.subheader("📊 Общий итог")
             df_all_filtered = pd.concat([
                 df1[~((df1["Рейтинг"] == 5) & (df1["Сумма"] <= price_threshold))][["Ресторан", "Рейтинг", "Текст"]],
                 df2, df3
@@ -787,7 +685,12 @@ if generate_report:
                 stats_all_rows.append(row)
             stats_all = pd.DataFrame(stats_all_rows)
             st.dataframe(stats_all, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            
         except Exception as e:
             st.error(f"❌ Произошла ошибка при обработке: {e}")
             st.exception(e)
+
+# ==========================================================
+# ФУТЕР
+# ==========================================================
+render_footer()
