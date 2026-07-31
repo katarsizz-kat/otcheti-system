@@ -1,22 +1,35 @@
 """Все эффекты и анимации приложения."""
 
-
 # =============================================================================
 # ЭФФЕКТЫ ВРЕМЕНИ СУТОК
 # =============================================================================
 
 def get_morning_effect() -> str:
-    """Эффект утреннего рассвета (мягкий свет)."""
+    """Эффект утреннего рассвета (мягкий розовый свет + облака)."""
     return (
         "<style>"
-        ".morning-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at top,rgba(241,148,138,0.15) 0%,transparent 70%);z-index:0;pointer-events:none}"
+        ".morning-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at top,rgba(255,182,168,0.15) 0%,transparent 70%);z-index:0;pointer-events:none}"
+        ".cloud{position:fixed;background:rgba(255,240,245,0.5);border-radius:100px;z-index:0;pointer-events:none;animation:cloudFloat linear infinite}"
+        ".cloud::before,.cloud::after{content:'';position:absolute;background:rgba(255,240,245,0.5);border-radius:100px}"
+        ".cloud:nth-child(2){width:100px;height:40px;top:20%;left:-100px;animation-duration:28s}"
+        ".cloud:nth-child(2)::before{width:50px;height:50px;top:-25px;left:15px}"
+        ".cloud:nth-child(2)::after{width:60px;height:40px;top:-15px;right:15px}"
+        ".cloud:nth-child(3){width:80px;height:30px;top:45%;left:-80px;animation-duration:35s;animation-delay:6s}"
+        ".cloud:nth-child(3)::before{width:40px;height:40px;top:-20px;left:10px}"
+        ".cloud:nth-child(4){width:120px;height:45px;top:65%;left:-120px;animation-duration:40s;animation-delay:12s}"
+        ".cloud:nth-child(4)::before{width:60px;height:50px;top:-25px;left:20px}"
+        ".cloud:nth-child(4)::after{width:70px;height:45px;top:-20px;right:20px}"
+        "@keyframes cloudFloat{0%{transform:translateX(0)}100%{transform:translateX(calc(100vw + 200px))}}"
         "</style>"
         "<div class='morning-glow'></div>"
+        "<div class='cloud'></div>"
+        "<div class='cloud'></div>"
+        "<div class='cloud'></div>"
+        "<div class='cloud'></div>"
     )
 
-
 def get_clouds_effect() -> str:
-    """Эффект плывущих облаков."""
+    """Эффект плывущих облаков (4 облака, светлые, без оранжевого)."""
     return (
         "<style>"
         ".cloud{position:fixed;background:rgba(255,255,255,0.6);border-radius:100px;z-index:0;pointer-events:none;animation:cloudFloat linear infinite}"
@@ -29,16 +42,19 @@ def get_clouds_effect() -> str:
         ".cloud:nth-child(3){width:120px;height:45px;top:60%;left:-120px;animation-duration:35s;animation-delay:10s}"
         ".cloud:nth-child(3)::before{width:60px;height:50px;top:-25px;left:20px}"
         ".cloud:nth-child(3)::after{width:70px;height:45px;top:-20px;right:20px}"
+        ".cloud:nth-child(4){width:90px;height:35px;top:75%;left:-90px;animation-duration:32s;animation-delay:15s}"
+        ".cloud:nth-child(4)::before{width:45px;height:45px;top:-22px;left:12px}"
+        ".cloud:nth-child(4)::after{width:55px;height:38px;top:-18px;right:18px}"
         "@keyframes cloudFloat{0%{transform:translateX(0)}100%{transform:translateX(calc(100vw + 200px))}}"
         "</style>"
         "<div class='cloud'></div>"
         "<div class='cloud'></div>"
         "<div class='cloud'></div>"
+        "<div class='cloud'></div>"
     )
 
-
 def get_stars_effect() -> str:
-    """Эффект мерцающих звёзд."""
+    """Эффект мерцающих звёзд (12 звёзд)."""
     return (
         "<style>"
         ".star{position:fixed;background:white;border-radius:50%;z-index:0;pointer-events:none;animation:twinkle ease-in-out infinite}"
@@ -50,6 +66,10 @@ def get_stars_effect() -> str:
         ".star:nth-child(6){width:3px;height:3px;top:85%;left:85%;animation-duration:4s;animation-delay:2.5s}"
         ".star:nth-child(7){width:2px;height:2px;top:15%;left:90%;animation-duration:3.5s;animation-delay:0.8s}"
         ".star:nth-child(8){width:3px;height:3px;top:50%;left:10%;animation-duration:4s;animation-delay:1.2s}"
+        ".star:nth-child(9){width:2px;height:2px;top:30%;left:30%;animation-duration:3.2s;animation-delay:0.3s}"
+        ".star:nth-child(10){width:3px;height:3px;top:65%;left:50%;animation-duration:4.2s;animation-delay:1.8s}"
+        ".star:nth-child(11){width:2px;height:2px;top:80%;left:20%;animation-duration:3.8s;animation-delay:2.2s}"
+        ".star:nth-child(12){width:3px;height:3px;top:5%;left:70%;animation-duration:4.3s;animation-delay:0.7s}"
         "@keyframes twinkle{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}"
         "</style>"
         "<div class='star'></div>"
@@ -60,29 +80,30 @@ def get_stars_effect() -> str:
         "<div class='star'></div>"
         "<div class='star'></div>"
         "<div class='star'></div>"
+        "<div class='star'></div>"
+        "<div class='star'></div>"
+        "<div class='star'></div>"
+        "<div class='star'></div>"
     )
 
-
 def get_sunset_effect() -> str:
-    """Эффект закатного неба."""
+    """Эффект закатного неба (розово-фиолетовый, без оранжевого)."""
     return (
         "<style>"
-        ".sunset-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at bottom,rgba(230,126,34,0.15) 0%,transparent 70%);z-index:0;pointer-events:none}"
+        ".sunset-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at bottom,rgba(195,155,211,0.2) 0%,rgba(241,148,138,0.15) 50%,transparent 70%);z-index:0;pointer-events:none}"
         "</style>"
         "<div class='sunset-glow'></div>"
     )
 
-
 def get_theme_effect(theme: str) -> str:
     """Возвращает эффекты для темы времени суток."""
     effects = {
-        "morning": get_morning_effect(),  # Новый эффект для утра
+        "morning": get_morning_effect(),
         "day": get_clouds_effect(),
         "evening": get_sunset_effect(),
         "night": get_stars_effect(),
     }
     return effects.get(theme, "")
-
 
 # =============================================================================
 # ПРАЗДНИЧНЫЕ ЭФФЕКТЫ
@@ -102,13 +123,12 @@ def get_snow_effect() -> str:
         "@keyframes fall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(360deg);opacity:0.3}}"
         "</style>"
         "<div class='snowflake'>❄</div>"
-        "<div class='snowflake'>❅</div>"
+        "<div class='snowflake'></div>"
         "<div class='snowflake'>❆</div>"
         "<div class='snowflake'>❄</div>"
-        "<div class='snowflake'></div>"
-        "<div class='snowflake'></div>"
+        "<div class='snowflake'>❅</div>"
+        "<div class='snowflake'>❆</div>"
     )
-
 
 def get_confetti_effect() -> str:
     """Эффект падающего конфетти."""
@@ -131,7 +151,6 @@ def get_confetti_effect() -> str:
         "<div class='confetti'></div>"
     )
 
-
 def get_falling_pizza_effect() -> str:
     """Эффект падающей пиццы."""
     return (
@@ -143,12 +162,11 @@ def get_falling_pizza_effect() -> str:
         ".falling-pizza:nth-child(4){left:75%;animation-duration:10s;animation-delay:2s}"
         "@keyframes pizzaFall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0.5}}"
         "</style>"
-        "<div class='falling-pizza'>🍕</div>"
         "<div class='falling-pizza'></div>"
         "<div class='falling-pizza'>🍕</div>"
-        "<div class='falling-pizza'></div>"
+        "<div class='falling-pizza'>🍕</div>"
+        "<div class='falling-pizza'>🍕</div>"
     )
-
 
 def get_pumpkins_effect() -> str:
     """Эффект парящих тыкв."""
@@ -160,11 +178,10 @@ def get_pumpkins_effect() -> str:
         ".pumpkin:nth-child(3){bottom:20%;left:15%;animation-delay:2s}"
         "@keyframes pumpkinFloat{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-20px) rotate(5deg)}}"
         "</style>"
-        "<div class='pumpkin'></div>"
-        "<div class='pumpkin'></div>"
+        "<div class='pumpkin'>🎃</div>"
+        "<div class='pumpkin'>🎃</div>"
         "<div class='pumpkin'>🎃</div>"
     )
-
 
 def get_hearts_effect() -> str:
     """Эффект парящих сердечек."""
@@ -179,12 +196,11 @@ def get_hearts_effect() -> str:
         "@keyframes heartFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100px) scale(1.5);opacity:0}}"
         "</style>"
         "<div class='heart'>❤️</div>"
-        "<div class='heart'></div>"
+        "<div class='heart'>💕</div>"
         "<div class='heart'>💖</div>"
         "<div class='heart'>💗</div>"
         "<div class='heart'>💝</div>"
     )
-
 
 def get_leaves_effect() -> str:
     """Эффект падающих листьев."""
@@ -201,10 +217,9 @@ def get_leaves_effect() -> str:
         "<div class='leaf'>🍂</div>"
         "<div class='leaf'>🍁</div>"
         "<div class='leaf'>🍃</div>"
-        "<div class='leaf'></div>"
+        "<div class='leaf'>🍂</div>"
         "<div class='leaf'>🍁</div>"
     )
-
 
 def get_fireworks_effect() -> str:
     """Эффект фейерверка."""
@@ -224,7 +239,6 @@ def get_fireworks_effect() -> str:
         "<div class='firework'></div>"
         "<div class='firework'></div>"
     )
-
 
 def get_rain_effect() -> str:
     """Эффект дождя."""
@@ -253,7 +267,6 @@ def get_rain_effect() -> str:
         "<div class='raindrop'></div>"
     )
 
-
 # =============================================================================
 # СБОРЩИК ЭФФЕКТОВ
 # =============================================================================
@@ -269,7 +282,6 @@ HOLIDAY_EFFECTS = {
     "rain": get_rain_effect,
 }
 
-
 def get_holiday_effect(effect_name: str) -> str:
     """Возвращает CSS и HTML для одного праздничного эффекта."""
     effect_func = HOLIDAY_EFFECTS.get(effect_name)
@@ -277,14 +289,11 @@ def get_holiday_effect(effect_name: str) -> str:
         return effect_func()
     return ""
 
-
 def get_holiday_effects(effects_list: list) -> str:
     """Возвращает CSS и HTML для списка праздничных эффектов."""
     if not effects_list:
         return ""
-    
     result = ""
     for effect_name in effects_list:
         result += get_holiday_effect(effect_name)
-    
     return result
