@@ -5,6 +5,7 @@ import datetime
 import streamlit as st
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
+from config.theme import get_theme_colors
 
 
 def make_key(text: str) -> str:
@@ -25,7 +26,10 @@ def render_app_header():
 
 def _render_header_container(theme: str, icon: str):
     """Контейнер верхней панели."""
-    text_color = "#1B4F72" if theme == "day" else "#FFFFFF"
+    # Получаем цвета из темы
+    colors = get_theme_colors(theme)
+    text_color = colors.get("header_text", "#FFFFFF")
+    
     html = (
         '<div style="display:flex;justify-content:space-between;'
         'align-items:center;padding:16px 24px;margin-bottom:24px;'
@@ -104,7 +108,7 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
     if mascot.get("enabled"):
         st.markdown(
             f"""<div style="background: rgba(46, 204, 113, 0.15); padding: 16px 20px; border-radius: 12px; margin: 16px 0; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(46, 204, 113, 0.3);">
-            <span style="font-size: 36px;"></span>
+            <span style="font-size: 36px;">🦖</span>
             <p style="margin: 0; font-style: italic; font-size: 18px;">{mascot.get('text', '')}</p>
             </div>""",
             unsafe_allow_html=True,
@@ -170,10 +174,11 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
         html = '<div class="content-block fade-in"><ul style="padding-left: 20px; margin: 0; list-style-type: none;">'
         for h in upcoming_holidays:
             html += (
-                f'<li style="margin: 12px 0; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1); '
-                f'display: flex; align-items: flex-start; gap: 10px;">'
+                f'<li style="margin: 12px 0; padding: 8px 0; border-bottom: 1px solid var(--card-border, rgba(255,255,255,0.1)); '
+                f'display: flex; align-items: flex-start; gap: 10px; '
+                f'color: var(--text-primary, #2C3E50);">'
                 f'<span style="font-size: 18px;">{h["emoji"]}</span>'
-                f'<span style="flex: 1;">{h["date"]} — {h["title"]}</span></li>'
+                f'<span style="flex: 1; color: var(--text-primary, #2C3E50);">{h["date"]} — {h["title"]}</span></li>'
             )
         html += '</ul></div>'
         st.markdown(html, unsafe_allow_html=True)
@@ -184,7 +189,7 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
         else:
             st.markdown(
                 '<div style="display:flex;justify-content:center;align-items:center;'
-                'height:200px;background:#F8F9FA;border-radius:10px;">🎉</div>',
+                'height:200px;background:var(--card-bg, #F8F9FA);border-radius:10px;">🎉</div>',
                 unsafe_allow_html=True,
             )
 
@@ -232,7 +237,7 @@ def render_footer():
             else:
                 st.markdown(
                     '<div style="text-align:center;padding:10px;">'
-                    '<span style="font-size:32px;opacity:0.6;">🦕</span>'
+                    '<span style="font-size:32px;opacity:0.6;"></span>'
                     '</div>',
                     unsafe_allow_html=True
                 )
