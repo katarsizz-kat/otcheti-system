@@ -475,7 +475,7 @@ st.markdown("### 📂 Загрузка файлов")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("####  Сайт / приложение")
+    st.markdown("📱  Сайт / приложение")
     file1 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="site", label_visibility="collapsed")
 
 with col2:
