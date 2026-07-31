@@ -488,45 +488,25 @@ with col3:
 
 st.markdown("---")
 st.subheader("⚙️ Настройки")
-
-is_month = report_type == " КР месяц"
-
 col_a, col_b, col_c = st.columns(3)
 
 with col_a:
-    if is_month:
-        month_names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
-                       "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
-        current_month_idx = datetime.now().month - 1
-        if current_month_idx == 0:
-            default_month = "Декабрь"
-            default_year = datetime.now().year - 1
-        else:
-            default_month = month_names[current_month_idx - 1]
-            default_year = datetime.now().year
-        selected_month = st.selectbox("Месяц отчёта", month_names, index=month_names.index(default_month))
-        selected_year = st.number_input("Год", value=default_year, min_value=2020, max_value=2030, step=1)
+    month_names = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+                   "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+    current_month_idx = datetime.now().month - 1
+    if current_month_idx == 0:
+        default_month = "Декабрь"
+        default_year = datetime.now().year - 1
     else:
-        # Для недельного отчёта
-        today = datetime.now()
-        start_of_week = today - timedelta(days=today.weekday())
-        end_of_week = start_of_week + timedelta(days=6)
-        st.info(f"📅 Текущая неделя: {start_of_week.strftime('%d.%m')} - {end_of_week.strftime('%d.%m.%Y')}")
-        selected_month = None
-        selected_year = None
+        default_month = month_names[current_month_idx - 1]
+        default_year = datetime.now().year
+    selected_month = st.selectbox("Месяц отчёта", month_names, index=month_names.index(default_month))
 
 with col_b:
-    if is_month:
-        price_threshold = st.number_input("Минимальная сумма заказа", value=749, step=10)
-    else:
-        st.markdown("")  # Пустое место для выравнивания
-        st.markdown("")
+    selected_year = st.number_input("Год", value=default_year, min_value=2020, max_value=2030, step=1)
 
 with col_c:
-    if is_month:
-        st.markdown("")
-    else:
-        st.markdown("")
+    price_threshold = st.number_input("Минимальная сумма заказа", value=749, step=10)
 
 st.markdown(" ")
 generate_report = st.button("🚀 Сформировать отчёт", use_container_width=True, type="primary")
