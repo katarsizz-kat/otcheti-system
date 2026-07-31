@@ -20,16 +20,16 @@ from components import (
 # =============================================================================
 # Получение данных
 # =============================================================================
-
 greeting_data = get_current_greeting()
 holiday = get_today_holiday()
 reports = get_reports()
 upcoming_holidays = get_upcoming_holidays(days=7)
-
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
+
 apply_theme(greeting_data["theme"], holiday_effects)
 
-
+# ✅ ОПТИМИЗАЦИЯ: Кэширование запросов к Supabase
+@st.cache_data(ttl=300)  # Кэш на 5 минут
 def get_upcoming_events_safe(days_ahead=30, max_events=6):
     """Безопасно получить ближайшие события с обработкой ошибок."""
     try:
@@ -38,7 +38,6 @@ def get_upcoming_events_safe(days_ahead=30, max_events=6):
         return events[:max_events]
     except Exception as e:
         return []
-
 
 def parse_event_date(d):
     """Безопасный парсинг даты события."""
@@ -58,13 +57,11 @@ def parse_event_date(d):
     except ValueError:
         return date.today()
 
-
 upcoming_events = get_upcoming_events_safe(days_ahead=30, max_events=6)
 
 # =============================================================================
 # Рендеринг страницы
 # =============================================================================
-
 render_app_header()
 
 subtitle = "Здесь можно сформировать отчёты одним кликом."
@@ -77,15 +74,12 @@ render_welcome_block(
 # =============================================================================
 # Блок "Ближайшие события"
 # =============================================================================
-
 st.markdown("### 📅 Ближайшие события", unsafe_allow_html=True)
 
 if upcoming_events:
-    # Определяем количество колонок
     num_cols = min(3, len(upcoming_events))
     cols = st.columns(num_cols)
     
-    # Цвета категорий (используются для акцента на рамке)
     category_colors = {
         'Праздник': '#E74C3C',
         'Мероприятие': '#3498DB',
@@ -96,11 +90,9 @@ if upcoming_events:
     
     for idx, event in enumerate(upcoming_events):
         with cols[idx % num_cols]:
-            # Парсим дату
             event_date = parse_event_date(event.get('start_date', ''))
             days_left = (event_date - date.today()).days
             
-            # Текст и цвет для дней
             if days_left == 0:
                 days_text = "🔴 Сегодня!"
                 days_color = "#E74C3C"
@@ -118,10 +110,8 @@ if upcoming_events:
             category = event.get('category', '')
             location = event.get('location_custom') or event.get('location_type', '')
             date_display = event_date.strftime("%d.%m.%Y")
-            
             cat_color = category_colors.get(category, '#95A5A6')
             
-            # 🎨 Карточка с рамкой, тенью и цветным акцентом слева
             st.markdown(f"""
             <div style="
                 background-color: #FFFFFF;
@@ -148,29 +138,26 @@ if upcoming_events:
             </div>
             """, unsafe_allow_html=True)
     
-    # Кнопка перехода к полному календарю
-    st.markdown("<br>", unsafe_allow_html=True) # Небольшой отступ
+    st.markdown("<br>", unsafe_allow_html=True)
+    
     if st.button("📅 Открыть полный календарь", use_container_width=True, type="primary"):
         st.switch_page("pages/5_Calendar.py")
 else:
-    st.info("ℹ️ На ближайшие 30 дней событий не запланировано")
+    st.info("️ На ближайшие 30 дней событий не запланировано")
 
 # =============================================================================
 # Праздничный баннер (если есть праздник сегодня)
 # =============================================================================
-
 if holiday:
     render_holiday_banner(holiday)
 
 # =============================================================================
 # Ближайшие праздники
 # =============================================================================
-
 if upcoming_holidays:
     render_upcoming_holidays_section(upcoming_holidays)
 
 # =============================================================================
 # Футер
 # =============================================================================
-
 render_footer()
