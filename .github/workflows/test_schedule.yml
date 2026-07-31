@@ -1,0 +1,14 @@
+name: Test Schedule
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Запуск каждые 10 минут для теста
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check time
+        run: |
+          echo "Current UTC time: $(date)"
+          echo "Current Moscow time: $(TZ=Europe/Moscow date)"
