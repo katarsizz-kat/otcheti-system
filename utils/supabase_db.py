@@ -22,16 +22,13 @@ def parse_date(d):
         return d
     if d is None:
         return date.today()
-    
     d_str = str(d).strip()
-    
     if 'T' in d_str:
         d_str = d_str.split('T')[0]
     if '+' in d_str[10:]:
         d_str = d_str.split('+')[0]
     if d_str.endswith('Z'):
         d_str = d_str[:-1]
-    
     try:
         return date.fromisoformat(d_str)
     except ValueError:
@@ -40,8 +37,8 @@ def parse_date(d):
 def extract_original_id(event_id) -> int:
     """Извлечь оригинальный числовой ID из ID вхождения."""
     id_str = str(event_id)
-    if "_occ_" in id_str:
-        return int(id_str.split("_occ_")[0])
+    if "occ" in id_str:
+        return int(id_str.split("occ")[0])
     return int(id_str)
 
 def generate_recurring_events(events: List[Dict], max_date: Optional[date] = None) -> List[Dict]:
@@ -61,7 +58,6 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
     
     for event in events:
         recurrence_type = str(event.get('recurrence_type', 'none')).strip().lower()
-        
         # Нормализация значений
         if recurrence_type in ['none', 'не повторяется', '']:
             recurrence_type = 'none'
@@ -74,7 +70,6 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
         elif recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual', 'annually']:
             recurrence_type = 'yearly'
         
-        # Обновляем значение в словаре
         event['recurrence_type'] = recurrence_type
         
         if recurrence_type == 'none':
@@ -97,7 +92,6 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
             occurrence['occurrence_date'] = current_date.isoformat()
             occurrence['original_id'] = event['id']
             occurrence['id'] = f"{event['id']}_occ_{occurrence_count}"
-            
             recurring_events.append(occurrence)
             occurrence_count += 1
             
@@ -110,7 +104,6 @@ def generate_recurring_events(events: List[Dict], max_date: Optional[date] = Non
                     current_date = current_date.replace(year=current_date.year + 1, month=1)
                 else:
                     current_date = current_date.replace(month=current_date.month + 1)
-                
                 last_day = calendar.monthrange(current_date.year, current_date.month)[1]
                 if start_date.day > last_day:
                     current_date = current_date.replace(day=last_day)
@@ -143,7 +136,6 @@ def add_event(
     """Добавить новое событие."""
     supabase = get_supabase_client()
     
-    # Нормализация recurrence_type перед сохранением
     recurrence_type = str(recurrence_type).strip().lower()
     if recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual']:
         recurrence_type = 'yearly'
@@ -199,8 +191,20 @@ def get_all_events() -> List[Dict]:
         events.append(event)
     
     events_with_occurrences = generate_recurring_events(events)
-    
     return events_with_occurrences
+
+def get_completed_events() -> List[Dict]:
+    """Получить завершённые события (дата окончания прошла)."""
+    all_events = get_all_events()
+    today = date.today()
+    
+    # Фильтруем только завершённые события
+    completed = [e for e in all_events if parse_date(e['end_date']) < today]
+    
+    # Сортируем по дате окончания (сначала самые свежие завершённые)
+    completed.sort(key=lambda x: parse_date(x['end_date']), reverse=True)
+    
+    return completed
 
 def get_event_by_id(event_id) -> Optional[Dict]:
     """Получить событие по ID."""
@@ -245,7 +249,6 @@ def update_event(
     supabase = get_supabase_client()
     original_id = extract_original_id(event_id)
     
-    # Нормализация
     recurrence_type = str(recurrence_type).strip().lower()
     if recurrence_type in ['yearly', 'ежегодно', 'every year', 'annual']:
         recurrence_type = 'yearly'
@@ -315,25 +318,21 @@ def get_upcoming_reminders(target_date: date) -> List[Dict]:
     for event in all_events:
         if event.get('is_occurrence', False):
             continue
-        
         if event['start_date'] == target_str and event.get('reminder_on_start_day', 1):
             reminders.append(event)
             continue
-        
         days_before = event.get('reminder_days_before_start', 0)
         if days_before > 0:
             reminder_date = (datetime.fromisoformat(event['start_date']) - timedelta(days=days_before)).date().isoformat()
             if reminder_date == target_str:
                 reminders.append(event)
                 continue
-        
         days_before_end = event.get('reminder_days_before_end', 0)
         if days_before_end > 0:
             reminder_date = (datetime.fromisoformat(event['end_date']) - timedelta(days=days_before_end)).date().isoformat()
             if reminder_date == target_str:
                 reminders.append(event)
                 continue
-        
         if event.get('reminder_custom_date') == target_str:
             reminders.append(event)
     
@@ -350,19 +349,14 @@ def get_upcoming_events(days_ahead: int = 30) -> List[Dict]:
     """Получить ближайшие события (для блока на главной странице)."""
     today = date.today()
     end_date = today + timedelta(days=days_ahead)
-    
     all_events = get_all_events()
     
     upcoming = []
     for event in all_events:
         event_start = parse_date(event['start_date'])
         event_end = parse_date(event['end_date'])
-        
-        # Событие попадает в диапазон [today, today + days_ahead]
         if event_start <= end_date and event_end >= today:
             upcoming.append(event)
     
-    # Сортировка по дате начала
     upcoming.sort(key=lambda x: parse_date(x['start_date']))
-    
-    return upcoming[:50]  # Максимум 50 событий, чтобы не перегружать
+    return upcoming[:50]
