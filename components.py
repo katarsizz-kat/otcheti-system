@@ -6,11 +6,13 @@ import streamlit as st
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
 
+
 def make_key(text: str) -> str:
     """Превращает текст в безопасный ключ."""
     safe = re.sub(r'[^\w]', '', text)
     safe = re.sub(r'_+', '', safe)
     return safe.lower()
+
 
 def render_app_header():
     """Полноценная верхняя панель приложения."""
@@ -19,6 +21,7 @@ def render_app_header():
         theme=greeting_data["theme"],
         icon=greeting_data["icon"],
     )
+
 
 def _render_header_container(theme: str, icon: str):
     """Контейнер верхней панели."""
@@ -38,6 +41,7 @@ def _render_header_container(theme: str, icon: str):
     )
     st.markdown(html, unsafe_allow_html=True)
 
+
 def render_welcome_block(icon: str, greeting: str, subtitle: str = ""):
     """Красивый приветственный блок."""
     st.markdown(
@@ -49,6 +53,7 @@ def render_welcome_block(icon: str, greeting: str, subtitle: str = ""):
         </div>""",
         unsafe_allow_html=True,
     )
+
 
 def render_holiday_banner(holiday: dict):
     if not holiday:
@@ -75,17 +80,18 @@ def render_holiday_banner(holiday: dict):
     if st.session_state.get(state_key):
         _render_holiday_popup(holiday, safe_title, state_key)
 
+
 def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
     from config.actions import execute_action
     popup = holiday.get("popup") if isinstance(holiday.get("popup"), dict) else {}
     mascot = holiday.get("mascot") if isinstance(holiday.get("mascot"), dict) else {}
     secret = holiday.get("secret") if isinstance(holiday.get("secret"), dict) else {}
     button = holiday.get("button") if isinstance(holiday.get("button"), dict) else {}
-    
+
     if not st.session_state.get(f"balloons_shown_{safe_title}"):
         st.balloons()
         st.session_state[f"balloons_shown_{safe_title}"] = True
-    
+
     if popup.get("enabled"):
         st.markdown(
             f"""<div style="background: linear-gradient(135deg, rgba(241,196,15,0.2) 0%, rgba(230,126,34,0.2) 100%); padding: 24px; border-radius: 16px; margin: 16px 0; border: 2px solid rgba(241,196,15,0.4);">
@@ -94,16 +100,16 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
             </div>""",
             unsafe_allow_html=True,
         )
-    
+
     if mascot.get("enabled"):
         st.markdown(
             f"""<div style="background: rgba(46, 204, 113, 0.15); padding: 16px 20px; border-radius: 12px; margin: 16px 0; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(46, 204, 113, 0.3);">
-            <span style="font-size: 36px;">🦖</span>
+            <span style="font-size: 36px;"></span>
             <p style="margin: 0; font-style: italic; font-size: 18px;">{mascot.get('text', '')}</p>
             </div>""",
             unsafe_allow_html=True,
         )
-    
+
     if secret.get("enabled"):
         st.markdown(
             f"""<div style="background: rgba(155, 89, 182, 0.15); padding: 16px 20px; border-radius: 12px; margin: 16px 0; border: 1px solid rgba(155, 89, 182, 0.3);">
@@ -111,7 +117,7 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
             </div>""",
             unsafe_allow_html=True,
         )
-    
+
     action_key = f"action_executed_{safe_title}"
     if button.get("enabled") and button.get("action"):
         action_name = button["action"]
@@ -121,7 +127,7 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
         if action_key in st.session_state:
             result = st.session_state[action_key]
             _render_action_result(result)
-    
+
     st.markdown("---")
     if st.button("✖ Закрыть", key=f"close_{safe_title}", use_container_width=True):
         st.session_state[state_key] = False
@@ -129,6 +135,7 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
         if action_key in st.session_state:
             del st.session_state[action_key]
         st.rerun()
+
 
 def _render_action_result(result: dict):
     result_type = result.get("type", "message")
@@ -138,6 +145,7 @@ def _render_action_result(result: dict):
         st.info(f"{result.get('title', '')}: {result.get('text', '')}")
     elif result_type == "sound":
         st.warning(f"{result.get('title', '')}: {result.get('text', '')}\n\n{result.get('note', '')}")
+
 
 def render_report_card(report: dict):
     st.markdown(
@@ -152,10 +160,11 @@ def render_report_card(report: dict):
         unsafe_allow_html=True,
     )
 
+
 def render_upcoming_holidays_section(upcoming_holidays: list):
     if not upcoming_holidays:
         return
-    st.markdown("###  Ближайшие праздники", unsafe_allow_html=True)
+    st.markdown("### 🎉 Ближайшие праздники", unsafe_allow_html=True)
     cols = st.columns([2, 1])
     with cols[0]:
         html = '<div class="content-block fade-in"><ul style="padding-left: 20px; margin: 0; list-style-type: none;">'
@@ -179,67 +188,82 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
                 unsafe_allow_html=True,
             )
 
+
 def render_footer():
-    """Подвал приложения с логотипами и слоганом."""
+    """Подвал приложения с логотипами и слоганом (Вариант В — колонки)."""
     # Пути к логотипам
     logo_teal_path = os.path.join("assets", "logo_teal.png")
     logo_green_path = os.path.join("assets", "logo_green.png")
-    
+
     # Проверяем существование файлов
     logo_teal_exists = os.path.exists(logo_teal_path)
     logo_green_exists = os.path.exists(logo_green_path)
-    
-    # CSS для полупрозрачности логотипов (компромиссный вариант)
+
+    # CSS для полупрозрачности логотипов (только в подвале)
     st.markdown(
         """<style>
-        div[data-testid="stImage"] img {
+        .footer-logo img {
             opacity: 0.6;
             transition: opacity 0.3s ease;
         }
-        div[data-testid="stImage"] img:hover {
+        .footer-logo img:hover {
             opacity: 0.9;
         }
         </style>""",
         unsafe_allow_html=True
     )
-    
-    # Создаём три колонки: [логотип] [слоган] [логотип]
-    footer_cols = st.columns([1, 4, 1])
-    
-    # Левая колонка — бирюзовый логотип
+
+    # Внешние колонки: [пустое] [логотип+слоган+логотип] [пустое]
+    footer_cols = st.columns([2, 6, 2])
+
     with footer_cols[0]:
-        if logo_teal_exists:
-            st.image(logo_teal_path, width=80, output_format="PNG")
-        else:
-            st.markdown(
-                '<div style="text-align:center;padding:20px;">'
-                '<span style="font-size:40px;opacity:0.6;">🦕</span>'
-                '</div>',
-                unsafe_allow_html=True
-            )
-    
-    # Центральная колонка — слоган и копирайт
+        pass  # Пустое пространство слева
+
     with footer_cols[1]:
-        st.markdown(
-            '<div style="text-align:center;padding:20px;">'
-            '<p style="margin:0;font-size:18px;font-style:italic;color:#5D6D7E;opacity:0.8;">'
-            '«Мы обязательно что-нибудь придумаем»'
-            '</p>'
-            '<p style="margin:8px 0 0 0;font-size:14px;color:#7F8C8D;opacity:0.7;">'
-            '© 2026 Система формирования отчётов • Версия 1.0'
-            '</p>'
-            '</div>',
-            unsafe_allow_html=True
-        )
-    
-    # Правая колонка — салатовый логотип
-    with footer_cols[2]:
-        if logo_green_exists:
-            st.image(logo_green_path, width=80, output_format="PNG")
-        else:
+        # Внутренние колонки: [логотип] [слоган] [логотип]
+        inner_cols = st.columns([1, 4, 1])
+
+        # Левая — бирюзовый логотип
+        with inner_cols[0]:
+            if logo_teal_exists:
+                st.markdown('<div class="footer-logo">', unsafe_allow_html=True)
+                st.image(logo_teal_path, width=60, output_format="PNG")
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    '<div style="text-align:center;padding:10px;">'
+                    '<span style="font-size:32px;opacity:0.6;">🦕</span>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+
+        # Центр — слоган и копирайт
+        with inner_cols[1]:
             st.markdown(
-                '<div style="text-align:center;padding:20px;">'
-                '<span style="font-size:40px;opacity:0.6;"></span>'
+                '<div style="text-align:center;padding:10px;">'
+                '<p style="margin:0;font-size:18px;font-style:italic;color:#5D6D7E;opacity:0.9;">'
+                '«Мы обязательно что-нибудь придумаем»'
+                '</p>'
+                '<p style="margin:8px 0 0 0;font-size:14px;color:#7F8C8D;opacity:0.7;">'
+                '© 2026 Система формирования отчётов • Версия 1.0'
+                '</p>'
                 '</div>',
                 unsafe_allow_html=True
             )
+
+        # Правая — салатовый логотип
+        with inner_cols[2]:
+            if logo_green_exists:
+                st.markdown('<div class="footer-logo">', unsafe_allow_html=True)
+                st.image(logo_green_path, width=60, output_format="PNG")
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(
+                    '<div style="text-align:center;padding:10px;">'
+                    '<span style="font-size:32px;opacity:0.6;">🦖</span>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+
+    with footer_cols[2]:
+        pass  # Пустое пространство справа
