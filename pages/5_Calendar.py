@@ -76,6 +76,12 @@ def get_cached_events():
 
 
 @st.cache_data(ttl=10)
+def get_cached_completed_events():
+    """Получить завершённые события с кэшированием."""
+    return db.get_completed_events()
+
+
+@st.cache_data(ttl=10)
 def get_cached_event_by_id(event_id):
     """Получить событие по ID с кэшированием."""
     return db.get_event_by_id(event_id)
@@ -84,6 +90,7 @@ def get_cached_event_by_id(event_id):
 def clear_cache():
     """Очистить кэш."""
     get_cached_events.clear()
+    get_cached_completed_events.clear()
     get_cached_event_by_id.clear()
 
 
@@ -167,7 +174,6 @@ with st.sidebar:
     
     search_query = st.text_input("Поиск по названию", key="sidebar_filter_search")
     
-    # Диапазон 30 лет для повторяющихся событий
     date_range = st.date_input(
         "Диапазон дат",
         value=(date.today(), date.today() + timedelta(days=365 * 30)),
@@ -182,7 +188,6 @@ with st.sidebar:
     st.divider()
     st.header("📤 Экспорт")
     
-    # Экспорт в Excel
     if st.button("📊 Экспорт в Excel", width="stretch", key="btn_export"):
         with st.spinner("Генерация Excel..."):
             events = get_cached_events()
@@ -257,7 +262,7 @@ with st.sidebar:
                 buffer.seek(0)
                 
                 st.download_button(
-                    label="📥 Скачать Excel",
+                    label=" Скачать Excel",
                     data=buffer,
                     file_name=f"calendar_events_{date.today()}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -266,7 +271,6 @@ with st.sidebar:
             else:
                 st.warning("Нет событий для экспорта")
     
-    # Экспорт в PDF с выбором количества месяцев
     st.subheader("📄 Экспорт в PDF")
     pdf_months = st.number_input(
         "Количество месяцев",
@@ -327,7 +331,7 @@ with st.sidebar:
         except Exception as e:
             st.error(f"❌ Ошибка: {str(e)}")
     
-    if st.button(" Отправить напоминания", width="stretch", key="btn_send_reminders"):
+    if st.button("🔔 Отправить напоминания", width="stretch", key="btn_send_reminders"):
         try:
             from utils.telegram_bot import send_reminder_notification
             
@@ -344,7 +348,7 @@ with st.sidebar:
             else:
                 st.info("ℹ️ Нет событий для напоминания сегодня")
         except ImportError:
-            st.error("❌ Модуль Telegram не установлен")
+            st.error(" Модуль Telegram не установлен")
         except Exception as e:
             st.error(f"❌ Ошибка: {str(e)}")
 
@@ -378,7 +382,12 @@ filtered_events = [
 # Вкладки
 # =============================================================================
 
-tab_calendar, tab_list, tab_add = st.tabs(["📅 Календарь", "📋 Список", "➕ Добавить событие"])
+tab_calendar, tab_list, tab_completed, tab_add = st.tabs([
+    "📅 Календарь", 
+    "📋 Список", 
+    "✅ Завершённые", 
+    "➕ Добавить событие"
+])
 
 # =============================================================================
 # Вкладка 1: Календарь
@@ -423,11 +432,11 @@ with tab_calendar:
 # =============================================================================
 
 with tab_list:
-    st.subheader("📋 Список событий")
+    st.subheader(" Список событий")
     
     if st.session_state.show_edit_form and st.session_state.selected_event:
         st.divider()
-        st.subheader(f"✏️ Редактирование: {st.session_state.selected_event['title']}")
+        st.subheader(f"️ Редактирование: {st.session_state.selected_event['title']}")
         
         title = st.text_input("Название события", value=st.session_state.data_title, key="edit_input_title")
         
@@ -498,7 +507,7 @@ with tab_list:
                         st.error(f"❌ Ошибка при сохранении: {str(e)}")
         
         with col_cancel:
-            if st.button("❌ Отменить", width="stretch", key="btn_cancel_edit_inline"):
+            if st.button(" Отменить", width="stretch", key="btn_cancel_edit_inline"):
                 reset_form()
                 st.rerun()
         
@@ -611,7 +620,105 @@ with tab_list:
         st.info("Нет будущих событий для отображения")
 
 # =============================================================================
-# Вкладка 3: Добавить событие
+# Вкладка 3: Завершённые события
+# =============================================================================
+
+with tab_completed:
+    st.subheader("✅ Завершённые события")
+    st.caption("События, дата окончания которых уже прошла")
+    
+    completed_events = get_cached_completed_events()
+    
+    # Применяем фильтры к завершённым событиям
+    if selected_category:
+        completed_events = [e for e in completed_events if e['category'] in selected_category]
+    
+    if selected_location != "Все рестораны":
+        location_code = cfg.LOCATIONS.get(selected_location, "all")
+        if location_code == "spb":
+            completed_events = [e for e in completed_events if e.get('location_type') in ['spb', 'all']]
+        elif location_code == "tyumen":
+            completed_events = [e for e in completed_events if e.get('location_type') in ['tyumen', 'all']]
+    
+    if search_query:
+        completed_events = [e for e in completed_events if search_query.lower() in str(e['title']).lower()]
+    
+    if completed_events:
+        st.write(f"**Всего завершённых событий:** {len(completed_events)}")
+        st.divider()
+        
+        for event in completed_events:
+            col_info, col_actions = st.columns([8, 2])
+            
+            with col_info:
+                location_display = event.get('location_custom') or event.get('location_type', 'Не указано')
+                end_date = parse_date(event['end_date'])
+                days_ago = (date.today() - end_date).days
+                
+                # Серый цвет для завершённых событий
+                st.markdown(f"""
+                <div style="
+                    background-color: #F5F5F5;
+                    border-left: 4px solid #9E9E9E;
+                    padding: 15px;
+                    margin-bottom: 10px;
+                    border-radius: 8px;
+                    opacity: 0.7;
+                ">
+                    <div style="color: #757575; font-size: 16px;">
+                        <b>{event['title']}</b>
+                    </div>
+                    <div style="color: #9E9E9E; font-size: 14px; margin-top: 5px;">
+                        📅 {event['start_date']} → {event['end_date']} | 
+                        🏷 {event['category']} | 
+                        📍 {location_display}
+                    </div>
+                    <div style="color: #BDBDBD; font-size: 12px; margin-top: 5px;">
+                        Завершено {days_ago} дн. назад
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_actions:
+                if st.button("️", key=f"edit_completed_{event['id']}", help="Редактировать"):
+                    st.session_state.selected_event = event
+                    st.session_state.edit_mode = True
+                    st.session_state.show_edit_form = True
+                    
+                    st.session_state.data_title = event['title']
+                    st.session_state.data_start_date = parse_date(event['start_date'])
+                    st.session_state.data_end_date = parse_date(event['end_date'])
+                    st.session_state.data_category = event['category']
+                    st.session_state.data_location = get_key_by_value(cfg.LOCATIONS, event.get('location_type', 'all'), "Все рестораны")
+                    
+                    if event.get('location_custom'):
+                        st.session_state.data_location_custom = [r.strip() for r in event['location_custom'].split(',')]
+                    else:
+                        st.session_state.data_location_custom = []
+                    
+                    st.session_state.data_reminder_on_start = bool(event.get('reminder_on_start_day', True))
+                    st.session_state.data_reminder_days_start = event.get('reminder_days_before_start', 0)
+                    st.session_state.data_reminder_days_end = event.get('reminder_days_before_end', 0)
+                    
+                    if event.get('reminder_custom_date'):
+                        st.session_state.data_use_custom_date = True
+                        st.session_state.data_reminder_custom_date = parse_date(event['reminder_custom_date'])
+                    else:
+                        st.session_state.data_use_custom_date = False
+                    
+                    st.session_state.data_recurrence = get_recurrence_key(event.get('recurrence_type', 'none'))
+                    st.rerun()
+                
+                if st.button("🗑️", key=f"delete_completed_{event['id']}", help="Удалить"):
+                    st.session_state.delete_confirm_id = event['id']
+                    st.rerun()
+            
+            st.divider()
+    else:
+        st.info("ℹ️ Пока нет завершённых событий")
+
+# =============================================================================
+# Вкладка 4: Добавить событие
 # =============================================================================
 
 with tab_add:
