@@ -26,7 +26,6 @@ def render_app_header():
 
 def _render_header_container(theme: str, icon: str):
     """Контейнер верхней панели."""
-    # Получаем цвета из темы
     colors = get_theme_colors(theme)
     text_color = colors.get("header_text", "#FFFFFF")
     
@@ -189,22 +188,21 @@ def render_upcoming_holidays_section(upcoming_holidays: list):
         else:
             st.markdown(
                 '<div style="display:flex;justify-content:center;align-items:center;'
-                'height:200px;background:var(--card-bg, #F8F9FA);border-radius:10px;">🎉</div>',
+                'height:200px;background:var(--card-bg, #F8F9FA);border-radius:10px;"></div>',
                 unsafe_allow_html=True,
             )
 
 
 def render_footer():
-    """Подвал приложения с логотипами и слоганом (Вариант В — колонки)."""
+    """Подвал приложения с логотипами, слоганом и пасхалкой."""
     # Пути к логотипам
     logo_teal_path = os.path.join("assets", "logo_teal.png")
     logo_green_path = os.path.join("assets", "logo_green.png")
 
-    # Проверяем существование файлов
     logo_teal_exists = os.path.exists(logo_teal_path)
     logo_green_exists = os.path.exists(logo_green_path)
 
-    # CSS для полупрозрачности логотипов (только в подвале)
+    # CSS для полупрозрачности логотипов
     st.markdown(
         """<style>
         .footer-logo img {
@@ -218,57 +216,51 @@ def render_footer():
         unsafe_allow_html=True
     )
 
-    # Внешние колонки: [пустое] [логотип+слоган+логотип] [пустое]
-    footer_cols = st.columns([2, 6, 2])
+    # ✅ ОПТИМИЗАЦИЯ: 3 колонки вместо 5
+    footer_cols = st.columns([1, 4, 1])
 
+    # Левая — бирюзовый логотип
     with footer_cols[0]:
-        pass  # Пустое пространство слева
-
-    with footer_cols[1]:
-        # Внутренние колонки: [логотип] [слоган] [логотип]
-        inner_cols = st.columns([1, 4, 1])
-
-        # Левая — бирюзовый логотип
-        with inner_cols[0]:
-            if logo_teal_exists:
-                st.markdown('<div class="footer-logo">', unsafe_allow_html=True)
-                st.image(logo_teal_path, width=60, output_format="PNG")
-                st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    '<div style="text-align:center;padding:10px;">'
-                    '<span style="font-size:32px;opacity:0.6;"></span>'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
-
-        # Центр — слоган и копирайт
-        with inner_cols[1]:
+        if logo_teal_exists:
+            st.markdown('<div class="footer-logo">', unsafe_allow_html=True)
+            st.image(logo_teal_path, width=60, output_format="PNG")
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
             st.markdown(
                 '<div style="text-align:center;padding:10px;">'
-                '<p style="margin:0;font-size:18px;font-style:italic;color:#5D6D7E;opacity:0.9;">'
-                '«Мы обязательно что-нибудь придумаем»'
-                '</p>'
-                '<p style="margin:8px 0 0 0;font-size:14px;color:#7F8C8D;opacity:0.7;">'
-                '© 2026 Система формирования отчётов • Версия 1.0'
-                '</p>'
+                '<span style="font-size:32px;opacity:0.6;">🦕</span>'
                 '</div>',
                 unsafe_allow_html=True
             )
 
-        # Правая — салатовый логотип
-        with inner_cols[2]:
-            if logo_green_exists:
-                st.markdown('<div class="footer-logo">', unsafe_allow_html=True)
-                st.image(logo_green_path, width=60, output_format="PNG")
-                st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    '<div style="text-align:center;padding:10px;">'
-                    '<span style="font-size:32px;opacity:0.6;">🦖</span>'
-                    '</div>',
-                    unsafe_allow_html=True
-                )
+    # Центр — слоган, копирайт и пасхалка
+    with footer_cols[1]:
+        st.markdown(
+            '<div style="text-align:center;padding:10px;">'
+            '<p style="margin:0;font-size:18px;font-style:italic;color:#5D6D7E;opacity:0.9;">'
+            '«Мы обязательно что-нибудь придумаем»'
+            '</p>'
+            '<p style="margin:8px 0 0 0;font-size:14px;color:#7F8C8D;opacity:0.7;">'
+            '© 2026 Система формирования отчётов • Версия 1.0'
+            '</p>'
+            '</div>',
+            unsafe_allow_html=True
+        )
+        
+        # ✅ ПАСХАЛКА: Вызов динозавра
+        from easter_eggs.dino import render_dino_footer
+        render_dino_footer()
 
+    # Правая — салатовый логотип
     with footer_cols[2]:
-        pass  # Пустое пространство справа
+        if logo_green_exists:
+            st.markdown('<div class="footer-logo">', unsafe_allow_html=True)
+            st.image(logo_green_path, width=60, output_format="PNG")
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(
+                '<div style="text-align:center;padding:10px;">'
+                '<span style="font-size:32px;opacity:0.6;">🦖</span>'
+                '</div>',
+                unsafe_allow_html=True
+            )
