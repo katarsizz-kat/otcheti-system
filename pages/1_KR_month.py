@@ -7,13 +7,11 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 warnings.filterwarnings("ignore")
 
-# ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом streamlit в файле!
 st.set_page_config(page_title="КР месяц", page_icon="📅", layout="wide")
 
 from styles import apply_theme
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
-from components import render_footer
 
 # ==========================================================
 # ПРИМЕНЯЕМ ОБЩУЮ ТЕМУ
@@ -22,6 +20,80 @@ greeting_data = get_current_greeting()
 holiday = get_today_holiday()
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
 apply_theme(greeting_data["theme"], holiday_effects)
+
+# ==========================================================
+# ОСВЕТЛЕНИЕ ФОНА В 3 РАЗА
+# ==========================================================
+st.markdown("""
+<style>
+/* Полупрозрачный белый слой поверх фона */
+.stApp::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.67);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Убираем все лишние обёртки вокруг загрузчиков */
+.element-container:has( > .stFileUploader) {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Единое поле загрузки */
+.stFileUploader {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px dashed rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.stFileUploader:hover {
+    border-color: #3498DB;
+    background: rgba(255, 255, 255, 1);
+}
+
+/* Зона drag & drop */
+.stFileUploader > div > div {
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Кнопка Upload */
+.stFileUploader button {
+    background: #3498DB !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+}
+
+.stFileUploader button:hover {
+    background: #2980B9 !important;
+}
+
+/* Текст под кнопкой */
+.stFileUploader small {
+    color: #7F8C8D;
+    font-size: 12px;
+}
+
+/* Заголовки над загрузчиками */
+.stMarkdown h4 {
+    margin-bottom: 12px;
+    color: var(--text-primary, #2C3E50);
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ==========================================================
 # НАСТРОЙКИ
@@ -106,7 +178,7 @@ def map_restaurant_address(val):
 def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "🌅 Доброе утро!"
-    if 12 <= hour < 18: return "️ Добрый день!"
+    if 12 <= hour < 18: return "🌤 Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌜 Доброй ночи!"
 
@@ -462,72 +534,11 @@ def write_analysis_sheet(writer, comp_all, pos_all):
         ws.column_dimensions[get_column_letter(col_idx)].width = 18
 
 # ==========================================================
-# СТИЛИ ЗАГРУЗЧИКОВ (УПРОЩЁННЫЕ - БЕЗ ВЛОЖЕННЫХ РАМОК)
-# ==========================================================
-st.markdown("""
-<style>
-/* Убираем все лишние обёртки вокруг загрузчиков */
-.element-container:has( > .stFileUploader) {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-}
-
-/* Единое поле загрузки */
-.stFileUploader {
-    background: rgba(255, 255, 255, 0.9);
-    padding: 20px;
-    border-radius: 12px;
-    border: 2px dashed rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
-}
-
-.stFileUploader:hover {
-    border-color: #3498DB;
-    background: rgba(255, 255, 255, 1);
-}
-
-/* Зона drag & drop */
-.stFileUploader > div > div {
-    border: none !important;
-    background: transparent !important;
-}
-
-/* Кнопка Upload */
-.stFileUploader button {
-    background: #3498DB !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
-    font-weight: 600 !important;
-}
-
-.stFileUploader button:hover {
-    background: #2980B9 !important;
-}
-
-/* Текст под кнопкой */
-.stFileUploader small {
-    color: #7F8C8D;
-    font-size: 12px;
-}
-
-/* Заголовки над загрузчиками */
-.stMarkdown h4 {
-    margin-bottom: 12px;
-    color: var(--text-primary, #2C3E50);
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ==========================================================
 # РИСУЕМ ИНТЕРФЕЙС
 # ==========================================================
 st.markdown(f"""
 <div class="header-block">
-    <h1>📅 КР месяц</h1>
+    <h1> КР месяц</h1>
     <p>{greeting_by_time()}</p>
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Формирование ежемесячного отчёта по отзывам из трёх источников</p>
 </div>
@@ -537,11 +548,11 @@ st.markdown("### 📂 Загрузка файлов")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("####  Сайт / приложение")
+    st.markdown("#### 📱 Сайт / приложение")
     file1 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="site", label_visibility="collapsed")
 
 with col2:
-    st.markdown("#### 🛵 Агрегаторы")
+    st.markdown("####  Агрегаторы")
     file2 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="agg", label_visibility="collapsed")
 
 with col3:
@@ -689,8 +700,3 @@ if generate_report:
         except Exception as e:
             st.error(f"❌ Произошла ошибка при обработке: {e}")
             st.exception(e)
-
-# ==========================================================
-# ФУТЕР
-# ==========================================================
-render_footer()
