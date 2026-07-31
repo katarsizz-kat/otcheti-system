@@ -2,7 +2,6 @@ name: Daily Calendar Reminders
 
 on:
   schedule:
-    # Запуск каждый день в 9:00 по Москве (6:00 UTC)
     - cron: '0 7 * * *'
   
   # Возможность запустить вручную из GitHub
