@@ -13,91 +13,37 @@ warnings.filterwarnings('ignore')
 # ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом!
 st.set_page_config(page_title="🍕 Продукт мини", page_icon="🍕", layout="wide")
 
-from styles import apply_subtle_theme
-from config.greetings import get_current_greeting
-from config.holidays import get_today_holiday
-
 # ==========================================================
-# ПРИМЕНЯЕМ ПРИГЛУШЁННУЮ ТЕМУ
-# ==========================================================
-greeting_data = get_current_greeting()
-holiday = get_today_holiday()
-holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
-apply_subtle_theme(greeting_data["theme"], holiday_effects)
-
-# ==========================================================
-# ОСВЕТЛЕНИЕ ФОНА + СТИЛИ ЗАГРУЗЧИКОВ (единый стиль)
+# СТИЛИ
 # ==========================================================
 st.markdown("""
 <style>
-/* Полупрозрачный белый слой поверх фона */
-.stApp::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.15);
-    z-index: 0;
-    pointer-events: none;
+.stApp { background: #f0f2f6 !important; }
+
+.header-block {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    color: white;
 }
 
-/* Убираем все лишние обёртки вокруг загрузчиков */
-.element-container:has( > .stFileUploader) {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-}
-
-/* Единое поле загрузки */
-.stFileUploader {
-    background: rgba(255, 255, 255, 0.9);
-    padding: 20px;
+.content-block {
+    background: white;
+    padding: 24px;
     border-radius: 12px;
-    border: 2px dashed rgba(0, 0, 0, 0.15);
-    transition: all 0.3s ease;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.stFileUploader:hover {
-    border-color: #3498DB;
-    background: rgba(255, 255, 255, 1);
+.input-box {
+    background: #fff3cd;
+    border: 3px solid #ffc107;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
 }
-
-/* Зона drag & drop */
-.stFileUploader > div > div {
-    border: none !important;
-    background: transparent !important;
-}
-
-/* Кнопка Upload */
-.stFileUploader button {
-    background: #3498DB !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 8px !important;
-    padding: 8px 16px !important;
-    font-weight: 600 !important;
-}
-
-.stFileUploader button:hover {
-    background: #2980B9 !important;
-}
-
-/* Текст под кнопкой */
-.stFileUploader small {
-    color: #7F8C8D;
-    font-size: 12px;
-}
-
-/* Заголовки над загрузчиками */
-.stMarkdown h4 {
-    margin-bottom: 12px;
-    color: var(--text-primary, #2C3E50);
-}
-</style>
-""", unsafe_allow_html=True)
 
 /* ===== БЛОК "КАК РАБОТАЕТ ОТЧЁТ" (зелёная рамка) ===== */
 .info-block {
@@ -154,7 +100,7 @@ st.markdown("""
     box-shadow: 0 6px 20px rgba(231, 76, 60, 0.2);
     transform: scale(1.5);
     transform-origin: top left;
-    margin-top: 60px; /* Компенсация увеличения */
+    margin-top: 60px;
 }
 
 .radio-block label {
@@ -180,6 +126,38 @@ st.markdown("""
     min-height: 28px !important;
 }
 
+/* Стили для текстового поля ввода */
+textarea {
+    border: 2px solid #4a90e2 !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+    background-color: #ffffff !important;
+    min-height: 300px !important;
+}
+
+textarea:focus {
+    border-color: #2c5aa0 !important;
+    box-shadow: 0 0 8px rgba(74, 144, 226, 0.3) !important;
+    outline: none !important;
+}
+
+/* Стили для placeholder */
+textarea::placeholder {
+    color: #6c757d !important;
+    font-style: italic;
+    opacity: 0.8;
+}
+
+/* Стили для label поля ввода */
+[data-testid="stTextArea"] label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ==========================================================
 # ФУНКЦИИ
 # ==========================================================
@@ -191,7 +169,7 @@ def normalize_text(text):
     for lat, cyr in replacements.items(): text = text.replace(lat, cyr)
     # Базовая очистка
     text = text.lower().replace('"', '').replace("'", "")
-    text = re.sub(r'(.*?)', '', text)
+    text = re.sub(r'\(.*?\)', '', text)
     # Убираем слова-паразиты для пицц
     text = re.sub(r'\bпицца\b|\bpizza\b', '', text)
     text = re.sub(r'\bтонкое\b|\bтрад\b|\bтрадиционное\b|\bтесто\b|\bсм\b|\bnew\b', '', text)
@@ -534,27 +512,19 @@ def create_pizza_excel(data, period_str, rules):
     ws.column_dimensions['Q'].width = 10
     return wb
 
-def greeting_by_time():
-    hour = datetime.now().hour
-    if 5 <= hour < 12: return "🌅 Доброе утро!"
-    if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return " Добрый вечер!"
-    return "🌜 Доброй ночи!"
-
 # ==========================================================
 # ИНТЕРФЕЙС
 # ==========================================================
-st.markdown(f"""
+st.markdown("""
 <div class="header-block">
-    <h1>🍕 Продукт мини</h1>
-    <p>{greeting_by_time()}</p>
-    <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Умный отчёт с разбивкой пицц по размерам и нечётким поиском</p>
+    <h1> Универсальный отчёт</h1>
+    <p>Умный отчёт с разбивкой пицц по размерам и нечётким поиском</p>
 </div>
 """, unsafe_allow_html=True)
 
-# Описание работы
+# Описание работы (ВЫНЕСЕНО В ОТДЕЛЬНУЮ ЯЧЕЙКУ С ЗЕЛЁНОЙ РАМКОЙ)
 st.markdown("""
-<div class="content-block">
+<div class="info-block">
 <h3> Как работает отчёт</h3>
 <h4>📝 Стандартный режим:</h4>
 <ul>
@@ -573,17 +543,19 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Переключатель режима
+# Переключатель режима (В ОТДЕЛЬНОЙ ЯЧЕЙКЕ С КРАСНОЙ РАМКОЙ, УВЕЛИЧЕН В 1.5 РАЗА)
+st.markdown('<div class="radio-block">', unsafe_allow_html=True)
 report_mode = st.radio(
     "📋 Выберите режим отчёта:",
-    ["📝 Стандартный отчёт", "🍕 Пиццы по размерам"],
+    ["📝 Стандартный отчёт", " Пиццы по размерам"],
     horizontal=True,
     help="Стандартный - обычный отчёт с количеством и суммой\nПиццы по размерам - отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см"
 )
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ПОЛЕ ВВОДА
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
-st.markdown("### ️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
+st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b></p>", unsafe_allow_html=True)
 
 if report_mode == "🍕 Пиццы по размерам":
@@ -607,7 +579,7 @@ else:
 rules_text = st.text_area(
     "Список позиций:",
     value="",
-    height=400 if report_mode == "🍕 Пиццы по размерам" else 300,
+    height=400 if report_mode == " Пиццы по размерам" else 300,
     key="rules_input",
     label_visibility="visible",
     placeholder=default_rules
@@ -675,7 +647,7 @@ if file_main:
                     output.seek(0)
                     file_name = f"Отчёт_{'pizza_' if report_mode == '🍕 Пиццы по размерам' else ''}{period_str.replace('.', '-')}.xlsx"
                     st.download_button(
-                        label=" Скачать Excel",
+                        label="📥 Скачать Excel",
                         data=output,
                         file_name=file_name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -687,4 +659,4 @@ if file_main:
                 st.code(traceback.format_exc())
     st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info("👆 Загрузите файл для начала работы")
+    st.info(" Загрузите файл для начала работы")
