@@ -19,7 +19,7 @@ from config.holidays import get_today_holiday
 greeting_data = get_current_greeting()
 holiday = get_today_holiday()
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
-apply_theme(greeting_data["theme"], holiday_effects)
+apply_subtle_theme(greeting_data["theme"], holiday_effects)
 
 # ==========================================================
 # УВЕЛИЧЕННЫЙ ПЕРЕКЛЮЧАТЕЛЬ ТИПА ОТЧЁТА (2x больше)
