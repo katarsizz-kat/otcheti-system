@@ -18,6 +18,12 @@ from components import (
 )
 
 # =============================================================================
+# Сброс состояния динозавра при загрузке главной страницы
+# =============================================================================
+if "main_page_dino_modal_open" not in st.session_state:
+    st.session_state.main_page_dino_modal_open = False
+
+# =============================================================================
 # Получение данных
 # =============================================================================
 greeting_data = get_current_greeting()
@@ -74,7 +80,7 @@ render_welcome_block(
 # =============================================================================
 # Блок "Ближайшие события"
 # =============================================================================
-st.markdown("### 📅 Ближайшие события", unsafe_allow_html=True)
+st.markdown("###  Ближайшие события", unsafe_allow_html=True)
 
 if upcoming_events:
     num_cols = min(3, len(upcoming_events))
@@ -94,7 +100,7 @@ if upcoming_events:
             days_left = (event_date - date.today()).days
             
             if days_left == 0:
-                days_text = "🔴 Сегодня!"
+                days_text = " Сегодня!"
                 days_color = "#E74C3C"
             elif days_left == 1:
                 days_text = "⏰ Завтра"
@@ -143,7 +149,7 @@ if upcoming_events:
     if st.button("📅 Открыть полный календарь", use_container_width=True, type="primary"):
         st.switch_page("pages/5_Calendar.py")
 else:
-    st.info("️ На ближайшие 30 дней событий не запланировано")
+    st.info("ℹ️ На ближайшие 30 дней событий не запланировано")
 
 # =============================================================================
 # Праздничный баннер (если есть праздник сегодня)
