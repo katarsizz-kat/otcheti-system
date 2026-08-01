@@ -85,6 +85,43 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   color: var(--text-primary) !important; "
         " } "
 
+        # ===== НАВИГАЦИЯ В САЙДБАРЕ (улучшенная читаемость) =====
+        " div[data-testid='stSidebarNav'] { "
+        "   padding: 10px 0 !important; "
+        " } "
+        " div[data-testid='stSidebarNav'] a, "
+        " section[data-testid='stSidebar'] nav a, "
+        " section[data-testid='stSidebar'] a[href] { "
+        "   color: var(--text-primary) !important; "
+        "   font-size: 16px !important; "
+        "   font-weight: 600 !important; "
+        "   opacity: 0.95 !important; "
+        "   padding: 10px 16px !important; "
+        "   margin: 4px 8px !important; "
+        "   border-radius: 8px !important; "
+        "   transition: all 0.3s ease !important; "
+        "   text-decoration: none !important; "
+        "   display: block !important; "
+        " } "
+        " div[data-testid='stSidebarNav'] a:hover, "
+        " section[data-testid='stSidebar'] nav a:hover, "
+        " section[data-testid='stSidebar'] a[href]:hover { "
+        "   background: rgba(255,255,255,0.25) !important; "
+        "   opacity: 1 !important; "
+        "   font-weight: 700 !important; "
+        "   transform: translateX(4px) !important; "
+        " } "
+        " div[data-testid='stSidebarNav'] a[aria-current='page'], "
+        " div[data-testid='stSidebarNav'] a.active, "
+        " section[data-testid='stSidebar'] nav a.active, "
+        " section[data-testid='stSidebar'] a[href].active { "
+        "   background: rgba(255,255,255,0.35) !important; "
+        "   font-weight: 700 !important; "
+        "   opacity: 1 !important; "
+        "   border-left: 4px solid var(--accent) !important; "
+        "   padding-left: 12px !important; "
+        " } "
+
         # ===== ПРИВЕТСТВЕННЫЙ БЛОК =====
         " .welcome-block { "
         "   background: var(--header-bg); "
@@ -403,6 +440,8 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   .header-block { padding: 20px; } "
         "   .header-block h1 { font-size: 28px; } "
         "   .header-block p { font-size: 16px; } "
+        "   div[data-testid='stSidebarNav'] a, "
+        "   section[data-testid='stSidebar'] nav a { font-size: 14px !important; } "
         " } "
 
         "</style>"
@@ -419,6 +458,8 @@ def apply_theme(theme: str, holiday_effects: list = None):
         base_css + effects_css + holiday_css,
         unsafe_allow_html=True
     )
+
+
 def apply_subtle_theme(theme: str, holiday_effects: list = None):
     """
     Приглушённая тема для страниц отчётов.
@@ -446,7 +487,7 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
     # Приглушённые стили (без эффектов облаков/звёзд)
     subtle_css = (
         "<style>"
-        
+
         # CSS-переменные
         ":root { "
         f"  --bg-main: {colors['bg_main']}; "
@@ -462,7 +503,7 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
         f"  --button-text: {colors['button_text']}; "
         "} "
 
-        # Фон приложения (без эффектов)
+        # Фон приложения
         " .stApp { "
         "   background: var(--bg-main) !important; "
         "   min-height: 100vh; "
@@ -488,6 +529,43 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
         " section[data-testid='stSidebar'] button { "
         "   color: var(--text-primary) !important; "
         "   font-size: 15px !important; "
+        " } "
+
+        # ===== НАВИГАЦИЯ В САЙДБАРЕ (улучшенная читаемость) =====
+        " div[data-testid='stSidebarNav'] { "
+        "   padding: 10px 0 !important; "
+        " } "
+        " div[data-testid='stSidebarNav'] a, "
+        " section[data-testid='stSidebar'] nav a, "
+        " section[data-testid='stSidebar'] a[href] { "
+        "   color: var(--text-primary) !important; "
+        "   font-size: 16px !important; "
+        "   font-weight: 600 !important; "
+        "   opacity: 0.95 !important; "
+        "   padding: 10px 16px !important; "
+        "   margin: 4px 8px !important; "
+        "   border-radius: 8px !important; "
+        "   transition: all 0.3s ease !important; "
+        "   text-decoration: none !important; "
+        "   display: block !important; "
+        " } "
+        " div[data-testid='stSidebarNav'] a:hover, "
+        " section[data-testid='stSidebar'] nav a:hover, "
+        " section[data-testid='stSidebar'] a[href]:hover { "
+        "   background: rgba(255,255,255,0.25) !important; "
+        "   opacity: 1 !important; "
+        "   font-weight: 700 !important; "
+        "   transform: translateX(4px) !important; "
+        " } "
+        " div[data-testid='stSidebarNav'] a[aria-current='page'], "
+        " div[data-testid='stSidebarNav'] a.active, "
+        " section[data-testid='stSidebar'] nav a.active, "
+        " section[data-testid='stSidebar'] a[href].active { "
+        "   background: rgba(255,255,255,0.35) !important; "
+        "   font-weight: 700 !important; "
+        "   opacity: 1 !important; "
+        "   border-left: 4px solid var(--accent) !important; "
+        "   padding-left: 12px !important; "
         " } "
 
         # HEADER-BLOCK (заголовок страницы)
@@ -565,6 +643,8 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
         "   .header-block h1 { font-size: 28px; } "
         "   .header-block p { font-size: 16px; } "
         "   div[data-testid='stButton'] > button { font-size: 14px !important; } "
+        "   div[data-testid='stSidebarNav'] a, "
+        "   section[data-testid='stSidebar'] nav a { font-size: 14px !important; } "
         " } "
 
         "</style>"
