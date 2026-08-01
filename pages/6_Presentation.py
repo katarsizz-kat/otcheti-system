@@ -7,7 +7,7 @@ from typing import List, Dict
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.pptx_builder import generate_flexible_presentation, parse_kr_excel
 
-st.set_page_config(page_title="Презентация КР", page_icon="🍕", layout="wide")
+st.set_page_config(page_title=" Презентация", page_icon="🎤", layout="wide")
 
 st.title("🍕 Генерация презентации")
 st.markdown("---")
