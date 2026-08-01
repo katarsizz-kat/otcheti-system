@@ -453,7 +453,7 @@ def get_weekday_name(d):
 
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return "🌅 Доброе утро!"
+    if 5 <= hour < 12: return " Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌜 Доброй ночи!"
@@ -474,11 +474,11 @@ def main():
     """, unsafe_allow_html=True)
 
     # ── ЗАГРУЗКА ──
-    st.sidebar.header("📂 Загрузка данных")
-    uploaded_file = st.sidebar.file_uploader(
+    st.markdown("### 📂 Загрузка данных")
+    uploaded_file = st.file_uploader(
         "Загрузите выгрузку тикетов (Excel/CSV)", type=['xlsx', 'csv'])
     if not uploaded_file:
-        st.info("👈 Загрузите файл с выгрузкой обращений в боковой панели.")
+        st.info("👆 Загрузите файл с выгрузкой обращений выше.")
         return
     try:
         df = (pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv')
@@ -490,7 +490,7 @@ def main():
 
     # ── ФИЛЬТРЫ ──
     st.sidebar.markdown("---")
-    st.sidebar.header("🔍 Фильтры")
+    st.sidebar.header(" Фильтры")
     available_cities = df['Город'].dropna().unique().tolist() if 'Город' in df.columns else []
     default_cities = [c for c in ['Санкт-Петербург', 'Тюмень'] if c in available_cities]
     cities = st.sidebar.multiselect("Город/регион:", options=available_cities,
@@ -581,7 +581,7 @@ def main():
                 st.info(f"Каждый день работал только один оператор (без учёта {', '.join(EXCLUDED_OPERATORS)}).")
 
             # --- Часовые интервалы ---
-            st.markdown("#####  Распределение по часам (МСК)")
+            st.markdown("##### 🕐 Распределение по часам (МСК)")
             total_days = df_op['Дата_рабочая'].nunique()
             df_op['Интервал'] = df_op['Час_МСК'].apply(get_hour_interval)
             h_stats = df_op.groupby('Интервал').size().reset_index(name='Обращений')
@@ -598,7 +598,7 @@ def main():
             h_stats['Обращений'] = h_stats['Обращений'].astype(int)
             h_stats['Обращений/час'] = h_stats['Обращений/час'].astype(float)
             h_stats['Обращений/час/день'] = h_stats['Обращений/час/день'].astype(float)
-            st.caption(f"📊 Период: **{total_days} дней**")
+            st.caption(f" Период: **{total_days} дней**")
             st.dataframe(h_stats, use_container_width=True, hide_index=True)
             st.bar_chart(h_stats.set_index('Интервал')[['Обращений/час', 'Обращений/час/день']])
 
@@ -678,7 +678,7 @@ def main():
         st.subheader("Генерация Excel-отчёта")
         st.info("7 листов: Операторы · Часы · Дни · Жалобы (деталь) · "
                 "Жалобы (укрупн) · Бот. С диаграммами!")
-        if st.button("📥 Сформировать и скачать Excel", type="primary"):
+        if st.button(" Сформировать и скачать Excel", type="primary"):
             with st.spinner("Формируем..."):
                 buf = io.BytesIO()
                 try:
@@ -724,7 +724,7 @@ def main():
                             except Exception:
                                 pass
 
-                        # ── Лист 3: Дни ─
+                        # ── Лист 3: Дни ──
                         if not df_op.empty:
                             day_stats = df_op.groupby('Дата_рабочая').size().reset_index(name='Обращений')
                             day_stats = day_stats.sort_values('Обращений', ascending=False)
@@ -801,7 +801,7 @@ def main():
                         except Exception:
                             pass
 
-                        # ─ Лист 6: Бот ──
+                        # ── Лист 6: Бот ──
                         if not bot_df.empty:
                             bot_df.to_excel(writer, sheet_name='Бот', index=False)
                             ws6 = writer.sheets['Бот']
@@ -817,7 +817,7 @@ def main():
                     return
                 buf.seek(0)
                 st.download_button(
-                    label="💾 Скачать отчёт (.xlsx)",
+                    label=" Скачать отчёт (.xlsx)",
                     data=buf,
                     file_name="OS_Report.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
