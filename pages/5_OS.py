@@ -109,10 +109,22 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     border: 2px solid rgba(0, 95, 107, 0.2) !important;
 }
 
-/* ===== SIDEBAR ===== */
+/* ===== SIDEBAR (цветной, как на kr reports) ===== */
 section[data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.95) !important;
-    border-right: 3px solid rgba(0, 95, 107, 0.3) !important;
+background: var(--bg-sidebar) !important;
+border-right: 1px solid var(--card-border) !important;
+opacity: 0.95 !important;
+}
+
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] button {
+color: var(--text-primary) !important;
+font-size: 15px !important;
 }
 
 /* ===== ЗАГРУЗЧИК ФАЙЛОВ ===== */
