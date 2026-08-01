@@ -9,6 +9,8 @@ import streamlit.components.v1 as components
 from streamlit_calendar import calendar
 import db
 import config as cfg
+import utils.supabase_db as db
+import config.calendar as cfg
 
 # =============================================================================
 # КОНФИГУРАЦИЯ СТРАНИЦЫ
