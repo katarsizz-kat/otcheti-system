@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром — исправленная версия."""
+"""Пасхалка с динозавром — исправленная версия (не открывается автоматически)."""
 import os
 import random
 import base64
@@ -16,7 +16,7 @@ def load_gif_base64(gif_path: str) -> str:
         return None
 
 
-@st.dialog(" Динозавр приветствует тебя!")
+@st.dialog("🦖 Динозавр приветствует тебя!")
 def dino_dialog(phrase: str, gif_src: str):
     """Нативная модалка Streamlit."""
     # CSS для видимого заголовка диалога
@@ -82,34 +82,34 @@ def dino_dialog(phrase: str, gif_src: str):
     
     # Кнопка закрытия
     if st.button("✖", key="dino_close_btn", help="Закрыть"):
-        st.session_state.dino_modal_open = False
+        st.session_state.main_page_dino_modal_open = False
         st.rerun()
 
 
 def render_dino_footer():
-    """Рендерит кнопку динозавра в подвале (всегда видна)."""
-    # Инициализация session_state
-    if "dino_modal_open" not in st.session_state:
-        st.session_state.dino_modal_open = False
-    if "dino_phrase" not in st.session_state:
-        st.session_state.dino_phrase = get_random_phrase()
-    if "dino_click_count" not in st.session_state:
-        st.session_state.dino_click_count = 0
+    """Рендерит кнопку динозавра в подвале (всегда видна, открывается только по клику)."""
+    # Уникальные ключи для главной страницы (не конфликтуют с другими страницами)
+    if "main_page_dino_modal_open" not in st.session_state:
+        st.session_state.main_page_dino_modal_open = False
+    if "main_page_dino_phrase" not in st.session_state:
+        st.session_state.main_page_dino_phrase = get_random_phrase()
+    if "main_page_dino_click_count" not in st.session_state:
+        st.session_state.main_page_dino_click_count = 0
     
     # Кнопка вызова динозавра (ВСЕГДА видна)
     col1, col2 = st.columns([1, 10])
     with col1:
         if st.button("🦖", key="dino_open_btn", help="Нажми меня!"):
-            st.session_state.dino_click_count += 1
-            if st.session_state.dino_click_count % 5 == 0:
-                st.session_state.dino_phrase = "Кристина лучшая ❤️"
+            st.session_state.main_page_dino_click_count += 1
+            if st.session_state.main_page_dino_click_count % 5 == 0:
+                st.session_state.main_page_dino_phrase = "Кристина лучшая ❤️"
             else:
-                st.session_state.dino_phrase = get_random_phrase()
-            st.session_state.dino_modal_open = True
+                st.session_state.main_page_dino_phrase = get_random_phrase()
+            st.session_state.main_page_dino_modal_open = True
             st.rerun()
     
-    # Если модалка открыта — показываем диалог
-    if st.session_state.dino_modal_open:
+    # Если модалка открыта — показываем диалог и сразу сбрасываем состояние
+    if st.session_state.main_page_dino_modal_open:
         gif_num = random.choice([1, 2])
         gif_path = f"assets/dino{gif_num}.gif"
         gif_base64 = load_gif_base64(gif_path)
@@ -117,4 +117,9 @@ def render_dino_footer():
             gif_src = f"data:image/gif;base64,{gif_base64}"
         else:
             gif_src = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
-        dino_dialog(st.session_state.dino_phrase, gif_src)
+        
+        # Вызываем диалог
+        dino_dialog(st.session_state.main_page_dino_phrase, gif_src)
+        
+        # Сбрасываем состояние после открытия (чтобы не открывался автоматически при следующем рендере)
+        st.session_state.main_page_dino_modal_open = False
