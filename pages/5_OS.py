@@ -144,15 +144,33 @@ section[data-testid="stSidebar"] .stRadio label {
     font-weight: 600 !important;
 }
 
-/* ===== ЗАГРУЗЧИК ФАЙЛОВ В SIDEBAR ===== */
-section[data-testid="stSidebar"] .stFileUploader {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 2px dashed rgba(0, 95, 107, 0.4) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
+/* ===== ЗАГРУЗЧИК ФАЙЛОВ В ОСНОВНОМ КОНТЕНТЕ ===== */
+.element-container:has( > .stFileUploader) {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
 }
 
-section[data-testid="stSidebar"] .stFileUploader button {
+.stFileUploader {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px dashed rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.stFileUploader:hover {
+    border-color: #005F6B;
+    background: rgba(255, 255, 255, 1);
+}
+
+.stFileUploader > div > div {
+    border: none !important;
+    background: transparent !important;
+}
+
+.stFileUploader button {
     background: #005F6B !important;
     color: #FFFFFF !important;
     border: none !important;
@@ -161,8 +179,13 @@ section[data-testid="stSidebar"] .stFileUploader button {
     font-weight: 600 !important;
 }
 
-section[data-testid="stSidebar"] .stFileUploader button:hover {
+.stFileUploader button:hover {
     background: #003D45 !important;
+}
+
+.stFileUploader small {
+    color: #7F8C8D;
+    font-size: 12px;
 }
 
 /* ===== РАЗДЕЛИТЕЛИ ===== */
@@ -453,10 +476,10 @@ def get_weekday_name(d):
 
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return " Доброе утро!"
+    if 5 <= hour < 12: return "🌅 Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
-    return "🌜 Доброй ночи!"
+    return " Доброй ночи!"
 
 # ==========================================================
 # ГЛАВНАЯ ФУНКЦИЯ
@@ -473,8 +496,8 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # ── ЗАГРУЗКА ──
-    st.markdown("### 📂 Загрузка данных")
+    # ── ЗАГРУЗКА (В ОСНОВНОМ КОНТЕНТЕ) ──
+    st.markdown("###  Загрузка данных")
     uploaded_file = st.file_uploader(
         "Загрузите выгрузку тикетов (Excel/CSV)", type=['xlsx', 'csv'])
     if not uploaded_file:
@@ -488,9 +511,9 @@ def main():
         return
     df['Дата отзыва'] = pd.to_datetime(df['Дата отзыва'], errors='coerce')
 
-    # ── ФИЛЬТРЫ ──
+    # ── ФИЛЬТРЫ (В SIDEBAR) ──
     st.sidebar.markdown("---")
-    st.sidebar.header(" Фильтры")
+    st.sidebar.header("🔍 Фильтры")
     available_cities = df['Город'].dropna().unique().tolist() if 'Город' in df.columns else []
     default_cities = [c for c in ['Санкт-Петербург', 'Тюмень'] if c in available_cities]
     cities = st.sidebar.multiselect("Город/регион:", options=available_cities,
@@ -526,8 +549,8 @@ def main():
 
     # ── ВКЛАДКИ ──
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📊 Статистика операторов", "🍕 Жалобы и Рестораны",
-        "🤖 Анализ Чат-бота", "📥 Экспорт в Excel"])
+        " Статистика операторов", " Жалобы и Рестораны",
+        " Анализ Чат-бота", "📥 Экспорт в Excel"])
 
     # =============================================
     # ВКЛАДКА 1: СТАТИСТИКА ОПЕРАТОРОВ
@@ -678,7 +701,7 @@ def main():
         st.subheader("Генерация Excel-отчёта")
         st.info("7 листов: Операторы · Часы · Дни · Жалобы (деталь) · "
                 "Жалобы (укрупн) · Бот. С диаграммами!")
-        if st.button(" Сформировать и скачать Excel", type="primary"):
+        if st.button("📥 Сформировать и скачать Excel", type="primary"):
             with st.spinner("Формируем..."):
                 buf = io.BytesIO()
                 try:
@@ -697,7 +720,7 @@ def main():
                             ws.set_column('A:A', 30)
                             ws.set_column('B:D', 18)
 
-                        # ── Лист 2: Часы ──
+                        # ─ Лист 2: Часы ──
                         if not df_op.empty:
                             h_stats.to_excel(writer, sheet_name='Часы', index=False)
                             ws2 = writer.sheets['Часы']
@@ -724,7 +747,7 @@ def main():
                             except Exception:
                                 pass
 
-                        # ── Лист 3: Дни ──
+                        # ─ Лист 3: Дни ──
                         if not df_op.empty:
                             day_stats = df_op.groupby('Дата_рабочая').size().reset_index(name='Обращений')
                             day_stats = day_stats.sort_values('Обращений', ascending=False)
@@ -776,7 +799,7 @@ def main():
                         except Exception:
                             pass
 
-                        # ── Лист 5: Жалобы укрупнённые ──
+                        # ── Лист 5: Жалобы укрупнённые ─
                         p2_reset.to_excel(writer, sheet_name='Жалобы укрупнённые', index=False)
                         ws5 = writer.sheets['Жалобы укрупнённые']
                         for c, v in enumerate(p2_reset.columns):
@@ -817,7 +840,7 @@ def main():
                     return
                 buf.seek(0)
                 st.download_button(
-                    label=" Скачать отчёт (.xlsx)",
+                    label="💾 Скачать отчёт (.xlsx)",
                     data=buf,
                     file_name="OS_Report.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
