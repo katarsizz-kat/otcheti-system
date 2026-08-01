@@ -12,7 +12,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом!
-st.set_page_config(page_title="Отчет Продукт", layout="wide", page_icon="🍕")
+st.set_page_config(page_title="🍕 Продукт", page_icon="🍕", layout="wide")
 
 # ==========================================================
 # ДИНАМИЧЕСКИЕ СТИЛИ (НЕБО ПО ВРЕМЕНИ СУТОК)
