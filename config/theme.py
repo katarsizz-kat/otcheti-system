@@ -1,21 +1,21 @@
 """Цветовые темы приложения."""
+
 THEMES = {
-    #  Утро - розово-персиковое небо (на основе картинки)
+    #  Утро - голубое небо с лёгким розовым акцентом + бирюзовые кнопки из брендбука
     "morning": {
-        "bg_main": "linear-gradient(135deg, #FFE4E1 0%, #E0F0FF 100%)",
-        "bg_sidebar": "rgba(255, 228, 225, 0.9)",
-        "header_bg": "linear-gradient(135deg, #FFB6A8 0%, #B0D4E3 100%)",
-        "header_text": "#2C3E50",
-        "text_primary": "#2C3E50",
+        "bg_main": "linear-gradient(135deg, #D6EAF8 0%, #AED6F1 50%, #FADBD8 100%)",
+        "bg_sidebar": "rgba(214, 234, 248, 0.9)",
+        "header_bg": "linear-gradient(135deg, #85C1E9 0%, #AED6F1 100%)",
+        "header_text": "#1B4F72",
+        "text_primary": "#1B4F72",
         "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(255, 240, 245, 0.85)",
-        "card_border": "rgba(255, 182, 168, 0.4)",
-        "accent": "#E8A0BF",
-        "button_bg": "#E8A0BF",
+        "card_bg": "rgba(214, 234, 248, 0.85)",
+        "card_border": "rgba(133, 193, 233, 0.4)",
+        "accent": "#005F6B",
+        "button_bg": "#005F6B",
         "button_text": "#FFFFFF",
     },
-    
-    # ☀️ День - светло-голубое небо (БЕЗ оранжевого!)
+    # ☀️ День - светло-голубое небо
     "day": {
         "bg_main": "linear-gradient(135deg, #B8D4E3 0%, #D6EAF8 100%)",
         "bg_sidebar": "rgba(184, 212, 227, 0.9)",
@@ -29,8 +29,7 @@ THEMES = {
         "button_bg": "#5DADE2",
         "button_text": "#FFFFFF",
     },
-    
-    # 🌆 Вечер - розово-фиолетовый закат (минимум оранжевого)
+    # 🌆 Вечер - розово-фиолетовый закат
     "evening": {
         "bg_main": "linear-gradient(135deg, #D7BDE2 0%, #FADBD8 50%, #AED6F1 100%)",
         "bg_sidebar": "rgba(215, 189, 226, 0.9)",
@@ -44,8 +43,7 @@ THEMES = {
         "button_bg": "#C39BD3",
         "button_text": "#FFFFFF",
     },
-    
-    #  Ночь - тёмно-бирюзовый со звёздами (тёмный фон, светлый текст)
+    # 🌙 Ночь - тёмно-бирюзовый со звёздами
     "night": {
         "bg_main": "linear-gradient(135deg, #0B3D4F 0%, #1A5276 50%, #1B4F72 100%)",
         "bg_sidebar": "rgba(11, 61, 79, 0.95)",
@@ -59,8 +57,7 @@ THEMES = {
         "button_bg": "#5DADE2",
         "button_text": "#FFFFFF",
     },
-    
-    # 🎄 Праздничные темы (осветлённые и упрощённые)
+    #  Праздничные темы
     "new_year": {
         "bg_main": "linear-gradient(135deg, #1B4F72 0%, #2E86C1 50%, #5DADE2 100%)",
         "bg_sidebar": "rgba(27, 79, 114, 0.9)",
@@ -74,7 +71,6 @@ THEMES = {
         "button_bg": "#5DADE2",
         "button_text": "#FFFFFF",
     },
-    
     "spring": {
         "bg_main": "linear-gradient(135deg, #AED6F1 0%, #D5F5E3 100%)",
         "bg_sidebar": "rgba(174, 214, 241, 0.9)",
@@ -88,7 +84,6 @@ THEMES = {
         "button_bg": "#5DADE2",
         "button_text": "#FFFFFF",
     },
-    
     "summer": {
         "bg_main": "linear-gradient(135deg, #FADBD8 0%, #F9E79F 100%)",
         "bg_sidebar": "rgba(250, 219, 216, 0.9)",
@@ -102,7 +97,6 @@ THEMES = {
         "button_bg": "#F39C12",
         "button_text": "#FFFFFF",
     },
-    
     "childrens_day": {
         "bg_main": "linear-gradient(135deg, #FADBD8 0%, #D7BDE2 50%, #AED6F1 100%)",
         "bg_sidebar": "rgba(250, 219, 216, 0.9)",
@@ -116,7 +110,6 @@ THEMES = {
         "button_bg": "#BB8FCE",
         "button_text": "#FFFFFF",
     },
-    
     "knowledge_day": {
         "bg_main": "linear-gradient(135deg, #85C1E9 0%, #BB8FCE 100%)",
         "bg_sidebar": "rgba(133, 193, 233, 0.9)",
@@ -130,7 +123,6 @@ THEMES = {
         "button_bg": "#5DADE2",
         "button_text": "#FFFFFF",
     },
-    
     "april_fools": {
         "bg_main": "linear-gradient(135deg, #F9E79F 0%, #FADBD8 100%)",
         "bg_sidebar": "rgba(249, 231, 159, 0.9)",
@@ -144,7 +136,6 @@ THEMES = {
         "button_bg": "#F39C12",
         "button_text": "#FFFFFF",
     },
-    
     "magic": {
         "bg_main": "linear-gradient(135deg, #2C3E50 0%, #4A235A 50%, #6C3483 100%)",
         "bg_sidebar": "rgba(44, 62, 80, 0.95)",
@@ -158,7 +149,6 @@ THEMES = {
         "button_bg": "#8E44AD",
         "button_text": "#FFFFFF",
     },
-    
     "scifi": {
         "bg_main": "linear-gradient(135deg, #1B4F72 0%, #2E86C1 100%)",
         "bg_sidebar": "rgba(27, 79, 114, 0.95)",
@@ -172,7 +162,6 @@ THEMES = {
         "button_bg": "#5DADE2",
         "button_text": "#FFFFFF",
     },
-    
     "military": {
         "bg_main": "linear-gradient(135deg, #2C3E50 0%, #5D6D7E 100%)",
         "bg_sidebar": "rgba(44, 62, 80, 0.9)",
