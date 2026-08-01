@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 
 st.set_page_config(page_title=" КР отчёты", page_icon="", layout="wide")
 
-from styles import apply_theme
+from styles import apply_subtle_theme
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
 
