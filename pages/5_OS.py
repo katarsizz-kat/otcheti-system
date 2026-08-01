@@ -411,7 +411,7 @@ def analyze_bot_fails(df):
         if is_fail or is_demand:
             msgs = re.findall(r'Клиент\s*([^)]+):\s*(.*?)(?:\n|$)',
                               str(row.get('Первичное сообщение', '')), re.DOTALL)
-            summary = msgs[0].strip()[:120] if msgs else "Нет текста"
+            summary = msgs[0][1].strip()[:120] if msgs else "Нет текста"  # ← ИСПРАВЛЕНО
             bot_fails.append({
                 '№ Обращения': row.get('Номер обращения', ''),
                 'Дата': row.get('Дата отзыва', ''),
