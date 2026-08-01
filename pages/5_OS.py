@@ -109,42 +109,13 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     border: 2px solid rgba(0, 95, 107, 0.2) !important;
 }
 
-/* ===== SIDEBAR (ФИЛЬТРЫ) ===== */
+/* ===== SIDEBAR ===== */
 section[data-testid="stSidebar"] {
     background: rgba(255, 255, 255, 0.95) !important;
     border-right: 3px solid rgba(0, 95, 107, 0.3) !important;
 }
 
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3 {
-    color: #005F6B !important;
-    font-weight: 700 !important;
-}
-
-section[data-testid="stSidebar"] label {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #2C3E50 !important;
-}
-
-section[data-testid="stSidebar"] .stSelectbox > div > div,
-section[data-testid="stSidebar"] .stMultiselect > div > div {
-    border: 2px solid rgba(0, 95, 107, 0.3) !important;
-    border-radius: 8px !important;
-}
-
-section[data-testid="stSidebar"] .stDateInput > div > div > input {
-    border: 2px solid rgba(0, 95, 107, 0.3) !important;
-    border-radius: 8px !important;
-}
-
-section[data-testid="stSidebar"] .stRadio label {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-}
-
-/* ===== ЗАГРУЗЧИК ФАЙЛОВ В ОСНОВНОМ КОНТЕНТЕ ===== */
+/* ===== ЗАГРУЗЧИК ФАЙЛОВ ===== */
 .element-container:has( > .stFileUploader) {
     background: transparent !important;
     box-shadow: none !important;
@@ -434,7 +405,7 @@ def analyze_bot_fails(df):
         if is_fail or is_demand:
             msgs = re.findall(r'Клиент\s*([^)]+):\s*(.*?)(?:\n|$)',
                               str(row.get('Первичное сообщение', '')), re.DOTALL)
-            summary = msgs[0][1].strip()[:120] if msgs else "Нет текста"  # ← ИСПРАВЛЕНО
+            summary = msgs[0][1].strip()[:120] if msgs else "Нет текста"
             bot_fails.append({
                 '№ Обращения': row.get('Номер обращения', ''),
                 'Дата': row.get('Дата отзыва', ''),
@@ -478,8 +449,8 @@ def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "🌅 Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return "🌙 Добрый вечер!"
-    return " Доброй ночи!"
+    if 18 <= hour < 23: return " Добрый вечер!"
+    return "🌜 Доброй ночи!"
 
 # ==========================================================
 # ГЛАВНАЯ ФУНКЦИЯ
@@ -511,34 +482,42 @@ def main():
         return
     df['Дата отзыва'] = pd.to_datetime(df['Дата отзыва'], errors='coerce')
 
-    # ── ФИЛЬТРЫ (В SIDEBAR) ──
-    st.sidebar.markdown("---")
-    st.sidebar.header("🔍 Фильтры")
-    available_cities = df['Город'].dropna().unique().tolist() if 'Город' in df.columns else []
-    default_cities = [c for c in ['Санкт-Петербург', 'Тюмень'] if c in available_cities]
-    cities = st.sidebar.multiselect("Город/регион:", options=available_cities,
-                                     default=default_cities or available_cities[:3])
-    df_filtered = df[df['Город'].isin(cities)] if cities else df.copy()
+    # ── ФИЛЬТРЫ (В ОСНОВНОМ КОНТЕНТЕ, 2 КОЛОНКИ) ──
+    st.markdown("---")
+    st.markdown("### 🔍 Фильтры")
+    col_filter1, col_filter2 = st.columns(2)
 
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("📅 Период")
-    date_type = st.sidebar.radio("Тип фильтра:", ["Интервал дат", "Отдельные даты"])
-    valid_dates = df_filtered['Дата отзыва'].dropna()
-    if not valid_dates.empty:
-        min_d, max_d = valid_dates.min().date(), valid_dates.max().date()
-        if date_type == "Интервал дат":
-            dr = st.sidebar.date_input("Период:", value=(min_d, max_d),
-                                        min_value=min_d, max_value=max_d)
-            if isinstance(dr, (list, tuple)) and len(dr) == 2:
-                df_filtered = df_filtered[
-                    (df_filtered['Дата отзыва'].dt.date >= dr[0]) &
-                    (df_filtered['Дата отзыва'].dt.date <= dr[1])]
-        else:
-            ud = sorted(valid_dates.dt.date.unique(), reverse=True)
-            sel = st.sidebar.multiselect("Даты:", options=ud,
-                                          default=ud[:7] if len(ud) >= 7 else ud)
-            if sel:
-                df_filtered = df_filtered[df_filtered['Дата отзыва'].dt.date.isin(sel)]
+    with col_filter1:
+        st.markdown("#### ️ Город/регион")
+        available_cities = df['Город'].dropna().unique().tolist() if 'Город' in df.columns else []
+        default_cities = [c for c in ['Санкт-Петербург', 'Тюмень'] if c in available_cities]
+        cities = st.multiselect("Город/регион:", options=available_cities,
+                                 default=default_cities or available_cities[:3],
+                                 key="os_cities")
+        df_filtered = df[df['Город'].isin(cities)] if cities else df.copy()
+
+    with col_filter2:
+        st.markdown("#### 📅 Период")
+        date_type = st.radio("Тип фильтра:", ["Интервал дат", "Отдельные даты"],
+                             key="os_date_type")
+        valid_dates = df_filtered['Дата отзыва'].dropna()
+        if not valid_dates.empty:
+            min_d, max_d = valid_dates.min().date(), valid_dates.max().date()
+            if date_type == "Интервал дат":
+                dr = st.date_input("Период:", value=(min_d, max_d),
+                                    min_value=min_d, max_value=max_d,
+                                    key="os_date_range")
+                if isinstance(dr, (list, tuple)) and len(dr) == 2:
+                    df_filtered = df_filtered[
+                        (df_filtered['Дата отзыва'].dt.date >= dr[0]) &
+                        (df_filtered['Дата отзыва'].dt.date <= dr[1])]
+            else:
+                ud = sorted(valid_dates.dt.date.unique(), reverse=True)
+                sel = st.multiselect("Даты:", options=ud,
+                                      default=ud[:7] if len(ud) >= 7 else ud,
+                                      key="os_dates")
+                if sel:
+                    df_filtered = df_filtered[df_filtered['Дата отзыва'].dt.date.isin(sel)]
 
     valid_dates = df_filtered['Дата отзыва'].dropna()
     if not valid_dates.empty:
@@ -572,7 +551,7 @@ def main():
                 if r['Час_МСК'] < 2 else r['Дата_МСК'].date(), axis=1)
 
             # --- Таблица операторов ---
-            st.markdown("##### 📋 Статистика по операторам")
+            st.markdown("#####  Статистика по операторам")
             op_rows = []
             for op in df_op['Исполнитель'].unique():
                 sub = df_op[df_op['Исполнитель'] == op]
@@ -701,7 +680,7 @@ def main():
         st.subheader("Генерация Excel-отчёта")
         st.info("7 листов: Операторы · Часы · Дни · Жалобы (деталь) · "
                 "Жалобы (укрупн) · Бот. С диаграммами!")
-        if st.button("📥 Сформировать и скачать Excel", type="primary"):
+        if st.button(" Сформировать и скачать Excel", type="primary"):
             with st.spinner("Формируем..."):
                 buf = io.BytesIO()
                 try:
@@ -720,7 +699,7 @@ def main():
                             ws.set_column('A:A', 30)
                             ws.set_column('B:D', 18)
 
-                        # ─ Лист 2: Часы ──
+                        # ── Лист 2: Часы ──
                         if not df_op.empty:
                             h_stats.to_excel(writer, sheet_name='Часы', index=False)
                             ws2 = writer.sheets['Часы']
@@ -747,7 +726,7 @@ def main():
                             except Exception:
                                 pass
 
-                        # ─ Лист 3: Дни ──
+                        # ── Лист 3: Дни ─
                         if not df_op.empty:
                             day_stats = df_op.groupby('Дата_рабочая').size().reset_index(name='Обращений')
                             day_stats = day_stats.sort_values('Обращений', ascending=False)
@@ -799,7 +778,7 @@ def main():
                         except Exception:
                             pass
 
-                        # ── Лист 5: Жалобы укрупнённые ─
+                        # ── Лист 5: Жалобы укрупнённые ──
                         p2_reset.to_excel(writer, sheet_name='Жалобы укрупнённые', index=False)
                         ws5 = writer.sheets['Жалобы укрупнённые']
                         for c, v in enumerate(p2_reset.columns):
