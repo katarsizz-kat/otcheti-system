@@ -147,7 +147,7 @@ if upcoming_events:
     st.markdown("<br>", unsafe_allow_html=True)
     
     if st.button("📅 Открыть полный календарь", use_container_width=True, type="primary"):
-        st.switch_page("pages/5_Calendar.py")
+        st.switch_page("pages/1_Calendar.py")
 else:
     st.info("ℹ️ На ближайшие 30 дней событий не запланировано")
 
