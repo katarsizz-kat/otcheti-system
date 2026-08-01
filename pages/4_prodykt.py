@@ -1,4 +1,4 @@
-# pages/prodykt.py
+"""Страница отчёта по продукту."""
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -14,169 +14,105 @@ warnings.filterwarnings('ignore')
 # ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом!
 st.set_page_config(page_title="🍕 Продукт", page_icon="🍕", layout="wide")
 
+from styles import apply_subtle_theme
+from config.greetings import get_current_greeting
+from config.holidays import get_today_holiday
+
 # ==========================================================
-# ДИНАМИЧЕСКИЕ СТИЛИ (НЕБО ПО ВРЕМЕНИ СУТОК)
+# ПРИМЕНЯЕМ ПРИГЛУШЁННУЮ ТЕМУ
 # ==========================================================
+greeting_data = get_current_greeting()
+holiday = get_today_holiday()
+holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
+apply_subtle_theme(greeting_data["theme"], holiday_effects)
 
-def get_sky_gradient():
-    """Возвращает градиент неба в зависимости от времени суток."""
-    hour = datetime.now().hour
-    
-    if 5 <= hour < 12:  # Утро - восход
-        return {
-            "header": "linear-gradient(135deg, #FF8C42 0%, #5DADE2 100%)",
-            "block": "linear-gradient(135deg, #FFF5EB 0%, #EBF5FB 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "button_bg": "#FF6B35"
-        }
-    elif 12 <= hour < 18:  # День - ясное небо
-        return {
-            "header": "linear-gradient(135deg, #3498DB 0%, #EBF5FB 100%)",
-            "block": "linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "button_bg": "#2E86C1"
-        }
-    elif 18 <= hour < 23:  # Вечер - закат
-        return {
-            "header": "linear-gradient(135deg, #2874A6 0%, #F39C12 100%)",
-            "block": "linear-gradient(135deg, #FDEBD0 0%, #D4E6F1 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#FFFFFF",
-            "button_bg": "#D68910"
-        }
-    else:  # Ночь
-        return {
-            "header": "linear-gradient(135deg, #1B4F72 0%, #5DADE2 100%)",
-            "block": "linear-gradient(135deg, #D6EAF8 0%, #FFFFFF 100%)",
-            "text": "#FFFFFF",
-            "button_text": "#1B4F72",
-            "button_bg": "#2E86C1"
-        }
+# ==========================================================
+# ОСВЕТЛЕНИЕ ФОНА + СТИЛИ ЗАГРУЗЧИКОВ (единый стиль)
+# ==========================================================
+st.markdown("""
+<style>
+/* Полупрозрачный белый слой поверх фона */
+.stApp::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.15);
+    z-index: 0;
+    pointer-events: none;
+}
 
-def apply_dynamic_styles():
-    """Применяет динамические стили."""
-    sky = get_sky_gradient()
-    
-    st.markdown(f"""
-    <style>
-        .stApp {{
-            background: {sky['block']} !important;
-        }}
-        .header-block {{
-            background: {sky['header']};
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-            border: 2px solid rgba(255,255,255,0.3);
-        }}
-        .header-block h1 {{
-            margin: 0;
-            color: {sky['text']};
-            font-size: 36px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }}
-        .header-block p {{
-            margin-top: 8px;
-            margin-bottom: 0;
-            font-size: 18px;
-            color: {sky['text']};
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }}
-        .content-block {{
-            background: rgba(255, 255, 255, 0.95);
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border: 1px solid #D6EAF8;
-        }}
-        .stButton>button {{
-            background: {sky['button_bg']} !important;
-            color: {sky['button_text']} !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: bold !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
-            transition: all 0.3s ease !important;
-        }}
-        .stButton>button:hover {{
-            filter: brightness(1.1) !important;
-            transform: translateY(-2px) !important;
-        }}
-        hr {{
-            border: none;
-            border-top: 2px solid #D6EAF8;
-            margin: 24px 0;
-        }}
-    </style>
-    """, unsafe_allow_html=True)
+/* Убираем все лишние обёртки вокруг загрузчиков */
+.element-container:has( > .stFileUploader) {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
 
-def apply_file_uploader_styles():
-    """Применяет стили для блоков загрузки файлов."""
-    st.markdown("""
-    <style>
-        .element-container:has(> .stFileUploader) {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
-        .element-container:has(> .stFileUploader):hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-        }
-        /* Основной файл - голубой */
-        .element-container:nth-child(2):has(> .stFileUploader) {
-            border-color: #3498DB;
-            background: linear-gradient(135deg, #EBF5FB 0%, #FFFFFF 100%);
-        }
-        /* Файл комбо - жёлтый */
-        .element-container:nth-child(3):has(> .stFileUploader) {
-            border-color: #F1C40F;
-            background: linear-gradient(135deg, #FEF9E7 0%, #FFFFFF 100%);
-        }
-        .stFileUploader [data-testid="stFileUploader"] {
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-        }
-        .stFileUploader label {
-            font-weight: bold;
-            color: #2C3E50;
-        }
-        .stFileUploader > div > div {
-            border: 2px dashed rgba(0,0,0,0.2) !important;
-            border-radius: 8px !important;
-            background: rgba(255,255,255,0.8) !important;
-            transition: all 0.3s ease !important;
-        }
-        .stFileUploader > div > div:hover {
-            border-color: #3498DB !important;
-            background: rgba(255,255,255,1) !important;
-        }
-        .stFileUploader small {
-            color: #7F8C8D;
-            font-size: 12px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+/* Единое поле загрузки */
+.stFileUploader {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 12px;
+    border: 2px dashed rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
 
+.stFileUploader:hover {
+    border-color: #3498DB;
+    background: rgba(255, 255, 255, 1);
+}
+
+/* Зона drag & drop */
+.stFileUploader > div > div {
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Кнопка Upload */
+.stFileUploader button {
+    background: #3498DB !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+}
+
+.stFileUploader button:hover {
+    background: #2980B9 !important;
+}
+
+/* Текст под кнопкой */
+.stFileUploader small {
+    color: #7F8C8D;
+    font-size: 12px;
+}
+
+/* Заголовки над загрузчиками */
+.stMarkdown h4 {
+    margin-bottom: 12px;
+    color: var(--text-primary, #2C3E50);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================================
+# ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ
+# ==========================================================
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return "☀️ Доброе утро!"
+    if 5 <= hour < 12: return "🌅 Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return "🌙 Добрый вечер!"
-    return " Доброй ночи!"
+    if 18 <= hour < 23: return " Добрый вечер!"
+    return "🌜 Доброй ночи!"
 
 # ==========================================================
 # НАСТРОЙКИ
 # ==========================================================
-
 CATEGORY_COLORS = {
     'пиццы': 'FFFFE0',
     'закуски': 'F0FFF0',
@@ -184,7 +120,6 @@ CATEGORY_COLORS = {
     'десерты': 'FFE4E1',
     'комбо и радости': 'FFFFFF'
 }
-
 CATEGORY_MAPPING = {
     'тесто 23 трад': 'пиццы', 'тесто 23 тонкое': 'пиццы',
     'тесто 30 трад': 'пиццы', 'тесто 30 тонкое': 'пиццы',
@@ -198,10 +133,8 @@ CATEGORY_MAPPING = {
     'радости': 'комбо и радости',
     'дополнительно': 'дополнительно'
 }
-
 CATEGORIES_ORDER = ['пиццы', 'закуски', 'напитки', 'десерты', 'комбо и радости']
 CITY_COLUMNS = {'СПБ': {'start': 1, 'end': 7}, 'Тюмень': {'start': 9, 'end': 15}}
-
 PIZZA_CATEGORY_MAPPING = {
     7: ["большая бонанза", "итальянская с моцареллой и пепперони", "8 сыров", "любимая папина пицца"],
     6: ["баварская", "супер папа", "мясная", "маленькая италия", "чеддер и бекон", "4 сыра", "четыре сыра", "с чеддером и беконом"],
@@ -217,10 +150,9 @@ PIZZA_CATEGORY_ORDER = [7, 6, 5, 4, 3, 2, 1, 'Сезонные']
 # ==========================================================
 # ФУНКЦИИ ПАРСИНГА
 # ==========================================================
-
 def clean_dish_name(name):
     if not isinstance(name, str): return ""
-    name = re.sub(r'\(.*?\)', '', name)
+    name = re.sub(r'<.*?>', '', name)
     return ' '.join(name.split()).strip()
 
 def is_half_pizza(name): return '+' in name
@@ -240,11 +172,11 @@ def map_city(legal_entity):
 def normalize_text(text):
     if not isinstance(text, str): return ""
     replacements = {'a': 'а', 'e': 'е', 'o': 'о', 'p': 'р', 'c': 'с', 'y': 'у', 'x': 'х',
-                   'A': 'А', 'E': 'Е', 'O': 'О', 'P': 'Р', 'C': 'С', 'Y': 'У', 'X': 'Х', 'ё': 'е', 'Ё': 'Е'}
+                    'A': 'А', 'E': 'Е', 'O': 'О', 'P': 'Р', 'C': 'С', 'Y': 'У', 'X': 'Х', 'ё': 'е', 'Ё': 'Е'}
     for lat, cyr in replacements.items(): text = text.replace(lat, cyr)
     text = text.lower().replace('"', '')
-    text = re.sub(r'\(.*?\)', '', text)
-    text = re.sub(r'^пицца\s*', '', text)
+    text = re.sub(r'<.*?>', '', text)
+    text = re.sub(r'^пицца\s', '', text)
     text = re.sub(r'\bпромо\b', '', text)
     text = re.sub(r'\bподарок\b', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
@@ -344,7 +276,6 @@ def parse_combo_file(uploaded_file):
 # ==========================================================
 # СОЗДАНИЕ ЛИСТОВ EXCEL
 # ==========================================================
-
 def create_rating_sheet(wb, df_main, df_combo):
     ws = wb.create_sheet('Рейтинг')
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -361,14 +292,12 @@ def create_rating_sheet(wb, df_main, df_combo):
             cell.font = Font(bold=True, size=10)
             cell.border = thin_border
             cell.alignment = Alignment(horizontal='center', vertical='center')
-    
     df_main_rating = df_main.copy()
     df_main_rating['Город'] = df_main_rating['Юридическое лицо'].apply(map_city)
     df_main_rating = df_main_rating[df_main_rating['Город'].notna()]
     df_main_rating = df_main_rating[df_main_rating['Категория_отчёт'].isin(['пиццы', 'закуски', 'напитки', 'десерты', 'комбо и радости', 'завтраки'])]
     df_combo_rating = df_combo.copy()
     all_data = pd.concat([df_main_rating, df_combo_rating], ignore_index=True)
-    
     city_items = {}
     max_items = 0
     for city in ['СПБ', 'Тюмень']:
@@ -379,7 +308,6 @@ def create_rating_sheet(wb, df_main, df_combo):
         items = [{'category': item['Категория_отчёт'], 'name': item['Блюдо_очищенное'], 'checks': int(item['Чеков']), 'sum': round(item['Сумма со скидкой, р.'], 2), 'dishes': int(item['Количество блюд'])} for _, item in city_data.iterrows()]
         city_items[city] = items
         if len(items) > max_items: max_items = len(items)
-    
     data_start_row = 9
     for idx in range(max_items):
         row = data_start_row + idx
@@ -407,7 +335,6 @@ def create_rating_sheet(wb, df_main, df_combo):
                     cell = ws.cell(row, col)
                     cell.fill = fill
                     cell.border = thin_border
-    
     total_row = data_start_row + max_items + 3
     for city in ['СПБ', 'Тюмень']:
         cols = CITY_COLUMNS[city]
@@ -431,7 +358,6 @@ def create_pizza_sheet(wb, df_main_raw):
     border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     spb_data = df_main_raw[df_main_raw['Юридическое лицо'].astype(str).str.contains('СПБ', na=False)].copy()
     tyumen_data = df_main_raw[df_main_raw['Юридическое лицо'].astype(str).str.contains('ООО "ПД"', na=False) & ~df_main_raw['Юридическое лицо'].astype(str).str.contains('СПБ', na=False)].copy()
-    
     def aggregate_data(df):
         result = {}
         for _, row in df.iterrows():
@@ -444,7 +370,6 @@ def create_pizza_sheet(wb, df_main_raw):
             if key not in result: result[key] = {15: 0, 23: 0, 30: 0, 35: 0, 40: 0}
             result[key][size] += int(float(row['Количество блюд']))
         return result
-    
     def create_table(df_data, title, start_col, start_row):
         result = aggregate_data(df_data)
         sorted_data = []
@@ -503,14 +428,12 @@ def create_pizza_sheet(wb, df_main_raw):
             cell = ws.cell(row=total_row, column=col, value=f"=SUM({cl}{data_start}:{cl}{data_end})")
             cell.font = Font(bold=True, size=11)
             cell.border = border
-    
     create_table(spb_data, "СПБ", 1, 1)
     create_table(tyumen_data, "Тюмень", 11, 1)
 
 def create_combo_sheet(wb, df_combo):
     ws = wb.create_sheet("Комбо")
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-    
     ws.cell(1, 1, 'СПБ').font = Font(bold=True, size=12)
     ws.cell(1, 6, 'Тюмень').font = Font(bold=True, size=12)
     headers = ['Блюдо', 'Количество блюд', 'Сумма со скидкой, р.', '% от числа всех комбо']
@@ -520,7 +443,6 @@ def create_combo_sheet(wb, df_combo):
             cell.font = Font(bold=True, size=10)
             cell.border = thin_border
             cell.alignment = Alignment(horizontal='center', vertical='center')
-    
     city_data_1 = {}
     for city in ['СПБ', 'Тюмень']:
         city_df = df_combo[df_combo['Город'] == city].copy()
@@ -528,10 +450,8 @@ def create_combo_sheet(wb, df_combo):
         city_df['%_qty'] = city_df['Количество блюд'] / total_qty if total_qty > 0 else 0
         city_df = city_df.sort_values('%_qty', ascending=False).reset_index(drop=True)
         city_data_1[city] = city_df
-    
     max_items_1 = max(len(city_data_1['СПБ']), len(city_data_1['Тюмень'])) if len(city_data_1['СПБ']) > 0 or len(city_data_1['Тюмень']) > 0 else 0
     total_row_1 = 3 + max_items_1 + 2
-    
     for idx in range(max_items_1):
         row = 3 + idx
         for city, start_col in [('СПБ', 1), ('Тюмень', 6)]:
@@ -544,7 +464,6 @@ def create_combo_sheet(wb, df_combo):
                 c = ws.cell(row, start_col + 3, formula)
                 c.border = thin_border
                 c.number_format = '0.00%'
-    
     for city, start_col in [('СПБ', 1), ('Тюмень', 6)]:
         col_b, col_c, col_d = start_col + 1, start_col + 2, start_col + 3
         total_cell = ws.cell(total_row_1, start_col, 'Итого' if city == 'СПБ' else 'Итого:')
@@ -557,7 +476,6 @@ def create_combo_sheet(wb, df_combo):
         c.font = Font(bold=True)
         c.border = thin_border
         c.number_format = '0.00%'
-    
     start_row_2 = total_row_1 + 3
     ws.cell(start_row_2, 1, 'СПБ').font = Font(bold=True, size=12)
     ws.cell(start_row_2, 6, 'Тюмень').font = Font(bold=True, size=12)
@@ -568,7 +486,6 @@ def create_combo_sheet(wb, df_combo):
             cell.font = Font(bold=True, size=10)
             cell.border = thin_border
             cell.alignment = Alignment(horizontal='center', vertical='center')
-    
     city_data_2 = {}
     for city in ['СПБ', 'Тюмень']:
         city_df = df_combo[df_combo['Город'] == city].copy()
@@ -576,11 +493,9 @@ def create_combo_sheet(wb, df_combo):
         city_df['%_sum'] = city_df['Сумма со скидкой, р.'] / total_sum if total_sum > 0 else 0
         city_df = city_df.sort_values('%_sum', ascending=False).reset_index(drop=True)
         city_data_2[city] = city_df
-    
     max_items_2 = max(len(city_data_2['СПБ']), len(city_data_2['Тюмень'])) if len(city_data_2['СПБ']) > 0 or len(city_data_2['Тюмень']) > 0 else 0
     data_start_2 = start_row_2 + 2
     total_row_2 = data_start_2 + max_items_2 + 2
-    
     for idx in range(max_items_2):
         row = data_start_2 + idx
         for city, start_col in [('СПБ', 1), ('Тюмень', 6)]:
@@ -593,7 +508,6 @@ def create_combo_sheet(wb, df_combo):
                 c = ws.cell(row, start_col + 3, formula)
                 c.border = thin_border
                 c.number_format = '0.00%'
-    
     for city, start_col in [('СПБ', 1), ('Тюмень', 6)]:
         col_b, col_c, col_d = start_col + 1, start_col + 2, start_col + 3
         total_cell = ws.cell(total_row_2, start_col, 'Итого' if city == 'СПБ' else 'Итого:')
@@ -629,24 +543,19 @@ def create_category_share_sheet(wb, df_main_raw, df_combo):
     ws = wb.create_sheet("Доля категорий")
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     CATEGORIES_SHARE = ['Десерты', 'Закуски', 'Напитки', 'Пиццы', 'Пиццы половинки', 'Сеты', 'Соусы']
-    
     df_main_share = df_main_raw.copy()
     df_main_share['Город'] = df_main_share['Юридическое лицо'].apply(map_city)
     df_main_share = df_main_share[df_main_share['Город'].notna()]
     df_main_share['Категория_доля'] = df_main_share.apply(classify_for_share, axis=1)
     df_main_share = df_main_share[df_main_share['Категория_доля'].notna()]
-    
     df_combo_share = df_combo.copy()
     df_combo_share['Категория_доля'] = 'Сеты'
-    
     df_all_share = pd.concat([df_main_share, df_combo_share], ignore_index=True)
     grouped = df_all_share.groupby(['Город', 'Категория_доля']).agg({'Количество блюд': 'sum', 'Сумма со скидкой, р.': 'sum'}).reset_index()
-    
     city_totals = {}
     for city in ['СПБ', 'Тюмень']:
         city_data = grouped[grouped['Город'] == city]
         city_totals[city] = {'qty': city_data['Количество блюд'].sum(), 'sum': city_data['Сумма со скидкой, р.'].sum()}
-    
     city_category_data = {}
     for city in ['СПБ', 'Тюмень']:
         city_data = grouped[grouped['Город'] == city]
@@ -660,10 +569,8 @@ def create_category_share_sheet(wb, df_main_raw, df_combo):
             pct_sum = sum_val / total_sum if total_sum > 0 else 0
             cat_data[cat] = {'qty': qty, 'sum': sum_val, 'pct_qty': pct_qty, 'pct_sum': pct_sum}
         city_category_data[city] = cat_data
-    
     sorted_cats_qty = sorted(CATEGORIES_SHARE, key=lambda cat: city_category_data['СПБ'][cat]['pct_qty'], reverse=True)
     sorted_cats_sum = sorted(CATEGORIES_SHARE, key=lambda cat: city_category_data['СПБ'][cat]['pct_sum'], reverse=True)
-    
     ws.cell(1, 1, 'СПБ').font = Font(bold=True, size=12)
     ws.cell(1, 6, 'Тюмень').font = Font(bold=True, size=12)
     headers_1 = ['Категория', 'кол-во', 'выручка', '%']
@@ -697,7 +604,6 @@ def create_category_share_sheet(wb, df_main_raw, df_combo):
         c.font = Font(bold=True)
         c.border = thin_border
         c.number_format = '0.00%'
-    
     start_row_2 = total_row_1 + 3
     ws.cell(start_row_2, 1, 'СПБ').font = Font(bold=True, size=12)
     ws.cell(start_row_2, 6, 'Тюмень').font = Font(bold=True, size=12)
@@ -737,25 +643,20 @@ def create_category_dynamics_sheet(wb, df_main_raw, df_combo):
     ws = wb.create_sheet("Доля категорий динамика")
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     CATEGORIES_DYN = ['Десерты', 'Закуски', 'Напитки', 'Пиццы', 'Пиццы половинки', 'Сеты', 'Соусы']
-    
     df_main_dyn = df_main_raw.copy()
     df_main_dyn['Город'] = df_main_dyn['Юридическое лицо'].apply(map_city)
     df_main_dyn = df_main_dyn[df_main_dyn['Город'].notna()]
     df_main_dyn['Категория_доля'] = df_main_dyn.apply(classify_for_share, axis=1)
     df_main_dyn = df_main_dyn[df_main_dyn['Категория_доля'].notna()]
-    
     df_combo_dyn = df_combo.copy()
     df_combo_dyn['Категория_доля'] = 'Сеты'
-    
     df_all_dyn = pd.concat([df_main_dyn, df_combo_dyn], ignore_index=True)
     grouped = df_all_dyn.groupby(['Город', 'Категория_доля']).agg({'Количество блюд': 'sum', 'Сумма со скидкой, р.': 'sum'}).reset_index()
-    
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=9)
     cell = ws.cell(1, 1, "Июль 2026г.")
     cell.font = Font(bold=True, size=14)
     cell.alignment = Alignment(horizontal='center', vertical='center')
     cell.fill = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
-    
     ws.cell(3, 1, 'СПБ').font = Font(bold=True, size=12)
     ws.cell(3, 1, 'СПБ').fill = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
     headers = ['Категория', 'Доля по кол-ву %', 'Доля по выручке%']
@@ -764,7 +665,6 @@ def create_category_dynamics_sheet(wb, df_main_raw, df_combo):
         cell.font = Font(bold=True, size=10)
         cell.border = thin_border
         cell.alignment = Alignment(horizontal='center', vertical='center')
-    
     spb_data = grouped[grouped['Город'] == 'СПБ']
     total_qty_spb = spb_data['Количество блюд'].sum()
     total_sum_spb = spb_data['Сумма со скидкой, р.'].sum()
@@ -782,7 +682,6 @@ def create_category_dynamics_sheet(wb, df_main_raw, df_combo):
         c2 = ws.cell(row, 3, pct_sum)
         c2.border = thin_border
         c2.number_format = '0.00%'
-    
     ws.cell(14, 1, 'Тюмень').font = Font(bold=True, size=12)
     ws.cell(14, 1, 'Тюмень').fill = PatternFill(start_color='D9E1F2', end_color='D9E1F2', fill_type='solid')
     for idx, header in enumerate(headers, 1):
@@ -790,7 +689,6 @@ def create_category_dynamics_sheet(wb, df_main_raw, df_combo):
         cell.font = Font(bold=True, size=10)
         cell.border = thin_border
         cell.alignment = Alignment(horizontal='center', vertical='center')
-    
     tmn_data = grouped[grouped['Город'] == 'Тюмень']
     total_qty_tmn = tmn_data['Количество блюд'].sum()
     total_sum_tmn = tmn_data['Сумма со скидкой, р.'].sum()
@@ -810,18 +708,11 @@ def create_category_dynamics_sheet(wb, df_main_raw, df_combo):
         c2.number_format = '0.00%'
 
 # ==========================================================
-# ПРИМЕНЯЕМ СТИЛИ
-# ==========================================================
-apply_dynamic_styles()
-apply_file_uploader_styles()
-
-# ==========================================================
 # ИНТЕРФЕЙС
 # ==========================================================
-
 st.markdown(f"""
 <div class="header-block">
-    <h1> Отчет Продукт</h1>
+    <h1>🍕 Продукт</h1>
     <p>{greeting_by_time()}</p>
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">Генератор сводного отчёта по продукту</p>
 </div>
@@ -833,43 +724,39 @@ st.markdown("""
     <p>Загрузите два файла для формирования отчета:</p>
     <ol>
         <li><b>Основной файл</b> — OLAP-отчет с пиццами, закусками и т.д.</li>
-        <li><b>Файл комбо</b> — OLAP-отчет комбо)</li>
+        <li><b>Файл комбо</b> — OLAP-отчет комбо</li>
     </ol>
     <p>💡 <i>Названия файлов могут быть любыми — важна только структура данных внутри.</i></p>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="content-block">', unsafe_allow_html=True)
 st.markdown("### 📂 Загрузка файлов")
 col1, col2 = st.columns(2)
 
 with col1:
     st.markdown("#### 📁 Основной файл")
     file_main = st.file_uploader("Загрузите Excel", type=['xlsx'], key="main", label_visibility="collapsed")
+
 with col2:
     st.markdown("#### 📁 Файл комбо")
     file_combo = st.file_uploader("Загрузите Excel", type=['xlsx'], key="combo", label_visibility="collapsed")
-st.markdown('</div>', unsafe_allow_html=True)
 
 if file_main and file_combo:
     st.markdown('<div class="content-block">', unsafe_allow_html=True)
-    if st.button(" Сгенерировать отчёт", type="primary", use_container_width=True):
+    if st.button("🚀 Сгенерировать отчёт", type="primary", use_container_width=True):
         with st.spinner("⏳ Формирую отчёт..."):
             try:
                 df_main_raw = read_main_file_raw(file_main)
                 file_main.seek(0)
                 df_main = parse_main_file(file_main)
                 df_combo = parse_combo_file(file_combo)
-                
                 wb = Workbook()
                 if 'Sheet' in wb.sheetnames: del wb['Sheet']
-                
                 create_rating_sheet(wb, df_main, df_combo)
                 create_pizza_sheet(wb, df_main_raw)
                 create_combo_sheet(wb, df_combo)
                 create_category_share_sheet(wb, df_main_raw, df_combo)
                 create_category_dynamics_sheet(wb, df_main_raw, df_combo)
-                
                 output = io.BytesIO()
                 wb.save(output)
                 output.seek(0)
