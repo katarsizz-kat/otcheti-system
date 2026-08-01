@@ -419,3 +419,156 @@ def apply_theme(theme: str, holiday_effects: list = None):
         base_css + effects_css + holiday_css,
         unsafe_allow_html=True
     )
+def apply_subtle_theme(theme: str, holiday_effects: list = None):
+    """
+    Приглушённая тема для страниц отчётов.
+    - Более светлый фон
+    - Без облаков/звёзд
+    - Улучшенная читаемость текста
+    """
+    if holiday_effects is None:
+        holiday_effects = []
+
+    # Принудительная светлая тема Streamlit
+    st.config.set_option("theme.base", "light")
+    st.config.set_option("theme.backgroundColor", "#FFFFFF")
+    st.config.set_option("theme.primaryColor", "#005F6B")
+    st.config.set_option("theme.secondaryBackgroundColor", "#F5F5DC")
+    st.config.set_option("theme.textColor", "#2C2C2C")
+
+    # Загрузка цветов темы
+    colors = get_theme_colors(theme)
+
+    # Определяем, тёмная ли тема
+    is_dark_theme = theme in ["night", "new_year", "magic", "scifi", "military"]
+    logo_opacity = "0.85" if is_dark_theme else "0.6"
+
+    # Приглушённые стили (без эффектов облаков/звёзд)
+    subtle_css = (
+        "<style>"
+        
+        # CSS-переменные
+        ":root { "
+        f"  --bg-main: {colors['bg_main']}; "
+        f"  --bg-sidebar: {colors['bg_sidebar']}; "
+        f"  --header-bg: {colors['header_bg']}; "
+        f"  --header-text: {colors['header_text']}; "
+        f"  --text-primary: {colors['text_primary']}; "
+        f"  --text-secondary: {colors['text_secondary']}; "
+        f"  --card-bg: {colors['card_bg']}; "
+        f"  --card-border: {colors['card_border']}; "
+        f"  --accent: {colors['accent']}; "
+        f"  --button-bg: {colors['button_bg']}; "
+        f"  --button-text: {colors['button_text']}; "
+        "} "
+
+        # Фон приложения (без эффектов)
+        " .stApp { "
+        "   background: var(--bg-main) !important; "
+        "   min-height: 100vh; "
+        " } "
+
+        # Верхняя панель
+        " header { "
+        "   background: transparent !important; "
+        "   border-bottom: none !important; "
+        " } "
+
+        # Боковая панель
+        " section[data-testid='stSidebar'] { "
+        "   background: var(--bg-sidebar) !important; "
+        "   border-right: 1px solid var(--card-border); "
+        " } "
+        " section[data-testid='stSidebar'] p, "
+        " section[data-testid='stSidebar'] h1, "
+        " section[data-testid='stSidebar'] h2, "
+        " section[data-testid='stSidebar'] h3, "
+        " section[data-testid='stSidebar'] .stMarkdown, "
+        " section[data-testid='stSidebar'] label, "
+        " section[data-testid='stSidebar'] button { "
+        "   color: var(--text-primary) !important; "
+        "   font-size: 15px !important; "
+        " } "
+
+        # HEADER-BLOCK (заголовок страницы)
+        " .header-block { "
+        "   background: var(--header-bg); "
+        "   padding: 32px; "
+        "   border-radius: 20px; "
+        "   margin-bottom: 32px; "
+        "   box-shadow: 0 8px 24px rgba(0,0,0,0.15); "
+        "   border: 2px solid rgba(255,255,255,0.3); "
+        " } "
+        " .header-block h1 { "
+        "   margin: 0 0 16px 0; "
+        "   color: var(--header-text) !important; "
+        "   font-size: 36px; "
+        "   font-weight: 700; "
+        "   text-shadow: 2px 2px 4px rgba(0,0,0,0.3); "
+        " } "
+        " .header-block p { "
+        "   margin: 0 0 8px 0; "
+        "   color: var(--header-text) !important; "
+        "   font-size: 18px; "
+        "   font-weight: 500; "
+        "   text-shadow: 1px 1px 2px rgba(0,0,0,0.2); "
+        " } "
+
+        # Кнопки
+        " div[data-testid='stButton'] > button, "
+        " .stButton > button { "
+        f"   background: {colors['button_bg']} !important; "
+        f"   color: {colors['button_text']} !important; "
+        "   border: none !important; "
+        "   border-radius: 10px !important; "
+        "   font-weight: 600 !important; "
+        "   font-size: 16px !important; "
+        "   transition: all 0.3s ease !important; "
+        "   text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; "
+        " } "
+        " div[data-testid='stButton'] > button:hover, "
+        " .stButton > button:hover { "
+        "   filter: brightness(1.15) !important; "
+        "   transform: translateY(-2px) !important; "
+        "   box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important; "
+        " } "
+
+        # Текст (увеличенный контраст)
+        " h1, h2, h3, h4, h5, h6 { "
+        "   color: var(--text-primary) !important; "
+        "   font-weight: 600 !important; "
+        " } "
+        " p, label, div[data-testid='stMarkdownContainer'] p, "
+        " div[data-testid='stMarkdownContainer'] label { "
+        "   color: var(--text-primary) !important; "
+        "   font-size: 16px !important; "
+        "   line-height: 1.6 !important; "
+        " } "
+
+        # Загрузчики файлов
+        " .stFileUploader { "
+        "   background: rgba(255,255,255,0.9); "
+        "   padding: 20px; "
+        "   border-radius: 12px; "
+        "   border: 2px dashed rgba(0,0,0,0.15); "
+        " } "
+
+        # Разделители
+        " hr { "
+        "   border: none; "
+        "   border-top: 2px solid var(--card-border); "
+        "   margin: 24px 0; "
+        " } "
+
+        # Адаптивность
+        " @media (max-width: 768px) { "
+        "   .header-block h1 { font-size: 28px; } "
+        "   .header-block p { font-size: 16px; } "
+        "   div[data-testid='stButton'] > button { font-size: 14px !important; } "
+        " } "
+
+        "</style>"
+    )
+
+    # Выводим стили (БЕЗ эффектов облаков/звёзд)
+    st.markdown(subtle_css, unsafe_allow_html=True)
