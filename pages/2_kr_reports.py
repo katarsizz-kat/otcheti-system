@@ -22,6 +22,45 @@ holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict
 apply_theme(greeting_data["theme"], holiday_effects)
 
 # ==========================================================
+# УВЕЛИЧЕННЫЙ ПЕРЕКЛЮЧАТЕЛЬ ТИПА ОТЧЁТА (2x больше)
+# ==========================================================
+st.markdown("""
+<style>
+/* Увеличенный переключатель типа отчёта */
+div[data-testid="stRadio"] > div {
+    transform: scale(2);
+    transform-origin: left center;
+    margin-bottom: 40px !important;
+    margin-top: 20px !important;
+}
+
+div[data-testid="stRadio"] label {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+}
+
+div[data-testid="stRadio"] > div > div {
+    gap: 12px !important;
+}
+
+/* Увеличенные кружочки radio-кнопок */
+div[data-testid="stRadio"] div[data-testid="stWidget"] {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+}
+
+/* Заголовок секции */
+div[data-testid="stRadio"] > div > div > div:first-child {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    margin-bottom: 15px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================================
 # ОСВЕТЛЕНИЕ ФОНА
 # ==========================================================
 st.markdown("""
@@ -183,7 +222,7 @@ def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "🌅 Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return " Добрый вечер!"
+    if 18 <= hour < 23: return "🌙 Добрый вечер!"
     return "🌜 Доброй ночи!"
 
 def calc_stats(df, threshold=None, filter_low_reviews=False):
@@ -456,7 +495,7 @@ def write_analysis_sheet(writer, comp_all, pos_all):
 # ==========================================================
 st.markdown(f"""
 <div class="header-block">
-    <h1>📊 КР отчёты</h1>
+    <h1> КР отчёты</h1>
     <p>{greeting_by_time()}</p>
     <p style="margin-top:10px; margin-bottom:0; font-size:16px;">
         Формирование отчётов по отзывам из трёх источников
@@ -475,7 +514,7 @@ st.markdown("### 📂 Загрузка файлов")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.markdown("#### 📱  Сайт")
+    st.markdown("####  Сайт")
     file1 = st.file_uploader("Загрузите Excel", type=["xlsx", "xls"], key="site", label_visibility="collapsed")
 
 with col2:
@@ -516,8 +555,10 @@ generate_report = st.button("🚀 Сформировать отчёт", use_cont
 # ==========================================================
 if generate_report:
     if not (file1 and file2 and file3):
-        st.error("️ Пожалуйста, загрузите все три Excel-файла.")
+        st.error("⚠️ Пожалуйста, загрузите все три Excel-файла.")
         st.stop()
+    
+    is_month = report_type == "📅 КР месяц"
     
     if is_month:
         period_text = f"{selected_month} ({selected_year}г)"
@@ -527,7 +568,7 @@ if generate_report:
         end_of_week = start_of_week + timedelta(days=6)
         period_text = f"{start_of_week.strftime('%d.%m')} - {end_of_week.strftime('%d.%m.%Y')}"
     
-    with st.spinner(" Обработка данных..."):
+    with st.spinner("⏳ Обработка данных..."):
         try:
             # --- Сайт ---
             df1 = pd.read_excel(file1)
@@ -552,16 +593,18 @@ if generate_report:
             
             # --- Геосервисы ---
             df3 = pd.read_excel(file3)
+            
+            # КР Месяц: удаляем удалённые отзывы, КР Неделя: НЕ удаляем
             if "Статус отзыва" in df3.columns and is_month:
                 df3 = df3[df3["Статус отзыва"] != "Удален"].copy()
             
             if "Название филиала" in df3.columns and "Адрес филиала" in df3.columns:
                 df3["Ресторан"] = df3.apply(
-                    lambda r: map_restaurant_address(str(r["Название филиала"])) or map_restaurant_address(str(r["Адрес филиала"])), 
+                    lambda r: map_restaurant_address(str(r["Название филиала"]), is_month) or map_restaurant_address(str(r["Адрес филиала"]), is_month), 
                     axis=1
                 )
             elif "Адрес филиала" in df3.columns:
-                df3["Ресторан"] = df3["Адрес филиала"].apply(map_restaurant_address)
+                df3["Ресторан"] = df3["Адрес филиала"].apply(lambda x: map_restaurant_address(x, is_month))
             else:
                 df3["Ресторан"] = None
             
@@ -602,8 +645,17 @@ if generate_report:
             
             comp_all = calc_summary_fast(df_all_texts, COMPLAINT_KEYWORDS)
             pos_all = calc_summary_fast(df_all_texts, POSITIVE_KEYWORDS)
-            comp_all = add_summary_totals(add_summary_totals(comp_all, "СПб", COMPLAINT_KEYWORDS), "Тюмень", COMPLAINT_KEYWORDS)
-            pos_all = add_summary_totals(add_summary_totals(pos_all, "СПб", POSITIVE_KEYWORDS), "Тюмень", POSITIVE_KEYWORDS)
+            
+            if is_month:
+                spb_list = SPB_ORDER
+                tmn_list = TMN_ORDER
+            else:
+                all_restaurants_in_data = sorted(df_all_texts["Ресторан"].unique())
+                spb_list = [r for r in all_restaurants_in_data if "ТМН" not in str(r)]
+                tmn_list = [r for r in all_restaurants_in_data if "ТМН" in str(r)]
+            
+            comp_all = add_summary_totals(add_summary_totals(comp_all, "СПб", COMPLAINT_KEYWORDS, spb_list, tmn_list), "Тюмень", COMPLAINT_KEYWORDS, spb_list, tmn_list)
+            pos_all = add_summary_totals(add_summary_totals(pos_all, "СПб", POSITIVE_KEYWORDS, spb_list, tmn_list), "Тюмень", POSITIVE_KEYWORDS, spb_list, tmn_list)
             
             # =====================================================
             # СОХРАНЕНИЕ EXCEL
@@ -647,7 +699,10 @@ if generate_report:
             
             st.success(f"✅ Отчёт за {period_text} успешно сформирован!")
             
-            file_name = f"КР_{selected_month}_{selected_year}.xlsx" if is_month else f"КР_неделя_{start_of_week.strftime('%d%m')}-{end_of_week.strftime('%d%m')}.xlsx"
+            if is_month:
+                file_name = f"КР_{selected_month}_{selected_year}.xlsx"
+            else:
+                file_name = f"КР_неделя_{start_of_week.strftime('%d%m')}-{end_of_week.strftime('%d%m')}.xlsx"
             
             st.download_button(
                 "📥 Скачать Excel", output,
@@ -655,9 +710,9 @@ if generate_report:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
             
-            st.subheader(" Общий итог")
+            st.subheader("📊 Общий итог")
             st.dataframe(stats_all, use_container_width=True)
             
         except Exception as e:
-            st.error(f"❌ Произошла ошибка при обработке: {e}")
+            st.error(f" Произошла ошибка при обработке: {e}")
             st.exception(e)
