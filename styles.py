@@ -3,6 +3,7 @@ import streamlit as st
 from config.theme import get_theme_colors
 from config.effects import get_theme_effect, get_holiday_effects
 
+
 def apply_theme(theme: str, holiday_effects: list = None):
     """
     Применяет тему и эффекты к приложению.
@@ -15,27 +16,47 @@ def apply_theme(theme: str, holiday_effects: list = None):
     """
     if holiday_effects is None:
         holiday_effects = []
-    
+
     # 1. Принудительная светлая тема Streamlit
     st.config.set_option("theme.base", "light")
     st.config.set_option("theme.backgroundColor", "#FFFFFF")
     st.config.set_option("theme.primaryColor", "#005F6B")
     st.config.set_option("theme.secondaryBackgroundColor", "#F5F5DC")
     st.config.set_option("theme.textColor", "#2C2C2C")
-    
+
     # 2. Загрузка цветов темы
     colors = get_theme_colors(theme)
-    
-    # 3. Базовые стили интерфейса
+
+    # Определяем, тёмная ли тема (для логотипов)
+    is_dark_theme = theme in ["night", "new_year", "magic", "scifi", "military"]
+    logo_opacity = "0.85" if is_dark_theme else "0.6"
+
+    # 3. Базовые стили интерфейса с CSS-переменными
     base_css = (
         "<style>"
-        
-        # ===== ПРИНУДИТЕЛЬНАЯ СВЕТЛАЯ ТЕМА =====
+
+        # ===== CSS-ПЕРЕМЕННЫЕ ДЛЯ ТЕМЫ =====
+        ":root { "
+        f"  --bg-main: {colors['bg_main']}; "
+        f"  --bg-sidebar: {colors['bg_sidebar']}; "
+        f"  --header-bg: {colors['header_bg']}; "
+        f"  --header-text: {colors['header_text']}; "
+        f"  --text-primary: {colors['text_primary']}; "
+        f"  --text-secondary: {colors['text_secondary']}; "
+        f"  --card-bg: {colors['card_bg']}; "
+        f"  --card-border: {colors['card_border']}; "
+        f"  --accent: {colors['accent']}; "
+        f"  --button-bg: {colors['button_bg']}; "
+        f"  --button-text: {colors['button_text']}; "
+        f"  --logo-opacity: {logo_opacity}; "
+        "} "
+
+        # ===== ПРИНУДИТЕЛЬНАЯ СВЕТЛАЯ ТЕМА STREAMLIT =====
         " .stApp { "
-        "   background: " + colors['bg_main'] + " !important; "
+        "   background: var(--bg-main) !important; "
         "   min-height: 100vh; "
         " } "
-        
+
         # ===== ВЕРХНЯЯ ПАНЕЛЬ (продолжение фона) =====
         " header { "
         "   background: transparent !important; "
@@ -44,11 +65,11 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " .stApp [data-testid='stHeader'] { "
         "   background: transparent !important; "
         " } "
-        
+
         # ===== БОКОВАЯ ПАНЕЛЬ (полупрозрачная с оттенком фона) =====
         " section[data-testid='stSidebar'] { "
-        "   background: " + colors['bg_sidebar'] + " !important; "
-        "   border-right: 1px solid " + colors['card_border'] + "; "
+        "   background: var(--bg-sidebar) !important; "
+        "   border-right: 1px solid var(--card-border); "
         "   opacity: 0.95; "
         " } "
         " section[data-testid='stSidebar'] > div { "
@@ -61,12 +82,12 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " section[data-testid='stSidebar'] .stMarkdown, "
         " section[data-testid='stSidebar'] label, "
         " section[data-testid='stSidebar'] button { "
-        "   color: " + colors['text_primary'] + " !important; "
+        "   color: var(--text-primary) !important; "
         " } "
-        
+
         # ===== ПРИВЕТСТВЕННЫЙ БЛОК =====
         " .welcome-block { "
-        "   background: " + colors['header_bg'] + "; "
+        "   background: var(--header-bg); "
         "   padding: 32px; "
         "   border-radius: 20px; "
         "   margin-bottom: 32px; "
@@ -82,27 +103,27 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " .welcome-title { "
         "   font-size: 36px; "
         "   font-weight: 700; "
-        "   color: " + colors['header_text'] + " !important; "
+        "   color: var(--header-text) !important; "
         "   margin: 0 0 8px 0; "
         "   text-shadow: 2px 2px 4px rgba(0,0,0,0.2); "
         " } "
         " .welcome-subtitle { "
         "   font-size: 18px; "
-        "   color: " + colors['header_text'] + " !important; "
+        "   color: var(--header-text) !important; "
         "   margin: 0 0 16px 0; "
         "   opacity: 0.95; "
         " } "
         " .welcome-hint { "
         "   font-size: 16px; "
-        "   color: " + colors['header_text'] + " !important; "
+        "   color: var(--header-text) !important; "
         "   margin: 0; "
         "   opacity: 0.9; "
         " } "
-        
+
         # ===== КАРТОЧКИ ОТЧЁТОВ (цветные, полупрозрачные) =====
         " .report-card { "
-        "   background: " + colors['card_bg'] + "; "
-        "   border: 2px solid " + colors['card_border'] + "; "
+        "   background: var(--card-bg); "
+        "   border: 2px solid var(--card-border); "
         "   border-radius: 16px; "
         "   padding: 24px; "
         "   margin-bottom: 20px; "
@@ -113,7 +134,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " .report-card:hover { "
         "   transform: translateY(-6px) scale(1.02); "
         "   box-shadow: 0 12px 32px rgba(0,0,0,0.2); "
-        "   border-color: " + colors['accent'] + "; "
+        "   border-color: var(--accent); "
         " } "
         " .card-icon { "
         "   font-size: 42px; "
@@ -122,75 +143,97 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " .card-title { "
         "   font-size: 22px; "
         "   font-weight: 700; "
-        "   color: " + colors['text_primary'] + " !important; "
+        "   color: var(--text-primary) !important; "
         "   margin: 0 0 8px 0; "
         " } "
         " .card-description { "
         "   font-size: 14px; "
-        "   color: " + colors['text_secondary'] + " !important; "
+        "   color: var(--text-secondary) !important; "
         "   margin: 0 0 16px 0; "
         " } "
         " .card-link { "
         "   font-size: 14px; "
         "   font-weight: 600; "
-        "   color: " + colors['accent'] + " !important; "
+        "   color: var(--accent) !important; "
         " } "
-        
-        # ===== КНОПКИ =====
+
+        # ===== КНОПКИ (улучшенные селекторы) =====
         " .stButton>button { "
-        "   background: " + colors['button_bg'] + " !important; "
-        "   color: " + colors['button_text'] + " !important; "
+        "   background: var(--button-bg) !important; "
+        "   color: var(--button-text) !important; "
         "   border: none !important; "
         "   border-radius: 10px !important; "
         "   font-weight: 600 !important; "
         "   transition: all 0.3s ease !important; "
+        "   text-shadow: 0 1px 2px rgba(0,0,0,0.15) !important; "
         " } "
         " .stButton>button:hover { "
         "   filter: brightness(1.1) !important; "
         "   transform: translateY(-2px) !important; "
         "   box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; "
         " } "
-        
+
+        # ===== КНОПКИ PRIMARY =====
+        " .stButton>button[kind='primary'] { "
+        "   background: var(--button-bg) !important; "
+        "   color: var(--button-text) !important; "
+        " } "
+
+        # ===== КНОПКИ SECONDARY =====
+        " .stButton>button[kind='secondary'] { "
+        "   background: var(--card-bg) !important; "
+        "   color: var(--text-primary) !important; "
+        "   border: 2px solid var(--card-border) !important; "
+        "   text-shadow: none !important; "
+        " } "
+
+        # ===== КНОПКИ TERTIARY =====
+        " .stButton>button[kind='tertiary'] { "
+        "   background: transparent !important; "
+        "   color: var(--accent) !important; "
+        "   text-shadow: none !important; "
+        " } "
+
         # ===== КОНТЕНТНЫЕ БЛОКИ =====
         " .content-block { "
-        "   background: " + colors['card_bg'] + "; "
+        "   background: var(--card-bg); "
         "   padding: 24px; "
         "   border-radius: 12px; "
         "   margin-bottom: 24px; "
-        "   border: 1px solid " + colors['card_border'] + "; "
+        "   border: 1px solid var(--card-border); "
         "   backdrop-filter: blur(10px); "
         " } "
-        
+
         # ===== ТЕКСТ =====
         " h1, h2, h3, h4, h5, h6 { "
-        "   color: " + colors['text_primary'] + " !important; "
+        "   color: var(--text-primary) !important; "
         " } "
         " p, label, div[data-testid='stMarkdownContainer'] p, "
         " div[data-testid='stMarkdownContainer'] label { "
-        "   color: " + colors['text_primary'] + " !important; "
+        "   color: var(--text-primary) !important; "
         " } "
-        
+
         # ===== ТАБЛИЦЫ (стандартные) =====
         " .stDataFrame { "
         "   border-radius: 8px; "
         "   overflow: hidden; "
         " } "
-        
+
         # ===== ЗАГРУЗЧИКИ ФАЙЛОВ =====
         " .stFileUploader { "
         "   background: rgba(255,255,255,0.5); "
         "   padding: 15px; "
         "   border-radius: 10px; "
-        "   border: 2px dashed " + colors['card_border'] + "; "
+        "   border: 2px dashed var(--card-border); "
         " } "
-        
+
         # ===== РАЗДЕЛИТЕЛИ =====
         " hr { "
         "   border: none; "
-        "   border-top: 2px solid " + colors['card_border'] + "; "
+        "   border-top: 2px solid var(--card-border); "
         "   margin: 24px 0; "
         " } "
-        
+
         # ===== АНИМАЦИИ =====
         " @keyframes float { "
         "   0%, 100% { transform: translateY(0); } "
@@ -208,12 +251,23 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   from { opacity: 0; transform: scale(0.8); } "
         "   to { opacity: 1; transform: scale(1); } "
         " } "
-        
+
         # ===== КЛАССЫ АНИМАЦИИ =====
         " .fade-in { animation: fadeIn 0.6s ease-out; } "
         " .scale-in { animation: scaleIn 0.4s ease-out; } "
-        
-        # ===== СТИЛИ ДЛЯ КНОПКИ-ДИНОЗАВРА В ПОДВАЛЕ =====
+
+        # ===== СТИЛИ ДЛЯ ЛОГОТИПОВ В ПОДВАЛЕ =====
+        " .footer-logo img { "
+        f"   opacity: {logo_opacity}; "
+        "   transition: opacity 0.3s ease, filter 0.3s ease; "
+        "   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); "
+        " } "
+        " .footer-logo img:hover { "
+        "   opacity: 1; "
+        "   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)) brightness(1.1); "
+        " } "
+
+        # ===== СТИЛИ ДЛЯ КНОПКИ-ДИНОЗАВРА =====
         " .dino-footer-button { "
         "   text-align: left; "
         "   margin-bottom: 16px; "
@@ -236,7 +290,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " .dino-emoji-btn:active { "
         "   transform: scale(1.1); "
         " } "
-        
+
         # ===== СТИЛИ ДЛЯ МОДАЛЬНОГО ОКНА =====
         " .dino-modal-overlay { "
         "   display: none; "
@@ -308,7 +362,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   font-weight: 600; "
         "   line-height: 1.6; "
         " } "
-        
+
         # ===== АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ =====
         " @media (max-width: 768px) { "
         "   .dino-emoji-btn { font-size: 28px; } "
@@ -318,17 +372,18 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   .welcome-subtitle { font-size: 16px; } "
         "   .report-card { padding: 16px; } "
         "   .card-title { font-size: 18px; } "
+        "   .footer-logo img { max-height: 30px; } "
         " } "
-        
+
         "</style>"
     )
-    
+
     # 4. Эффекты времени суток
     effects_css = get_theme_effect(theme)
-    
+
     # 5. Праздничные эффекты
     holiday_css = get_holiday_effects(holiday_effects)
-    
+
     # Выводим всё вместе
     st.markdown(
         base_css + effects_css + holiday_css,
