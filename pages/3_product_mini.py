@@ -10,7 +10,7 @@ from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="Универсальный отчёт", layout="wide", page_icon="📊")
+st.set_page_config(page_title="🍕 Продукт мини", page_icon="🍕", layout="wide")
 
 # Стили
 st.markdown("""
