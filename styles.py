@@ -157,41 +157,39 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   color: var(--accent) !important; "
         " } "
 
-        # ===== КНОПКИ (улучшенные селекторы) =====
-        " .stButton>button { "
-        "   background: var(--button-bg) !important; "
-        "   color: var(--button-text) !important; "
+        # ===== КНОПКИ (УСИЛЕННЫЕ СЕЛЕКТОРЫ) =====
+        " div[data-testid='stButton'] > button, "
+        " div[data-testid='stButton'] > button[kind='primary'], "
+        " div[data-testid='stButton'] > button[kind='secondary'], "
+        " div[data-testid='stButton'] > button[kind='tertiary'], "
+        " div[data-testid='stDownloadButton'] > button, "
+        " .stButton > button, "
+        " .stButton > button[kind='primary'], "
+        " .stButton > button[kind='secondary'], "
+        " .stButton > button[kind='tertiary'] { "
+        f"   background: {colors['button_bg']} !important; "
+        f"   color: {colors['button_text']} !important; "
         "   border: none !important; "
         "   border-radius: 10px !important; "
         "   font-weight: 600 !important; "
+        "   font-size: 16px !important; "
         "   transition: all 0.3s ease !important; "
-        "   text-shadow: 0 1px 2px rgba(0,0,0,0.15) !important; "
+        "   text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; "
+        "   padding: 0.5rem 1rem !important; "
         " } "
-        " .stButton>button:hover { "
-        "   filter: brightness(1.1) !important; "
+
+        " div[data-testid='stButton'] > button:hover, "
+        " div[data-testid='stButton'] > button[kind='primary']:hover, "
+        " div[data-testid='stButton'] > button[kind='secondary']:hover, "
+        " div[data-testid='stButton'] > button[kind='tertiary']:hover, "
+        " div[data-testid='stDownloadButton'] > button:hover, "
+        " .stButton > button:hover, "
+        " .stButton > button[kind='primary']:hover, "
+        " .stButton > button[kind='secondary']:hover, "
+        " .stButton > button[kind='tertiary']:hover { "
+        "   filter: brightness(1.15) !important; "
         "   transform: translateY(-2px) !important; "
-        "   box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; "
-        " } "
-
-        # ===== КНОПКИ PRIMARY =====
-        " .stButton>button[kind='primary'] { "
-        "   background: var(--button-bg) !important; "
-        "   color: var(--button-text) !important; "
-        " } "
-
-        # ===== КНОПКИ SECONDARY =====
-        " .stButton>button[kind='secondary'] { "
-        "   background: var(--card-bg) !important; "
-        "   color: var(--text-primary) !important; "
-        "   border: 2px solid var(--card-border) !important; "
-        "   text-shadow: none !important; "
-        " } "
-
-        # ===== КНОПКИ TERTIARY =====
-        " .stButton>button[kind='tertiary'] { "
-        "   background: transparent !important; "
-        "   color: var(--accent) !important; "
-        "   text-shadow: none !important; "
+        "   box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important; "
         " } "
 
         # ===== КОНТЕНТНЫЕ БЛОКИ =====
@@ -373,6 +371,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   .report-card { padding: 16px; } "
         "   .card-title { font-size: 18px; } "
         "   .footer-logo img { max-height: 30px; } "
+        "   div[data-testid='stButton'] > button { font-size: 14px !important; } "
         " } "
 
         "</style>"
