@@ -7,8 +7,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 import streamlit.components.v1 as components
 from streamlit_calendar import calendar
-import db
-import config as cfg
 import utils.supabase_db as db
 import config.calendar as cfg
 
@@ -96,7 +94,7 @@ st.markdown("""
 .filters-block label {
     font-size: 13px !important;
     font-weight: 600 !important;
-    color: #2C3E50 !important;
+    color: #2C3E50 !important; 
     margin-bottom: 4px !important;
 }
 
@@ -132,7 +130,7 @@ st.markdown("""
     font-size: 20px;
     font-weight: 700;
     color: #005F6B !important;
-    margin: 0 0 12px 0;
+    margin: 0 0 12px 0; 
 }
 
 /* ===== ВКЛАДКИ ===== */
@@ -158,7 +156,7 @@ div[data-testid="stTabs"] button[aria-selected="true"] {
 }
 
 /* ===== КНОПКИ ===== */
-.stButton>button {
+.stButton > button {
     background: #005F6B !important;
     color: #FFFFFF !important;
     border: none !important;
@@ -167,7 +165,7 @@ div[data-testid="stTabs"] button[aria-selected="true"] {
     font-size: 14px !important;
     padding: 6px 14px !important;
 }
-.stButton>button:hover {
+.stButton > button:hover {
     filter: brightness(1.1) !important;
     transform: translateY(-1px) !important;
 }
@@ -341,7 +339,7 @@ with f_col2:
         key="sidebar_filter_location"
     )
 with f_col3:
-    search_query = st.text_input("🔎 Поиск по названию", key="sidebar_filter_search")
+    search_query = st.text_input(" Поиск по названию", key="sidebar_filter_search")
 with f_col4:
     date_range = st.date_input(
         "📅 Диапазон дат",
@@ -416,7 +414,7 @@ with exp_col1:
                 buffer = io.BytesIO()
                 wb.save(buffer)
                 buffer.seek(0)
-                st.download_button("💾 Скачать", data=buffer,
+                st.download_button(" Скачать", data=buffer,
                                    file_name=f"calendar_events_{date.today()}.xlsx",
                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                    use_container_width=True, key="btn_download_excel")
@@ -428,7 +426,7 @@ with exp_col2:
     st.markdown('<div class="export-block">', unsafe_allow_html=True)
     st.markdown("#### 📄 Экспорт в PDF")
     pdf_months = st.number_input("Месяцев вперёд", min_value=1, max_value=12, value=3, key="pdf_months_input")
-    if st.button("📥 Скачать PDF", use_container_width=True, key="btn_export_pdf"):
+    if st.button(" Скачать PDF", use_container_width=True, key="btn_export_pdf"):
         with st.spinner("Генерация..."):
             try:
                 from utils.pdf_export import create_pdf_calendar
@@ -462,7 +460,7 @@ with exp_col3:
                 from utils.telegram_bot import test_telegram_connection
                 if test_telegram_connection(): st.success("✅ OK")
                 else: st.error("❌ Ошибка")
-            except ImportError: st.error("❌ Не установлен")
+            except ImportError: st.error(" Не установлен")
             except Exception as e: st.error(f"❌ {str(e)}")
     with tc2:
         if st.button("📨 Отпр.", use_container_width=True, key="btn_send_reminders"):
@@ -505,7 +503,7 @@ filtered_events = [
 # ВКЛАДКИ: СПИСОК / ЗАВЕРШЁННЫЕ / ДОБАВИТЬ
 # =============================================================================
 tab_list, tab_completed, tab_add = st.tabs([
-    "📋 Список событий",
+    " Список событий",
     "✅ Завершённые",
     "➕ Добавить событие"
 ])
@@ -582,7 +580,7 @@ with tab_list:
             st.warning(f"⚠️ Удалить **'{event_to_delete['title']}'**?")
             dc1, dc2 = st.columns(2)
             with dc1:
-                if st.button("🗑️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
+                if st.button("️ Да, удалить", use_container_width=True, type="primary", key="confirm_delete_yes"):
                     db.delete_event(st.session_state.delete_confirm_id)
                     clear_cache()
                     st.session_state.success_message = f"✅ '{event_to_delete['title']}' удалено!"
@@ -689,7 +687,7 @@ with tab_completed:
                 <div class="event-card-completed">
                     <div style="color: #424242; font-size: 16px;"><b>{event['title']}</b></div>
                     <div style="color: #757575; font-size: 14px; margin-top: 5px;">
-                        📅 {event['start_date']} → {event['end_date']} | 🏷 {event['category']} | 📍 {location_display}
+                        📅 {event['start_date']} → {event['end_date']} |  {event['category']} | 📍 {location_display}
                     </div>
                     <div style="color: #9E9E9E; font-size: 12px; margin-top: 5px;">Завершено {days_ago} дн. назад</div>
                 </div>
@@ -767,7 +765,7 @@ with tab_add:
     with sc1:
         if st.button("💾 Сохранить", use_container_width=True, type="primary", key="btn_save_event"):
             if not title: st.error("❌ Введите название")
-            elif start_date > end_date: st.error(f"❌ Дата начала ({start_date}) позже окончания ({end_date})")
+            elif start_date > end_date: st.error(f" Дата начала ({start_date}) позже окончания ({end_date})")
             else:
                 location_code = cfg.LOCATIONS.get(location_type, "all")
                 if not use_custom_date: reminder_custom_date = None
@@ -786,3 +784,4 @@ with tab_add:
     with sc2:
         if st.button("🔄 Очистить", use_container_width=True, key="btn_clear_form"):
             reset_form(); st.rerun()
+
