@@ -5,25 +5,21 @@
 # =============================================================================
 
 def get_morning_effect() -> str:
-    """Эффект утреннего рассвета (мягкий розовый свет + облака)."""
+    """Эффект утреннего рассвета (мягкий голубой свет + 2 заметных облака)."""
     return (
         "<style>"
-        ".morning-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at top,rgba(255,182,168,0.15) 0%,transparent 70%);z-index:0;pointer-events:none}"
-        ".cloud{position:fixed;background:rgba(255,240,245,0.5);border-radius:100px;z-index:0;pointer-events:none;animation:cloudFloat linear infinite}"
-        ".cloud::before,.cloud::after{content:'';position:absolute;background:rgba(255,240,245,0.5);border-radius:100px}"
-        ".cloud:nth-child(2){width:100px;height:40px;top:20%;left:-100px;animation-duration:28s}"
-        ".cloud:nth-child(2)::before{width:50px;height:50px;top:-25px;left:15px}"
-        ".cloud:nth-child(2)::after{width:60px;height:40px;top:-15px;right:15px}"
-        ".cloud:nth-child(3){width:80px;height:30px;top:45%;left:-80px;animation-duration:35s;animation-delay:6s}"
-        ".cloud:nth-child(3)::before{width:40px;height:40px;top:-20px;left:10px}"
-        ".cloud:nth-child(4){width:120px;height:45px;top:65%;left:-120px;animation-duration:40s;animation-delay:12s}"
-        ".cloud:nth-child(4)::before{width:60px;height:50px;top:-25px;left:20px}"
-        ".cloud:nth-child(4)::after{width:70px;height:45px;top:-20px;right:20px}"
-        "@keyframes cloudFloat{0%{transform:translateX(0)}100%{transform:translateX(calc(100vw + 200px))}}"
+        ".morning-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at top,rgba(133,193,233,0.25) 0%,transparent 70%);z-index:0;pointer-events:none}"
+        ".cloud{position:fixed;background:rgba(255,255,255,0.75);border-radius:100px;z-index:0;pointer-events:none;animation:cloudFloat linear infinite}"
+        ".cloud::before,.cloud::after{content:'';position:absolute;background:rgba(255,255,255,0.75);border-radius:100px}"
+        ".cloud:nth-child(2){width:120px;height:50px;top:25%;left:-120px;animation-duration:30s}"
+        ".cloud:nth-child(2)::before{width:60px;height:60px;top:-30px;left:20px}"
+        ".cloud:nth-child(2)::after{width:70px;height:50px;top:-20px;right:20px}"
+        ".cloud:nth-child(3){width:100px;height:45px;top:55%;left:-100px;animation-duration:38s;animation-delay:8s}"
+        ".cloud:nth-child(3)::before{width:50px;height:50px;top:-25px;left:15px}"
+        ".cloud:nth-child(3)::after{width:60px;height:45px;top:-20px;right:15px}"
+        "@keyframes cloudFloat{0%{transform:translateX(0)}100%{transform:translateX(calc(100vw + 250px))}}"
         "</style>"
         "<div class='morning-glow'></div>"
-        "<div class='cloud'></div>"
-        "<div class='cloud'></div>"
         "<div class='cloud'></div>"
         "<div class='cloud'></div>"
     )
@@ -105,6 +101,7 @@ def get_theme_effect(theme: str) -> str:
     }
     return effects.get(theme, "")
 
+
 # =============================================================================
 # ПРАЗДНИЧНЫЕ ЭФФЕКТЫ
 # =============================================================================
@@ -123,7 +120,7 @@ def get_snow_effect() -> str:
         "@keyframes fall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(360deg);opacity:0.3}}"
         "</style>"
         "<div class='snowflake'>❄</div>"
-        "<div class='snowflake'></div>"
+        "<div class='snowflake'>❅</div>"
         "<div class='snowflake'>❆</div>"
         "<div class='snowflake'>❄</div>"
         "<div class='snowflake'>❅</div>"
@@ -266,6 +263,7 @@ def get_rain_effect() -> str:
         "<div class='raindrop'></div>"
         "<div class='raindrop'></div>"
     )
+
 
 # =============================================================================
 # СБОРЩИК ЭФФЕКТОВ
