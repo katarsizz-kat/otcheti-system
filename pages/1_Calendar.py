@@ -9,7 +9,7 @@ from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 import io
 
-st.set_page_config(page_title="Календарь событий", page_icon="📅", layout="wide")
+st.set_page_config(page_title=" Календарь", page_icon="", layout="wide")
 
 # =============================================================================
 # Вспомогательные функции
