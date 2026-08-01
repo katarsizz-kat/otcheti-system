@@ -89,66 +89,27 @@ st.markdown("""
     color: #005F6B;
 }
 
-/* ===== БЛОК ПЕРЕКЛЮЧАТЕЛЯ РЕЖИМОВ (увеличен в 1.5 раза) ===== */
-.radio-block {
-    background: rgba(255, 255, 255, 0.95);
-    border: 3px solid #005F6B;
-    border-radius: 16px;
-    padding: 36px;
-    margin-bottom: 36px;
-    box-shadow: 0 6px 20px rgba(0, 95, 107, 0.2);
-    transform: scale(1.5);
-    transform-origin: top left;
-    margin-top: 60px;
-}
-
-.radio-block label {
-    font-size: 24px !important;
+/* ===== ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ (radio) ===== */
+div[data-testid="stRadio"] > label {
+    font-size: 18px !important;
     font-weight: 600 !important;
     color: #2C3E50 !important;
 }
 
-.radio-block div[data-testid="stRadio"] > div {
-    gap: 16px !important;
-}
-
-.radio-block div[data-testid="stRadio"] div[role="radiogroup"] > label {
-    font-size: 22px !important;
+div[data-testid="stRadio"] div[role="radiogroup"] > label {
+    font-size: 17px !important;
     font-weight: 600 !important;
-    padding: 12px 16px !important;
+    padding: 8px 12px !important;
 }
 
-.radio-block div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    min-height: 28px !important;
+div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
 }
 
-/* ===== БЛОК ПОЛЯ ВВОДА (изумрудная рамка) ===== */
-.input-block {
-    background: rgba(255, 255, 255, 0.95);
-    border: 3px solid #005F6B;
-    border-radius: 16px;
-    padding: 32px;
-    margin-bottom: 32px;
-    box-shadow: 0 6px 20px rgba(0, 95, 107, 0.2);
-}
-
-.input-block h3 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #005F6B;
-    margin-bottom: 16px;
-}
-
-.input-block p {
-    font-size: 16px;
-    color: #2C3E50;
-    margin-bottom: 20px;
-}
-
-/* Стили для текстового поля ввода */
+/* ===== ПОЛЕ ВВОДА (textarea) ===== */
 textarea {
     border: 2px solid #005F6B !important;
     border-radius: 8px !important;
@@ -164,53 +125,16 @@ textarea:focus {
     outline: none !important;
 }
 
-/* Стили для placeholder */
 textarea::placeholder {
     color: #7F8C8D !important;
     font-style: italic;
     opacity: 0.8;
 }
 
-/* Стили для label поля ввода */
 [data-testid="stTextArea"] label {
     font-weight: 600;
     color: #005F6B;
     margin-bottom: 8px;
-}
-
-/* ===== КНОПКИ (УСИЛЕННЫЕ СЕЛЕКТОРЫ) ===== */
-div[data-testid="stButton"] > button,
-div[data-testid="stButton"] > button[kind="primary"],
-div[data-testid="stButton"] > button[kind="secondary"],
-div[data-testid="stButton"] > button[kind="tertiary"],
-div[data-testid="stDownloadButton"] > button,
-.stButton > button,
-.stButton > button[kind="primary"],
-.stButton > button[kind="secondary"],
-.stButton > button[kind="tertiary"] {
-    background: #005F6B !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-size: 16px !important;
-    transition: all 0.3s ease !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
-    padding: 0.5rem 1rem !important;
-}
-
-div[data-testid="stButton"] > button:hover,
-div[data-testid="stButton"] > button[kind="primary"]:hover,
-div[data-testid="stButton"] > button[kind="secondary"]:hover,
-div[data-testid="stButton"] > button[kind="tertiary"]:hover,
-div[data-testid="stDownloadButton"] > button:hover,
-.stButton > button:hover,
-.stButton > button[kind="primary"]:hover,
-.stButton > button[kind="secondary"]:hover,
-.stButton > button[kind="tertiary"]:hover {
-    filter: brightness(1.15) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
 }
 
 /* ===== СТИЛИ ЗАГРУЗЧИКОВ ===== */
@@ -239,10 +163,8 @@ div[data-testid="stDownloadButton"] > button:hover,
     background: transparent !important;
 }
 
-/* Кнопка Upload внутри загрузчика */
-.stFileUploader button,
-.stFileUploader button[kind="secondary"],
-.stFileUploader button[kind="primary"] {
+/* Кнопка Upload — белый текст на бирюзовом фоне */
+.stFileUploader button {
     background: #005F6B !important;
     color: #FFFFFF !important;
     border: none !important;
@@ -591,10 +513,10 @@ def create_pizza_excel(data, period_str, rules):
 
 def greeting_by_time():
     hour = datetime.now().hour
-    if 5 <= hour < 12: return " Доброе утро!"
+    if 5 <= hour < 12: return "🌅 Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
     if 18 <= hour < 23: return "🌙 Добрый вечер!"
-    return "🌜 Доброй ночи!"
+    return " Доброй ночи!"
 
 # ==========================================================
 # ИНТЕРФЕЙС
@@ -621,25 +543,22 @@ st.markdown("""
 </ul>
 <h4>🍕 Пиццы по размерам:</h4>
 <ul>
-<li><b>Если нужен отчёт по пиццам с разбивкой по размерам</b> — переключитесь на раздел <b>" Пиццы по размерам"</b> сверху.</li>
+<li><b>Если нужен отчёт по пиццам с разбивкой по размерам</b> — переключитесь на раздел <b>"🍕 Пиццы по размерам"</b> сверху.</li>
 <li>Программа автоматически сгруппирует все размеры (15, 23, 30, 35, 40 см) в отдельные колонки.</li>
 <li>Тонкое и традиционное тесто суммируются внутри каждого размера.</li>
 </ul>
 </div>
 """, unsafe_allow_html=True)
 
-# Переключатель режима (УВЕЛИЧЕН В 1.5 РАЗА)
-st.markdown('<div class="radio-block">', unsafe_allow_html=True)
+# Переключатель режима (БЕЗ div-обёртки — стили применяются через общие селекторы)
 report_mode = st.radio(
     "📋 Выберите режим отчёта:",
     ["📝 Стандартный отчёт", "🍕 Пиццы по размерам"],
     horizontal=True,
     help="Стандартный - обычный отчёт с количеством и суммой\nПиццы по размерам - отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см"
 )
-st.markdown('</div>', unsafe_allow_html=True)
 
-# Поле ввода (В БЛОКЕ С ИЗУМРУДНОЙ РАМКОЙ)
-st.markdown('<div class="input-block">', unsafe_allow_html=True)
+# Поле ввода (БЕЗ div-обёртки — стили применяются через общие селекторы)
 st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
 st.markdown("<p><b>Каждая строка = одна позиция в отчёте.</b></p>", unsafe_allow_html=True)
 
@@ -670,8 +589,6 @@ rules_text = st.text_area(
     placeholder=default_rules
 )
 
-st.markdown('</div>', unsafe_allow_html=True)
-
 # ЗАГРУЗКА ФАЙЛА
 st.markdown("###  Загрузка файла")
 file_main = st.file_uploader("Загрузите файл рейтинг_продукт (Excel)", type=['xlsx'], key="universal")
@@ -684,7 +601,7 @@ if file_main:
         st.info(f"📅 Период: **{period_str}**")
     except:
         period_str = f"01.{datetime.now().strftime('%m')}.{datetime.now().year}"
-        st.warning("️ Не удалось определить период")
+        st.warning("⚠️ Не удалось определить период")
     
     if st.button("📊 Сгенерировать отчёт", type="primary", use_container_width=True):
         with st.spinner("Формирую отчёт..."):
@@ -692,7 +609,7 @@ if file_main:
                 df = read_file(file_main)
                 rules = [line.strip() for line in rules_text.split('\n') if line.strip()]
                 if not rules:
-                    st.error("❌ Введите хотя бы одну позицию в поле выше!")
+                    st.error(" Введите хотя бы одну позицию в поле выше!")
                 else:
                     if report_mode == " Пиццы по размерам":
                         data = aggregate_pizza_by_size(df, rules_text)
@@ -724,7 +641,7 @@ if file_main:
                     output.seek(0)
                     file_name = f"Отчёт_{'pizza_' if report_mode == '🍕 Пиццы по размерам' else ''}{period_str.replace('.', '-')}.xlsx"
                     st.download_button(
-                        label="📥 Скачать Excel",
+                        label=" Скачать Excel",
                         data=output,
                         file_name=file_name,
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
