@@ -9,7 +9,7 @@ from openpyxl.utils import get_column_letter
 warnings.filterwarnings("ignore")
 
 # ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом streamlit в файле!
-st.set_page_config(page_title="КР неделя", page_icon="📈", layout="wide")
+st.set_page_config(page_title="📆 КР неделя", page_icon="📈", layout="wide")
 
 # ==========================================================
 # ДИНАМИЧЕСКИЕ СТИЛИ (НЕБО ПО ВРЕМЕНИ СУТОК)
