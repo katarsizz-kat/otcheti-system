@@ -7,7 +7,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="КР отчёты", page_icon="📊", layout="wide")
+st.set_page_config(page_title=" КР отчёты", page_icon="", layout="wide")
 
 from styles import apply_theme
 from config.greetings import get_current_greeting
