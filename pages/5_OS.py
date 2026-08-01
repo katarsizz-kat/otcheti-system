@@ -8,7 +8,7 @@ import xlsxwriter
 from xlsxwriter.utility import xl_col_to_name
 
 # --- НАСТРОЙКИ И КОНСТАНТЫ ---
-st.set_page_config(page_title="ОС - Отчет", layout="wide", page_icon="💬")
+st.set_page_config(page_title="😊😠 ОС", page_icon="📈", layout="wide")
 
 BRAND_COLORS = {
     "primary": "#2C3E50", "secondary": "#3498DB", "accent": "#F1C40F",
