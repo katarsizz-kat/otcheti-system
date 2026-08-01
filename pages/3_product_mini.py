@@ -99,6 +99,87 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+/* ===== БЛОК "КАК РАБОТАЕТ ОТЧЁТ" (зелёная рамка) ===== */
+.info-block {
+    background: rgba(255, 255, 255, 0.95);
+    border: 3px solid #27AE60;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.2);
+}
+
+.info-block h3 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1B4F72;
+    margin-bottom: 24px;
+}
+
+.info-block h4 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #2C3E50;
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+.info-block ul {
+    padding-left: 24px;
+    margin-bottom: 16px;
+}
+
+.info-block li {
+    margin-bottom: 12px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #2C3E50;
+}
+
+.info-block code {
+    background: rgba(240, 240, 240, 0.8);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    border: 1px solid #BDC3C7;
+}
+
+/* ===== БЛОК ПЕРЕКЛЮЧАТЕЛЯ РЕЖИМОВ (красная рамка) — УВЕЛИЧЕН В 1.5 РАЗА ===== */
+.radio-block {
+    background: rgba(255, 255, 255, 0.95);
+    border: 3px solid #E74C3C;
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 36px;
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.2);
+    transform: scale(1.5);
+    transform-origin: top left;
+    margin-top: 60px; /* Компенсация увеличения */
+}
+
+.radio-block label {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #2C3E50 !important;
+}
+
+.radio-block div[data-testid="stRadio"] > div {
+    gap: 16px !important;
+}
+
+.radio-block div[data-testid="stRadio"] div[role="radiogroup"] > label {
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    padding: 12px 16px !important;
+}
+
+.radio-block div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+}
+
 # ==========================================================
 # ФУНКЦИИ
 # ==========================================================
