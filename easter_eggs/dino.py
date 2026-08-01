@@ -1,4 +1,4 @@
-"""Пасхалка с динозавром — версия с st.dialog() (красивый вид)."""
+"""Пасхалка с динозавром — исправленная версия."""
 import os
 import random
 import base64
@@ -18,28 +18,21 @@ def load_gif_base64(gif_path: str) -> str:
 
 @st.dialog(" Динозавр приветствует тебя!")
 def dino_dialog(phrase: str, gif_src: str):
-    """Нативная модалка Streamlit — красивый вид."""
-    # Гифка
-    st.image(gif_src, use_container_width=True)
-    
-    # Фраза
-    st.markdown(
-        f"""
-        <div style="text-align: center; font-size: 22px; font-weight: 700; color: #000000; padding: 20px 0;">
-            {phrase}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    # Звук через <audio> тег + CSS для маленькой кнопки закрытия
+    """Нативная модалка Streamlit."""
+    # CSS для видимого заголовка диалога
     st.markdown(
         """
-        <audio autoplay>
-            <source src="assets/dino_roar.mp3" type="audio/mpeg">
-        </audio>
         <style>
-        /* Маленькая круглая кнопка закрытия ТОЛЬКО внутри диалога */
+        /* Заголовок диалога - делаем видимым */
+        div[data-testid="stDialog"] h3 {
+            color: #005F6B !important;
+            font-size: 24px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+            margin-bottom: 20px !important;
+        }
+        
+        /* Маленькая круглая кнопка закрытия */
         div[data-testid="stDialog"] button[kind="secondary"] {
             background: rgba(0,0,0,0.1) !important;
             border: none !important;
@@ -64,6 +57,29 @@ def dino_dialog(phrase: str, gif_src: str):
         unsafe_allow_html=True
     )
     
+    # Гифка
+    st.image(gif_src, use_container_width=True)
+    
+    # Фраза
+    st.markdown(
+        f"""
+        <div style="text-align: center; font-size: 22px; font-weight: 700; color: #000000; padding: 20px 0;">
+            {phrase}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    # Звук
+    st.markdown(
+        """
+        <audio autoplay>
+            <source src="assets/dino_roar.mp3" type="audio/mpeg">
+        </audio>
+        """,
+        unsafe_allow_html=True
+    )
+    
     # Кнопка закрытия
     if st.button("✖", key="dino_close_btn", help="Закрыть"):
         st.session_state.dino_modal_open = False
@@ -71,7 +87,8 @@ def dino_dialog(phrase: str, gif_src: str):
 
 
 def render_dino_footer():
-    """Рендерит кнопку и логику динозавра в подвале."""
+    """Рендерит кнопку динозавра в подвале (всегда видна)."""
+    # Инициализация session_state
     if "dino_modal_open" not in st.session_state:
         st.session_state.dino_modal_open = False
     if "dino_phrase" not in st.session_state:
@@ -79,27 +96,25 @@ def render_dino_footer():
     if "dino_click_count" not in st.session_state:
         st.session_state.dino_click_count = 0
     
+    # Кнопка вызова динозавра (ВСЕГДА видна)
+    col1, col2 = st.columns([1, 10])
+    with col1:
+        if st.button("🦖", key="dino_open_btn", help="Нажми меня!"):
+            st.session_state.dino_click_count += 1
+            if st.session_state.dino_click_count % 5 == 0:
+                st.session_state.dino_phrase = "Кристина лучшая ❤️"
+            else:
+                st.session_state.dino_phrase = get_random_phrase()
+            st.session_state.dino_modal_open = True
+            st.rerun()
+    
     # Если модалка открыта — показываем диалог
     if st.session_state.dino_modal_open:
         gif_num = random.choice([1, 2])
         gif_path = f"assets/dino{gif_num}.gif"
-        # Загружаем гифку как base64 (с кэшем)
         gif_base64 = load_gif_base64(gif_path)
         if gif_base64:
             gif_src = f"data:image/gif;base64,{gif_base64}"
         else:
-            # Запасной вариант, если локальный файл не найден
             gif_src = "https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif"
         dino_dialog(st.session_state.dino_phrase, gif_src)
-    else:
-        # Показываем только кнопку вызова
-        col1, col2 = st.columns([1, 10])
-        with col1:
-            if st.button("🦖", key="dino_open_btn", help="Нажми меня!"):
-                st.session_state.dino_click_count += 1
-                if st.session_state.dino_click_count % 5 == 0:
-                    st.session_state.dino_phrase = "Кристина лучшая ❤️"
-                else:
-                    st.session_state.dino_phrase = get_random_phrase()
-                st.session_state.dino_modal_open = True
-                st.rerun()
