@@ -3,6 +3,22 @@ import pandas as pd
 import os
 import sys
 from typing import List, Dict
+import streamlit as st
+
+# 1. НАСТРОЙКА СТРАНИЦЫ
+st.set_page_config(page_title="Название страницы", page_icon="🍕", layout="wide")
+
+# 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
+st.markdown("""
+<style>
+.stApp, body, .main .block-container, [data-testid="stAppViewBlockContainer"] {
+    background-color: #D6EAF8 !important;
+    background: #D6EAF8 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 3. ОСТАЛЬНЫЕ ИМПОРТЫ И КОД...
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.pptx_builder import generate_flexible_presentation, parse_kr_excel

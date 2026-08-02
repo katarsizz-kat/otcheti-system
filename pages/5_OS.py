@@ -16,6 +16,22 @@ st.set_page_config(page_title="😊😠 ОС", page_icon="📈", layout="wide")
 from styles import apply_subtle_theme
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
+import streamlit as st
+
+# 1. НАСТРОЙКА СТРАНИЦЫ
+st.set_page_config(page_title="Название страницы", page_icon="🍕", layout="wide")
+
+# 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
+st.markdown("""
+<style>
+.stApp, body, .main .block-container, [data-testid="stAppViewBlockContainer"] {
+    background-color: #D6EAF8 !important;
+    background: #D6EAF8 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 3. ОСТАЛЬНЫЕ ИМПОРТЫ И КОД...
 
 # ==========================================================
 # ПРИМЕНЯЕМ ПРИГЛУШЁННУЮ ТЕМУ

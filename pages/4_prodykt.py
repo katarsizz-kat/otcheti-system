@@ -1,5 +1,31 @@
 """Страница отчёта по продукту."""
 import streamlit as st
+
+# =============================================================================
+# 1. НАСТРОЙКА СТРАНИЦЫ (ВСЕГДА ПЕРВАЯ КОМАНДА!)
+# =============================================================================
+st.set_page_config(page_title="🍕 Продукт", page_icon="🍕", layout="wide")
+
+# =============================================================================
+# 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
+# Применяется ДО любых импортов и запросов к БД, чтобы убрать мигание
+# =============================================================================
+st.markdown("""
+<style>
+/* Принудительно красим все возможные контейнеры Streamlit ДО загрузки apply_subtle_theme */
+.stApp, 
+body, 
+.main .block-container,
+[data-testid="stAppViewBlockContainer"] {
+    background-color: #D6EAF8 !important;
+    background: #D6EAF8 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =============================================================================
+# 3. ИМПОРТЫ (теперь фон уже задан, мигания не будет)
+# =============================================================================
 import pandas as pd
 import numpy as np
 import re
@@ -11,24 +37,21 @@ from openpyxl.utils import get_column_letter
 import warnings
 warnings.filterwarnings('ignore')
 
-# ВАЖНО: st.set_page_config должен быть ПЕРВЫМ вызовом!
-st.set_page_config(page_title="🍕 Продукт", page_icon="🍕", layout="wide")
-
 from styles import apply_subtle_theme
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
 
-# ==========================================================
+# =============================================================================
 # ПРИМЕНЯЕМ ПРИГЛУШЁННУЮ ТЕМУ
-# ==========================================================
+# =============================================================================
 greeting_data = get_current_greeting()
 holiday = get_today_holiday()
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
 apply_subtle_theme(greeting_data["theme"], holiday_effects)
 
-# ==========================================================
+# =============================================================================
 # ОСВЕТЛЕНИЕ ФОНА + СТИЛИ ЗАГРУЗЧИКОВ (единый стиль)
-# ==========================================================
+# =============================================================================
 st.markdown("""
 <style>
 /* Полупрозрачный белый слой поверх фона */
@@ -100,19 +123,19 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ==========================================================
+# =============================================================================
 # ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ
-# ==========================================================
+# =============================================================================
 def greeting_by_time():
     hour = datetime.now().hour
     if 5 <= hour < 12: return "🌅 Доброе утро!"
     if 12 <= hour < 18: return "🌤 Добрый день!"
-    if 18 <= hour < 23: return " Добрый вечер!"
+    if 18 <= hour < 23: return "🌆 Добрый вечер!"
     return "🌜 Доброй ночи!"
 
-# ==========================================================
+# =============================================================================
 # НАСТРОЙКИ
-# ==========================================================
+# =============================================================================
 CATEGORY_COLORS = {
     'пиццы': 'FFFFE0',
     'закуски': 'F0FFF0',
@@ -147,9 +170,9 @@ PIZZA_CATEGORY_MAPPING = {
 }
 PIZZA_CATEGORY_ORDER = [7, 6, 5, 4, 3, 2, 1, 'Сезонные']
 
-# ==========================================================
+# =============================================================================
 # ФУНКЦИИ ПАРСИНГА
-# ==========================================================
+# =============================================================================
 def clean_dish_name(name):
     if not isinstance(name, str): return ""
     name = re.sub(r'<.*?>', '', name)
@@ -273,9 +296,9 @@ def parse_combo_file(uploaded_file):
         'Чеков': 'sum'
     }).reset_index()
 
-# ==========================================================
+# =============================================================================
 # СОЗДАНИЕ ЛИСТОВ EXCEL
-# ==========================================================
+# =============================================================================
 def create_rating_sheet(wb, df_main, df_combo):
     ws = wb.create_sheet('Рейтинг')
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -707,9 +730,9 @@ def create_category_dynamics_sheet(wb, df_main_raw, df_combo):
         c2.border = thin_border
         c2.number_format = '0.00%'
 
-# ==========================================================
+# =============================================================================
 # ИНТЕРФЕЙС
-# ==========================================================
+# =============================================================================
 st.markdown(f"""
 <div class="header-block">
     <h1>🍕 Продукт</h1>
@@ -732,11 +755,9 @@ st.markdown("""
 
 st.markdown("### 📂 Загрузка файлов")
 col1, col2 = st.columns(2)
-
 with col1:
     st.markdown("#### 📁 Основной файл")
     file_main = st.file_uploader("Загрузите Excel", type=['xlsx'], key="main", label_visibility="collapsed")
-
 with col2:
     st.markdown("#### 📁 Файл комбо")
     file_combo = st.file_uploader("Загрузите Excel", type=['xlsx'], key="combo", label_visibility="collapsed")
@@ -762,9 +783,9 @@ if file_main and file_combo:
                 output.seek(0)
                 st.success("✅ Отчёт сформирован!")
                 st.download_button(
-                    label="📥 Скачать Итоговый_отчет.xlsx", 
-                    data=output, 
-                    file_name="Итоговый_отчет_Продукт.xlsx", 
+                    label="📥 Скачать Итоговый_отчет.xlsx",
+                    data=output,
+                    file_name="Итоговый_отчет_Продукт.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )

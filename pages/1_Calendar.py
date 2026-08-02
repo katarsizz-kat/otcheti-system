@@ -9,6 +9,22 @@ import streamlit.components.v1 as components
 from streamlit_calendar import calendar
 import utils.supabase_db as db
 import config.calendar as cfg
+import streamlit as st
+
+# 1. НАСТРОЙКА СТРАНИЦЫ
+st.set_page_config(page_title="Название страницы", page_icon="🍕", layout="wide")
+
+# 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
+st.markdown("""
+<style>
+.stApp, body, .main .block-container, [data-testid="stAppViewBlockContainer"] {
+    background-color: #D6EAF8 !important;
+    background: #D6EAF8 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 3. ОСТАЛЬНЫЕ ИМПОРТЫ И КОД...
 
 # =============================================================================
 # КОНФИГУРАЦИЯ СТРАНИЦЫ

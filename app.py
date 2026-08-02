@@ -1,3 +1,7 @@
+"""Главная страница приложения."""
+import streamlit as st  # ← ЭТОЙ СТРОКИ НЕ ХВАТАЛО!
+from datetime import date, datetime, timedelta
+
 # =============================================================================
 # 1. НАСТРОЙКА СТРАНИЦЫ (ВСЕГДА ПЕРВАЯ КОМАНДА!)
 # =============================================================================
@@ -5,6 +9,7 @@ st.set_page_config(page_title="Система отчётов", page_icon="🦖",
 
 # =============================================================================
 # 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
+# Применяется ДО любых импортов и запросов к БД, чтобы убрать мигание белой темы
 # =============================================================================
 st.markdown("""
 <style>
@@ -22,7 +27,6 @@ body,
 # =============================================================================
 # 3. ИМПОРТЫ (теперь фон уже задан, мигания не будет)
 # =============================================================================
-from datetime import date, datetime, timedelta
 from config.greetings import get_current_greeting
 from config.reports import get_reports
 from config.holidays import get_today_holiday, get_upcoming_holidays
@@ -100,7 +104,7 @@ render_welcome_block(
 # =============================================================================
 # Блок "Ближайшие события"
 # =============================================================================
-st.markdown("### 📅 Ближайшие события", unsafe_allow_html=True)
+st.markdown("###  Ближайшие события", unsafe_allow_html=True)
 
 if upcoming_events:
     num_cols = min(3, len(upcoming_events))
@@ -156,10 +160,10 @@ if upcoming_events:
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #475569;">
                     <div>
-                        📅 {date_display} &nbsp; 
+                         {date_display} &nbsp; 
                         <span style="color: {days_color}; font-weight: 600;">{days_text}</span>
                     </div>
-                    {f'<div>🏷️ <span style="color: {cat_color}; font-weight: 500;">{category}</span></div>' if category else ''}
+                    {f'<div>️ <span style="color: {cat_color}; font-weight: 500;">{category}</span></div>' if category else ''}
                     {f'<div>📍 {location}</div>' if location else ''}
                 </div>
             </div>
