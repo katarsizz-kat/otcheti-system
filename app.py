@@ -1,9 +1,36 @@
 """Главная страница приложения."""
 import streamlit as st
-from datetime import date, datetime, timedelta
 
+# =============================================================================
+# 1. НАСТРОЙКА СТРАНИЦЫ (ВСЕГДА ПЕРВАЯ КОМАНДА!)
+# =============================================================================
 st.set_page_config(page_title="Система отчётов", page_icon="🦖", layout="wide")
 
+# =============================================================================
+# 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
+# Применяется ДО любых импортов и запросов к БД, чтобы убрать мигание белой темы
+# =============================================================================
+st.markdown("""
+<style>
+/* Принудительно задаем фон, соответствующий дневной теме, до загрузки apply_theme */
+.stApp {
+    background: linear-gradient(135deg, #B8D4E3 0%, #D6EAF8 100%) !important;
+    min-height: 100vh;
+}
+body {
+    background: #D6EAF8 !important;
+}
+/* Убираем стандартный белый блок Streamlit */
+.main .block-container {
+    background-color: transparent !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =============================================================================
+# 3. ИМПОРТЫ (теперь фон уже задан, мигания не будет)
+# =============================================================================
+from datetime import date, datetime, timedelta
 from config.greetings import get_current_greeting
 from config.reports import get_reports
 from config.holidays import get_today_holiday, get_upcoming_holidays
@@ -32,6 +59,7 @@ reports = get_reports()
 upcoming_holidays = get_upcoming_holidays(days=7)
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
 
+# Применяем тему (это уточняет цвета интерфейса Streamlit под текущее время)
 apply_theme(greeting_data["theme"], holiday_effects)
 
 # ✅ ОПТИМИЗАЦИЯ: Кэширование запросов к Supabase
@@ -80,12 +108,13 @@ render_welcome_block(
 # =============================================================================
 # Блок "Ближайшие события"
 # =============================================================================
-st.markdown("###  Ближайшие события", unsafe_allow_html=True)
+st.markdown("### 📅 Ближайшие события", unsafe_allow_html=True)
 
 if upcoming_events:
     num_cols = min(3, len(upcoming_events))
     cols = st.columns(num_cols)
     
+    # ✅ Оставляем оригинальные цвета интерфейса (НЕ из брендбука PPTX)
     category_colors = {
         'Праздник': '#E74C3C',
         'Мероприятие': '#3498DB',

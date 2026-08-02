@@ -8,30 +8,24 @@ def apply_theme(theme: str, holiday_effects: list = None):
     """
     Применяет тему и эффекты к приложению.
     Этапы:
-    1. Принудительная светлая тема Streamlit
-    2. Загрузка цветов темы
-    3. Базовые стили интерфейса (header, sidebar, карточки)
-    4. Подключение эффектов времени суток
-    5. Подключение праздничных эффектов
+    1. Загрузка цветов темы
+    2. Базовые стили интерфейса (header, sidebar, карточки)
+    3. Подключение эффектов времени суток
+    4. Подключение праздничных эффектов
+    
+    ВАЖНО: Базовая тема управляется через .streamlit/config.toml
     """
     if holiday_effects is None:
         holiday_effects = []
 
-    # 1. Принудительная светлая тема Streamlit
-    st.config.set_option("theme.base", "light")
-    st.config.set_option("theme.backgroundColor", "#FFFFFF")
-    st.config.set_option("theme.primaryColor", "#005F6B")
-    st.config.set_option("theme.secondaryBackgroundColor", "#F5F5DC")
-    st.config.set_option("theme.textColor", "#2C2C2C")
-
-    # 2. Загрузка цветов темы
+    # 1. Загрузка цветов темы
     colors = get_theme_colors(theme)
 
     # Определяем, тёмная ли тема (для логотипов)
     is_dark_theme = theme in ["night", "new_year", "magic", "scifi", "military"]
     logo_opacity = "0.85" if is_dark_theme else "0.6"
 
-    # 3. Базовые стили интерфейса с CSS-переменными
+    # 2. Базовые стили интерфейса с CSS-переменными
     base_css = (
         "<style>"
 
@@ -448,10 +442,10 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "</style>"
     )
 
-    # 4. Эффекты времени суток
+    # 3. Эффекты времени суток
     effects_css = get_theme_effect(theme)
 
-    # 5. Праздничные эффекты
+    # 4. Праздничные эффекты
     holiday_css = get_holiday_effects(holiday_effects)
 
     # Выводим всё вместе
@@ -470,13 +464,6 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
     """
     if holiday_effects is None:
         holiday_effects = []
-
-    # Принудительная светлая тема Streamlit
-    st.config.set_option("theme.base", "light")
-    st.config.set_option("theme.backgroundColor", "#FFFFFF")
-    st.config.set_option("theme.primaryColor", "#005F6B")
-    st.config.set_option("theme.secondaryBackgroundColor", "#F5F5DC")
-    st.config.set_option("theme.textColor", "#2C2C2C")
 
     # Загрузка цветов темы
     colors = get_theme_colors(theme)
