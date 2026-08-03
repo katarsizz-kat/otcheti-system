@@ -10,7 +10,7 @@ BRAND_GREEN = "#006837"
 BRAND_GREEN_DARK = "#004d2a"
 BRAND_RED = "#c62828"
 
-st.set_page_config(page_title="Тест - Папа Джонс", page_icon="🎯", layout="wide")
+st.set_page_config(page_title="Тест", page_icon="🎯", layout="wide")
 
 # --- ЛОКАЛЬНАЯ ТЕМА СТРАНИЦЫ ТЕСТА: светлый фон, тёмный читаемый текст (база 17px) ---
 st.markdown("""
@@ -129,7 +129,7 @@ def finish_quiz():
 
 
 # --- Главный рендер ---
-st.markdown('<div class="quiz-title">🎯 Аттестация Папа Джонс</div>', unsafe_allow_html=True)
+st.markdown('<div class="quiz-title">🎯 Аттестация </div>', unsafe_allow_html=True)
 st.markdown('<div class="quiz-subtitle">Проверь свои знания и получи звание!</div>', unsafe_allow_html=True)
 
 # === ЭКРАН 1: Приветствие и ВЫБОР РЕЖИМА (полная ширина, без вложенных узких колонок) ===
@@ -145,7 +145,7 @@ if not st.session_state.quiz_started and not st.session_state.quiz_finished:
         </ul>
         <h4>🏆 Звания:</h4>
         <ul>
-            <li>56–{MAX_SCORE} баллов — <b>Мастер Папа Джонс 👑</b></li>
+            <li>56–{MAX_SCORE} баллов — <b>Мастер 👑</b></li>
             <li>46–55 баллов — <b>Эксперт смены ⭐</b></li>
             <li>31–45 баллов — <b>Сотрудник зала 🍕</b></li>
             <li>0–30 баллов — <b>Стажёр 🌱</b></li>
