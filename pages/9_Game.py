@@ -309,7 +309,7 @@ elif not st.session_state.game_active:
 else:
     # --- ИГРОВОЙ ЭКРАН ---
     elapsed = int(datetime.datetime.now().timestamp() - st.session_state.start_time)
-    time_left = max(0, 60 - elapsed)
+    time_left = max(0, 100 - elapsed)
     
     if time_left == 0 and st.session_state.game_active:
         end_game()
