@@ -3,6 +3,7 @@ import math
 import re
 from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
+from difflib import get_close_matches
 
 import streamlit as st
 from openpyxl import Workbook
@@ -22,6 +23,12 @@ HEADER_COLOR = "1F4E79"
 BLOCK_COLOR = "DCE6F1"
 TOTAL_COLOR = "FFF2CC"
 VIOLATION_COLOR = "C00000"
+
+# Ширины колонок
+CATEGORY_WIDTH = 42
+ITEM_WIDTH = 95
+RESTAURANT_WIDTH = 7
+TOTAL_WIDTH = 14
 
 # Служебные строки, которые не являются пунктами чек-листа
 IGNORE_EXACT = {
@@ -57,6 +64,132 @@ HEADER_PREFIXES = (
 )
 
 RESULT_RE = re.compile(r"\b(Да|Нет)\b[\.\s]*$")
+
+
+# =========================
+# Канонические категории без точек
+# =========================
+CANONICAL_BLOCKS = [
+    "Внешний вид здания",
+    "Зал",
+    "Уголок потребителя",
+    "Обслуживание гостей в зале",
+    "Внешний вид сотрудников",
+    "Производственная зона",
+    "Производственная зона. Тесто",
+    "Мейклайн",
+    "Станция Слэп",
+    "Раскатка традиционного теста",
+    "Раскатка тонкого теста",
+    "Оценка готовой пиццы",
+    "Кат-Тейбл",
+    "Оборудование кухни",
+    "Станция для водителей",
+    "Холодильная камера(основной)",
+    "Холодильное оборудование",
+    "Маркировка",
+    "Овощная-баночная",
+    "Сухой склад",
+    "Мойка посуды",
+    "Раковины и сантехника",
+    "Уборочный инвентарь и моющие средства",
+    "Раздевалка для персонала",
+    "Туалет для персонала",
+    "Туалет для гостей",
+    "Риски",
+    "Стоп-лист",
+    "Документация",
+    "Медикаменты",
+    "Критические нарушения",
+]
+
+
+def canonical_block_key(value: str) -> str:
+    """
+    Делает ключ блока для сопоставления:
+    убирает пробелы, точки, скобки, дефисы и другие небуквенно-цифровые символы.
+    """
+    value = str(value or "")
+    value = value.lower().replace("ё", "е")
+    value = re.sub(r"[^a-zа-яё0-9]+", "", value)
+    return value
+
+
+CANONICAL_BLOCK_MAP = {
+    canonical_block_key(name): name
+    for name in CANONICAL_BLOCKS
+}
+
+
+# =========================
+# Корректировка категорий для проблемных мест PDF
+# =========================
+CATEGORY_OVERRIDE_RULES_RAW = [
+    # Уголок потребителя
+    (r"книга отзывов и предложений", "Уголок потребителя"),
+    (r"список аллергенов", "Уголок потребителя"),
+
+    # Обслуживание гостей в зале
+    (r"шаг\s+[1-5]\s*й", "Обслуживание гостей в зале"),
+
+    # Внешний вид сотрудников
+    (r"пиццамейкер в бандане", "Внешний вид сотрудников"),
+    (r"все сотрудники в поло", "Внешний вид сотрудников"),
+    (r"на сотрудниках надет фартук", "Внешний вид сотрудников"),
+    (r"именной бейдж", "Внешний вид сотрудников"),
+    (r"брюки джинсы полной длины", "Внешний вид сотрудников"),
+    (r"обувь закрытая", "Внешний вид сотрудников"),
+    (r"на теле отсутствуют украшения", "Внешний вид сотрудников"),
+    (r"мужчины выбриты", "Внешний вид сотрудников"),
+    (r"длина ногтей соответствует стандартам", "Внешний вид сотрудников"),
+    (r"серьги тоннели", "Внешний вид сотрудников"),
+    (r"ремень черного или коричневого цвета", "Внешний вид сотрудников"),
+    (r"носки для всех должностей", "Внешний вид сотрудников"),
+
+    # Производственная зона
+    (r"тяжелый докер", "Производственная зона"),
+    (r"мелкий инвентарь убирают в лексан", "Производственная зона"),
+    (r"подставка для скринов", "Производственная зона"),
+    (r"термометры для теста", "Производственная зона"),
+    (r"полы стены потолки и источники освещения чистые", "Производственная зона"),
+
+    # Уборочный инвентарь и моющие средства
+    (r"комплект для зоны туалет гостевой", "Уборочный инвентарь и моющие средства"),
+    (r"комплект для зоны туалет для персонала", "Уборочный инвентарь и моющие средства"),
+    (r"каждый комплект уборочного инвентаря хранится", "Уборочный инвентарь и моющие средства"),
+    (r"уборочный инвентарь для зон туалет гостевой туалет персонала", "Уборочный инвентарь и моющие средства"),
+    (r"отсутствует грязная вода в уборочном ведре", "Уборочный инвентарь и моющие средства"),
+
+    # Раздевалка / туалеты
+    (r"в наличии табличка раздевалка для персонала", "Раздевалка для персонала"),
+    (r"в наличии табличка туалет для персонала", "Туалет для персонала"),
+    (r"в наличии табличка обозначение туалет", "Туалет для гостей"),
+    (r"график уборок туалетной комнаты", "Туалет для гостей"),
+
+    # Риски
+    (r"наличие насекомых не обнаружено", "Риски"),
+    (r"ресторан не использует химические препараты", "Риски"),
+    (r"кухонный инвентарь и оборудование технически исправно", "Риски"),
+
+    # Стоп-лист
+    (r"стоп лист в айко", "Стоп-лист"),
+
+    # Документация
+    (r"журнал лист контроля температуры влажности холодильного оборудования", "Документация"),
+    (r"журнал генеральных уборок", "Документация"),
+    (r"журнал контроля здоровья", "Документация"),
+    (r"наличие действующей медицинской книжки", "Документация"),
+    (r"личная подпись в лмк", "Документация"),
+    (r"наличие в лмк печати", "Документация"),
+
+    # Медикаменты
+    (r"наличие аптечки", "Медикаменты"),
+]
+
+CATEGORY_OVERRIDE_RULES = [
+    (re.compile(pattern), category)
+    for pattern, category in CATEGORY_OVERRIDE_RULES_RAW
+]
 
 
 # =========================
@@ -121,8 +254,53 @@ def normalize_block(name: str) -> str:
     """Приводит название блока к аккуратному виду."""
     name = name.replace("\\*", "*")
     name = re.sub(r"\s+", " ", name).strip()
-    name = name.rstrip(".").strip()
     return name
+
+
+def canonicalize_block(raw_block: str) -> str:
+    """
+    Приводит распознанный блок к каноническому виду без точек в конце.
+    """
+    raw_block = normalize_block(raw_block)
+
+    if not raw_block:
+        return raw_block
+
+    key = canonical_block_key(raw_block)
+
+    # Точное совпадение
+    if key in CANONICAL_BLOCK_MAP:
+        return CANONICAL_BLOCK_MAP[key]
+
+    # Частичное совпадение по началу ключа
+    best_name = None
+    best_len = 0
+
+    for canon_key, canon_name in CANONICAL_BLOCK_MAP.items():
+        if not canon_key:
+            continue
+
+        if key.startswith(canon_key) or canon_key.startswith(key):
+            if len(canon_key) > best_len:
+                best_name = canon_name
+                best_len = len(canon_key)
+
+    if best_name:
+        return best_name
+
+    # Дополнительная страховка от небольших отличий
+    close_keys = get_close_matches(
+        key,
+        list(CANONICAL_BLOCK_MAP.keys()),
+        n=1,
+        cutoff=0.88,
+    )
+
+    if close_keys:
+        return CANONICAL_BLOCK_MAP[close_keys[0]]
+
+    # Если блок неизвестный, оставляем как есть, чтобы не потерять данные
+    return raw_block
 
 
 def detect_block(s: str):
@@ -140,7 +318,7 @@ def detect_block(s: str):
         return None
 
     # Пример: Внешний вид здания.( 85,15%)
-    m = re.match(r"^(?P<name>.+?)[\.\s]*\(\s*\d+(?:[.,]\d+)?\s*%\)\s*$", s)
+    m = re.match(r"^(?P<name>.+?)\s*\(\s*\d+(?:[.,]\d+)?\s*%\)\s*$", s)
 
     # Пример: Маркировка  16,67%
     if not m:
@@ -150,42 +328,110 @@ def detect_block(s: str):
         return None
 
     name = m.group("name").strip()
+
     if not name or is_noise_line(name) or len(name) < 3:
         return None
 
-    return normalize_block(name)
+    return canonicalize_block(name)
 
 
-def remove_leading_tags(s: str) -> str:
-    """Убирает ведущие теги вида *М*, *ОФ*, *Ц*, *Р*, *Ц*ОФ*."""
-    s = re.sub(r"^(?:\*[А-ЯЁA-Z]{1,4}\*\s*)+", "", s)
-    s = s.lstrip("*").strip()
+def beautify_item(s: str) -> str:
+    """
+    Лёгкое приведение текста к читаемому виду.
+    Не меняет смысл пункта.
+    """
+    # Пробел перед скобкой, если его нет
+    s = re.sub(r"(?<=[^\s])\(", " (", s)
+
+    # Убираем лишние пробелы сразу после скобки и перед закрывающей скобкой
+    s = re.sub(r"\(\s+", "(", s)
+    s = re.sub(r"\s+\)", ")", s)
+
+    # Добавляем пробел после запятой, если его нет
+    s = re.sub(r",(?=\S)", ", ", s)
+
+    # Сжимаем множественные пробелы
+    s = re.sub(r"\s+", " ", s).strip()
+
     return s
 
 
 def clean_item(s: str) -> str:
-    """Очищает текст пункта чек-листа."""
+    """
+    Очищает текст пункта чек-листа.
+
+    Важно:
+    - текст пункта сохраняется максимально полностью;
+    - служебные баллы вида 5/5 убираются;
+    - случайно приклеившиеся заголовки таблиц убираются;
+    - теги вида *М*, *ОФ* сохраняются в отображении.
+    """
     s = str(s or "")
     s = s.replace("\\*", "*")
     s = re.sub(r"\s+", " ", s).strip()
 
     s = strip_score_prefix(s)
     s = remove_table_header_prefix(s)
-    s = remove_leading_tags(s)
 
-    s = s.replace("«", '"').replace("»", '"')
-    s = s.replace("“", '"').replace("”", '"')
+    s = beautify_item(s)
 
-    s = re.sub(r"\s+", " ", s).strip()
     return s
 
 
+def normalize_for_rules(s: str) -> str:
+    """
+    Нормализация текста только для работы правил корректировки категории.
+    """
+    s = str(s or "")
+    s = s.lower().replace("ё", "е")
+
+    # Удаляем служебные теги вида *М*, *ОФ*, *Ц*, *Р*
+    s = re.sub(r"\*[а-яёa-z]{1,4}\*", "", s)
+    s = s.replace("*", "")
+
+    # Оставляем только буквы, цифры и пробелы
+    s = re.sub(r"[^a-zа-яё0-9\s]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+
+    return s
+
+
+def apply_category_override(block: str, item_text: str) -> str:
+    """
+    Применяет корректировку категории для известных проблемных пунктов.
+    """
+    if not item_text:
+        return block
+
+    normalized = normalize_for_rules(item_text)
+
+    for pattern, target_category in CATEGORY_OVERRIDE_RULES:
+        if pattern.search(normalized):
+            return target_category
+
+    return block
+
+
 def normalize_item_key(s: str) -> str:
-    """Нормализация пункта для сопоставления между ресторанами."""
+    """
+    Нормализация пункта для сопоставления между ресторанами.
+
+    Здесь уже убираем служебные теги и лишние символы,
+    чтобы одинаковые пункты из разных файлов совпадали.
+    """
     s = clean_item(s)
     s = s.lower().replace("ё", "е")
-    s = re.sub(r"[\"«»“”]", "", s)
-    s = re.sub(r"\s+", " ", s).strip()
+
+    # Удаляем служебные теги вида *М*, *ОФ*, *Ц*, *Р*
+    s = re.sub(r"\*[а-яёa-z]{1,4}\*", "", s)
+
+    # Удаляем оставшиеся звездочки, чтобы не мешали сопоставлению
+    s = s.replace("*", "")
+
+    # Агрессивная нормализация для сопоставления:
+    # оставляем только буквы и цифры
+    s = re.sub(r"[^a-zа-яё0-9]+", "", s)
+
     return s
 
 
@@ -219,6 +465,21 @@ def estimate_row_height(text: str, width: float, min_height: int = 18, max_heigh
         lines += max(1, math.ceil(len(part) / chars_per_line))
 
     return min(max_height, max(min_height, lines * 15))
+
+
+def order_blocks(blocks: OrderedDict) -> OrderedDict:
+    """Ставит блоки в каноническом порядке, неизвестные блоки добавляет в конец."""
+    ordered = OrderedDict()
+
+    for name in CANONICAL_BLOCKS:
+        if name in blocks:
+            ordered[name] = blocks[name]
+
+    for name, items in blocks.items():
+        if name not in ordered:
+            ordered[name] = items
+
+    return ordered
 
 
 # =========================
@@ -291,8 +552,11 @@ def parse_voc_text(text: str, filename: str):
         if not norm_key:
             return
 
+        # Корректируем категорию для известных проблемных пунктов
+        final_block = apply_category_override(block_name, item_clean)
+
         value = 1 if result_word.strip().lower() == "нет" else 0
-        key = (block_name, norm_key)
+        key = (final_block, norm_key)
 
         if key not in results:
             results[key] = {
@@ -527,6 +791,9 @@ def build_summary(parsed, include_default=False, only_uploaded=True):
         if kept_items:
             filtered_blocks[block] = kept_items
 
+    # Приводим блоки к нужному порядку
+    filtered_blocks = order_blocks(filtered_blocks)
+
     return filtered_blocks, rest_labels, rest_info, matrix, loaded_labels
 
 
@@ -571,17 +838,17 @@ def generate_excel(blocks, rest_labels, rest_info, matrix, loaded_labels):
         return buf.getvalue()
 
     # Ширины колонок
-    ws.column_dimensions["A"].width = 30
-    ws.column_dimensions["B"].width = 90
+    ws.column_dimensions["A"].width = CATEGORY_WIDTH
+    ws.column_dimensions["B"].width = ITEM_WIDTH
 
     start_col = 3
 
     for i, _ in enumerate(rest_labels):
         col_letter = get_column_letter(start_col + i)
-        ws.column_dimensions[col_letter].width = 7
+        ws.column_dimensions[col_letter].width = RESTAURANT_WIDTH
 
     total_col = start_col + len(rest_labels)
-    ws.column_dimensions[get_column_letter(total_col)].width = 14
+    ws.column_dimensions[get_column_letter(total_col)].width = TOTAL_WIDTH
 
     last_rest_col = start_col + len(rest_labels) - 1
     last_rest_col_letter = get_column_letter(last_rest_col)
@@ -619,7 +886,7 @@ def generate_excel(blocks, rest_labels, rest_info, matrix, loaded_labels):
         for col in range(1, total_col + 1):
             ws.cell(row=row, column=col).border = base_border
 
-        ws.row_dimensions[row].height = 22
+        ws.row_dimensions[row].height = 24
         row += 1
 
         # Пункты внутри блока
@@ -662,7 +929,7 @@ def generate_excel(blocks, rest_labels, rest_info, matrix, loaded_labels):
                     cell.border = base_border
 
             # Автоподбор высоты строки
-            ws.row_dimensions[row].height = estimate_row_height(display, 90)
+            ws.row_dimensions[row].height = estimate_row_height(display, ITEM_WIDTH)
 
             item_rows.append(row)
             row += 1
