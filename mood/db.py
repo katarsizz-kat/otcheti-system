@@ -42,25 +42,15 @@ def save_entry(
     note: str = "",
 ) -> int:
     """
-    Сохранить запись настроения.
+    Добавить запись настроения.
 
-    Одна запись на человека на часть дня:
-    если запись за эту часть дня уже есть — она заменяется.
+    За одну часть дня может быть НЕСКОЛЬКО настроений —
+    каждая запись добавляется в хронологию дня.
     Обычная запись отменяет статус «пауза» за этот день.
+    Если запись ошибочная — удалите её кнопкой 🗑 в форме.
     """
     supabase = get_supabase_client()
     d = _date_str(entry_date)
-
-    # Заменяем запись за эту же часть дня
-    (
-        supabase.table(MOOD_TABLE)
-        .delete()
-        .eq("person", person)
-        .eq("date", d)
-        .eq("part_of_day", part_of_day)
-        .eq("status", "logged")
-        .execute()
-    )
 
     # Обычная запись отменяет паузу
     (
@@ -94,7 +84,6 @@ def save_pause(person: str, entry_date) -> int:
     supabase = get_supabase_client()
     d = _date_str(entry_date)
 
-    # Очищаем день полностью
     (
         supabase.table(MOOD_TABLE)
         .delete()
