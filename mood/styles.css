@@ -1,20 +1,11 @@
 /* ============================================================
    ДНЕВНИК ЭМОЦИОНАЛЬНОЙ ПОГОДЫ — СТИЛИ
-   
-   Тёплый digital-блокнот:
-   - glassmorphism карточки
-   - neumorphism кнопки интенсивности
-   - плавные анимации
-   - микро-интеракции
    ============================================================ */
 
-/* ============================================================
-   ШРИФТЫ
-   ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
 /* ============================================================
-   CSS-ПЕРЕМЕННЫЕ (палитра из config.py)
+   CSS-ПЕРЕМЕННЫЕ
    ============================================================ */
 :root {
     --mood-bg-primary: #fdf6f0;
@@ -33,8 +24,6 @@
     --mood-btn-secondary: linear-gradient(135deg, #f5e6d3 0%, #e8d5c0 100%);
     --mood-tab-active: linear-gradient(135deg, #e8a87c 0%, #d9976b 100%);
     --mood-tab-inactive: #f5ede3;
-    
-    /* Динамический цвет эмоции (устанавливается через JS/form.py) */
     --mood-color: #e8a87c;
     --mood-color-soft: #fdf0e6;
     --mood-color-text: #7a4a2a;
@@ -103,7 +92,7 @@ h1 {
 }
 
 /* ============================================================
-   ФОРМЫ: SELECTBOX, DATE INPUT, TEXT INPUT
+   ФОРМЫ
    ============================================================ */
 div[data-testid="stSelectbox"] > label,
 div[data-testid="stDateInput"] > label,
@@ -146,7 +135,7 @@ div[data-testid="stTextArea"] textarea:focus {
 }
 
 /* ============================================================
-   КНОПКИ ИНТЕНСИВНОСТИ (neumorphism кружочки)
+   КНОПКИ ИНТЕНСИВНОСТИ
    ============================================================ */
 .mood-intensity-container {
     display: flex;
@@ -169,22 +158,19 @@ div[data-testid="stTextArea"] textarea:focus {
     font-weight: 600;
     font-size: 0.8rem;
     color: transparent;
-    box-shadow: 
+    box-shadow:
         3px 3px 6px rgba(120, 80, 50, 0.1),
         -2px -2px 5px rgba(255, 255, 255, 0.8);
 }
 
 .mood-intensity-btn:hover {
     transform: scale(1.15);
-    box-shadow: 
-        4px 4px 8px rgba(120, 80, 50, 0.15),
-        -3px -3px 6px rgba(255, 255, 255, 0.9);
 }
 
 .mood-intensity-btn.active {
     border-color: var(--mood-color);
     color: var(--mood-color-text);
-    box-shadow: 
+    box-shadow:
         inset 2px 2px 4px rgba(120, 80, 50, 0.1),
         inset -2px -2px 4px rgba(255, 255, 255, 0.7),
         0 0 0 3px var(--mood-color-soft);
@@ -217,56 +203,31 @@ div[data-testid="stButton"] > button:hover {
     box-shadow: var(--mood-shadow-hover) !important;
 }
 
-div[data-testid="stButton"] > button:active {
-    transform: translateY(0) !important;
-}
-
-/* Основная кнопка (Сохранить) */
 .mood-btn-primary button {
     background: var(--mood-btn-primary) !important;
     color: white !important;
 }
 
-.mood-btn-primary button:hover {
-    background: linear-gradient(135deg, #d9976b 0%, #c8865a 100%) !important;
-}
-
-/* Вторичная кнопка (Пауза) */
 .mood-btn-secondary button {
     background: var(--mood-btn-secondary) !important;
     color: var(--mood-text-primary) !important;
     border: 1.5px solid var(--mood-border) !important;
 }
 
-.mood-btn-secondary button:hover {
-    background: linear-gradient(135deg, #e8d5c0 0%, #d9c4af 100%) !important;
-}
-
-/* Кнопка удаления */
 .mood-btn-delete button {
     background: rgba(229, 115, 115, 0.1) !important;
     color: #e57373 !important;
     border: 1.5px solid rgba(229, 115, 115, 0.3) !important;
 }
 
-.mood-btn-delete button:hover {
-    background: rgba(229, 115, 115, 0.2) !important;
-}
-
 /* ============================================================
-   ВКЛАДКИ (Отметить / Календарь)
+   ВКЛАДКИ
    ============================================================ */
-div[data-testid="stTabs"] {
-    background: transparent;
-}
-
 div[data-baseweb="tab-list"] {
     gap: 0.5rem;
     background: var(--mood-bg-secondary);
     padding: 0.5rem;
     border-radius: 16px;
-    box-shadow: inset 2px 2px 5px rgba(120, 80, 50, 0.05),
-                inset -2px -2px 5px rgba(255, 255, 255, 0.8);
 }
 
 button[data-baseweb="tab"] {
@@ -286,11 +247,6 @@ button[data-baseweb="tab"][aria-selected="true"] {
     box-shadow: 0 4px 12px rgba(232, 168, 124, 0.3) !important;
 }
 
-button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
-    background: #efe3d5 !important;
-    color: var(--mood-text-primary) !important;
-}
-
 /* ============================================================
    КАЛЕНДАРЬ
    ============================================================ */
@@ -301,13 +257,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     border-radius: 20px;
     padding: 1.5rem;
     box-shadow: var(--mood-shadow);
-}
-
-.mood-calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
 }
 
 .mood-calendar-grid {
@@ -345,7 +294,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 .mood-calendar-cell:hover {
     border-color: var(--mood-accent);
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(120, 80, 50, 0.1);
 }
 
 .mood-calendar-cell.today {
@@ -356,11 +304,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 .mood-calendar-cell.empty {
     background: transparent;
     cursor: default;
-}
-
-.mood-calendar-cell.empty:hover {
-    transform: none;
-    box-shadow: none;
 }
 
 .mood-calendar-date {
@@ -388,9 +331,7 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     transform: scale(1.3);
 }
 
-/* Две полоски в общем календаре */
 .mood-calendar-cell-shared {
-    flex-direction: column;
     justify-content: space-between;
     padding: 4px;
 }
@@ -413,15 +354,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 /* ============================================================
    СТАТИСТИКА
    ============================================================ */
-.mood-stats-container {
-    background: var(--mood-bg-card);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--mood-border);
-    border-radius: 20px;
-    padding: 1.5rem;
-    box-shadow: var(--mood-shadow);
-}
-
 .mood-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -440,7 +372,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 
 .mood-stat-card:hover {
     transform: translateY(-3px);
-    box-shadow: var(--mood-shadow);
 }
 
 .mood-stat-emoji {
@@ -462,7 +393,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     margin-top: 0.25rem;
 }
 
-/* Эмоциональный узор месяца */
 .mood-pattern-container {
     display: flex;
     flex-wrap: wrap;
@@ -501,7 +431,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 
 .mood-achievement:hover {
     transform: translateX(4px);
-    box-shadow: var(--mood-shadow);
 }
 
 .mood-achievement-emoji {
@@ -521,12 +450,11 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   ЗАПИСИ ДНЯ (список с кнопками редактирования/удаления)
+   ЗАПИСИ ДНЯ
    ============================================================ */
 .mood-entry-item {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     background: rgba(255, 255, 255, 0.7);
     border-radius: 12px;
     padding: 0.75rem 1rem;
@@ -537,39 +465,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 
 .mood-entry-item:hover {
     background: rgba(255, 255, 255, 0.9);
-    box-shadow: var(--mood-shadow);
-}
-
-.mood-entry-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.mood-entry-emoji {
-    font-size: 1.5rem;
-}
-
-.mood-entry-details {
-    display: flex;
-    flex-direction: column;
-}
-
-.mood-entry-mood {
-    font-family: 'Quicksand', sans-serif;
-    font-weight: 600;
-    color: var(--mood-text-primary);
-}
-
-.mood-entry-meta {
-    font-family: 'Nunito', sans-serif;
-    font-size: 0.75rem;
-    color: var(--mood-text-secondary);
-}
-
-.mood-entry-actions {
-    display: flex;
-    gap: 0.5rem;
 }
 
 /* ============================================================
@@ -586,11 +481,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     100% { transform: scale(1); opacity: 1; }
 }
 
-@keyframes moodPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
-
 .mood-fade-in {
     animation: moodFadeIn 0.4s ease forwards;
 }
@@ -599,12 +489,8 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     animation: moodPop 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.mood-pulse {
-    animation: moodPulse 2s ease-in-out infinite;
-}
-
 /* ============================================================
-   ПРИВЕТСТВИЕ / ЭКРАН ВХОДА
+   ЭКРАН ВХОДА
    ============================================================ */
 .mood-auth-container {
     max-width: 400px;
@@ -639,28 +525,16 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     .main .block-container {
         padding: 1rem;
     }
-    
     .mood-calendar-grid {
         gap: 4px;
     }
-    
-    .mood-calendar-cell {
-        border-radius: 8px;
-    }
-    
     .mood-stats-grid {
         grid-template-columns: 1fr;
-    }
-    
-    .mood-intensity-btn {
-        width: 32px;
-        height: 32px;
     }
 }
 
 /* ============================================================
-   СКРЫТИЕ СТАНДАРТНЫХ ЭЛЕМЕНТОВ STREAMLIT
+   СКРЫТИЕ БРЕНДИНГА (НЕ трогаем header — там кнопка сайдбара!)
    ============================================================ */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
