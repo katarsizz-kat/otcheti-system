@@ -677,12 +677,3 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
    ============================================================ */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-/* ============================================================
-   ТЁПЛЫЙ ФОН СТРАНИЦЫ (переопределяет общую тему проекта)
-   ============================================================ */
-.stApp,
-[data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] > div,
-.main {
-    background: linear-gradient(180deg, #fdf6f0 0%, #fff4e6 100%) !important;
-}
