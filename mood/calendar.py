@@ -1,11 +1,14 @@
 """
 Календарь настроения: три режима просмотра.
 
-- 🌸 Календарь Кати (точки по частям дня)
-- 🌷 Календарь Кристины (точки по частям дня)
+- 🌸 Календарь Кати (точки по всем настроениям дня)
+- 🌷 Календарь Кристины (точки по всем настроениям дня)
 - 👯‍♀️ Общий (две полоски в каждой ячейке)
 
-Календарь появляется после нажатия кнопки режима.
+За одну часть дня может быть несколько настроений:
+- в личном календаре — точка за каждое настроение;
+- в общем — градиентная полоска из цветов настроений;
+- в подсказке — цепочка «😊 хорошее → 😟 тревога».
 """
 
 import calendar as cal
@@ -65,8 +68,35 @@ def _parse_month(option: str):
 # ДЕТАЛИ ЯЧЕЕК
 # ============================================================
 
+def _logged_entries(entries: list, part: str = None) -> list:
+    """Отфильтровать только logged-записи (опционально по части дня)."""
+    result = []
+    for e in entries:
+        if e.get("status") != "logged":
+            continue
+        if part is not None and e.get("part_of_day") != part:
+            continue
+        result.append(e)
+    return result
+
+
+def _part_background(logged: list) -> str:
+    """
+    Фон сегмента части дня.
+
+    Одно настроение — сплошной цвет,
+    несколько — градиент из цветов по хронологии.
+    """
+    colors = [get_mood_data(e["mood"])["color"] for e in logged]
+    if not colors:
+        return EMPTY_SEGMENT
+    if len(colors) == 1:
+        return colors[0]
+    return f"linear-gradient(90deg, {', '.join(colors)})"
+
+
 def _person_dots(entries: list) -> str:
-    """Точки по частям дня (личный календарь)."""
+    """Точки по всем настроениям дня (личный календарь)."""
     if entries and all(
         e.get("status") == "pause" for e in entries
     ):
@@ -78,18 +108,12 @@ def _person_dots(entries: list) -> str:
         )
 
     dots = []
-    for part in PARTS_OF_DAY:
-        logged = [
-            e for e in entries
-            if e.get("part_of_day") == part
-            and e.get("status") == "logged"
-        ]
-        if logged:
-            color = get_mood_data(logged[-1]["mood"])["color"]
-            dots.append(
-                f'<span class="mood-calendar-dot" '
-                f'style="background:{color}"></span>'
-            )
+    for e in _logged_entries(entries):
+        color = get_mood_data(e["mood"])["color"]
+        dots.append(
+            f'<span class="mood-calendar-dot" '
+            f'style="background:{color}"></span>'
+        )
     return f'<div class="mood-calendar-dots">{"".join(dots)}</div>'
 
 
@@ -109,18 +133,11 @@ def _person_stripe(entries: list) -> str:
 
     segments = []
     for part in PARTS_OF_DAY:
-        logged = [
-            e for e in entries
-            if e.get("part_of_day") == part
-            and e.get("status") == "logged"
-        ]
-        color = (
-            get_mood_data(logged[-1]["mood"])["color"]
-            if logged else EMPTY_SEGMENT
-        )
+        logged = _logged_entries(entries, part)
+        background = _part_background(logged)
         segments.append(
             '<div class="mood-calendar-stripe-segment" '
-            f'style="background:{color}"></div>'
+            f'style="background:{background}"></div>'
         )
     return (
         f'<div class="mood-calendar-stripe">'
@@ -143,16 +160,18 @@ def _tooltip(date_str: str, mode: str, index: dict) -> str:
             continue
 
         parts = []
-        for e in entries:
-            if e.get("status") != "logged":
-                continue
-            mood_data = get_mood_data(e["mood"])
-            parts.append(
-                f"{e['part_of_day']}: {mood_data['emoji']} "
-                f"{e['mood']} {e['intensity']}/5"
-            )
+        for part in PARTS_OF_DAY:
+            logged = _logged_entries(entries, part)
+            if logged:
+                chain = " → ".join(
+                    f"{get_mood_data(e['mood'])['emoji']} "
+                    f"{e['mood']} {e['intensity']}/5"
+                    for e in logged
+                )
+                parts.append(f"{part}: {chain}")
+
         if parts:
-            lines.append(f"{person}: {', '.join(parts)}")
+            lines.append(f"{person}: {'; '.join(parts)}")
 
     return "&#10;".join(lines)
 
