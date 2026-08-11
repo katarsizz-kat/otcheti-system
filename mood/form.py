@@ -33,6 +33,17 @@ def _today_moscow():
     return datetime.now(MOSCOW_TZ).date()
 
 
+def _apply_pending_actions(person: str) -> None:
+    """
+    Отложенные действия ДО отрисовки виджетов.
+
+    Streamlit разрешает менять значение виджета по ключу
+    только до того, как виджет отрисован в этом запуске.
+    """
+    if st.session_state.pop(f"mood_clear_note_{person}", False):
+        st.session_state[f"mood_note_{person}"] = ""
+
+
 def _show_flash(person: str) -> None:
     """Показать сохранённое сообщение после rerun."""
     flash = st.session_state.pop(f"mood_flash_{person}", None)
@@ -92,6 +103,8 @@ def _render_person_column(person: str) -> None:
     emoji = PERSON_EMOJI[person]
     st.markdown(f"### {emoji} {person}")
 
+    # Отложенные действия и сообщения — ДО виджетов
+    _apply_pending_actions(person)
     _show_flash(person)
 
     # Дата (не дальше сегодня)
@@ -205,7 +218,8 @@ def _render_person_column(person: str) -> None:
             st.session_state[f"mood_flash_{person}"] = (
                 REACTIONS.get(mood_name, "Запись сохранена 🌿")
             )
-            st.session_state[f"mood_note_{person}"] = ""
+            # Очищаем заметку отложенно (на следующем рендере)
+            st.session_state[f"mood_clear_note_{person}"] = True
             st.rerun()
 
     with col_pause:
@@ -218,6 +232,7 @@ def _render_person_column(person: str) -> None:
             st.session_state[f"mood_flash_{person}"] = (
                 random.choice(PAUSE_TEXTS)
             )
+            st.session_state[f"mood_clear_note_{person}"] = True
             st.rerun()
 
     # Записи дня
