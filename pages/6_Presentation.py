@@ -1,53 +1,87 @@
+"""Страница генерации презентаций.
+
+v2.0 (дизайн-система Sage & Sandstone):
+- убраны дублирующий set_page_config и критический #D6EAF8;
+- подключены apply_subtle_theme (lite-режим) и render_theme_controls();
+- st.title заменён на темизированный .header-block;
+- st.balloons() заменён на celebrate_report_success() — пастельные шарики.
+Вся логика генерации PPTX (utils.pptx_builder) не тронута.
+"""
 import streamlit as st
-import pandas as pd
 import os
 import sys
-from typing import List, Dict
-import streamlit as st
 
-# 1. НАСТРОЙКА СТРАНИЦЫ
-st.set_page_config(page_title="Название страницы", page_icon="🍕", layout="wide")
+# =============================================================================
+# 1. НАСТРОЙКА СТРАНИЦЫ (ВСЕГДА ПЕРВАЯ КОМАНДА!)
+# =============================================================================
+st.set_page_config(page_title="Презентация", page_icon="🎤", layout="wide")
 
-# 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
-st.markdown("""
-<style>
-.stApp, body, .main .block-container, [data-testid="stAppViewBlockContainer"] {
-    background-color: #D6EAF8 !important;
-    background: #D6EAF8 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# 3. ОСТАЛЬНЫЕ ИМПОРТЫ И КОД...
-
+# =============================================================================
+# 2. ИМПОРТЫ
+# =============================================================================
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.pptx_builder import generate_flexible_presentation, parse_kr_excel
 
-st.set_page_config(page_title=" Презентация", page_icon="🎤", layout="wide")
+from styles import apply_subtle_theme
+from config.greetings import get_current_greeting
+from config.holidays import get_today_holiday
 
-st.title("🍕 Генерация презентации")
+try:
+    from components import render_theme_controls
+except Exception:
+    render_theme_controls = None
+
+try:
+    from config.effects import celebrate_report_success
+except Exception:
+    celebrate_report_success = None
+
+# =============================================================================
+# 3. ТЕМА (lite-режим) + БЛОК "ОФОРМЛЕНИЕ"
+# =============================================================================
+greeting_data = get_current_greeting() or {}
+holiday = get_today_holiday() or {}
+theme_name = greeting_data.get("theme") if isinstance(greeting_data, dict) else None
+holiday_effects = holiday.get("effects") if isinstance(holiday, dict) else None
+apply_subtle_theme(theme_name, holiday_effects)
+
+if render_theme_controls is not None:
+    try:
+        render_theme_controls()
+    except Exception:
+        pass
+
+# =============================================================================
+# ЗАГОЛОВОК
+# =============================================================================
+st.markdown(
+    """
+    <div class="header-block">
+        <h1>🍕 Генерация презентации</h1>
+        <p>Загрузите Excel-файлы с данными клиентского рейтинга
+        и опишите структуру презентации.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 st.markdown("---")
 
-st.write("Загрузите Excel-файлы с данными клиентского рейтинга и опишите структуру презентации.")
-
-# ==========================================
-#  БЛОК 1: ЗАГРУЗКА ФАЙЛОВ
-# ==========================================
+# =============================================================================
+# БЛОК 1: ЗАГРУЗКА ФАЙЛОВ
+# =============================================================================
 st.subheader("📁 1. Загрузка данных")
 
 if 'uploaded_files' not in st.session_state:
     st.session_state.uploaded_files = []
 
 col1, col2 = st.columns([3, 1])
-
 with col1:
     uploaded_file = st.file_uploader(
-        "Загрузите Excel-файл", 
-        type=['xlsx'], 
+        "Загрузите Excel-файл",
+        type=['xlsx'],
         accept_multiple_files=False,
         key=f"file_{len(st.session_state.uploaded_files)}"
     )
-
 with col2:
     if st.button("➕ Добавить файл", type="secondary", use_container_width=True):
         if uploaded_file is not None:
@@ -57,8 +91,7 @@ with col2:
             st.warning("⚠️ Сначала выберите файл!")
 
 if st.session_state.uploaded_files:
-    st.markdown(f"**📋 Загружено файлов: {len(st.session_state.uploaded_files)}**")
-    
+    st.markdown(f"📋 Загружено файлов: {len(st.session_state.uploaded_files)}")
     files_to_remove = []
     for idx, file in enumerate(st.session_state.uploaded_files):
         col_a, col_b, col_c = st.columns([6, 2, 1])
@@ -69,24 +102,21 @@ if st.session_state.uploaded_files:
         with col_c:
             if st.button("🗑️", key=f"remove_{idx}"):
                 files_to_remove.append(idx)
-    
     if files_to_remove:
         for idx in sorted(files_to_remove, reverse=True):
             st.session_state.uploaded_files.pop(idx)
         st.rerun()
-    
     if st.button("🗑️ Очистить все файлы", type="secondary"):
         st.session_state.uploaded_files = []
         st.rerun()
 
-# ==========================================
-#  БЛОК 2: СТРУКТУРА ПРЕЗЕНТАЦИИ
-# ==========================================
+# =============================================================================
+# БЛОК 2: СТРУКТУРА ПРЕЗЕНТАЦИИ
+# =============================================================================
 st.divider()
 st.subheader("📝 2. Структура презентации")
-
 st.markdown("""
-**Опишите, какие слайды нужны** (каждый слайд с новой строки):
+Опишите, какие слайды нужны (каждый слайд с новой строки):
 
 Пример:
 Общие показатели по сети
@@ -102,17 +132,14 @@ presentation_structure = st.text_area(
     placeholder="Введите название каждого слайда с новой строки..."
 )
 
-# ==========================================
+# =============================================================================
 # ⚙️ БЛОК 3: НАСТРОЙКИ
-# ==========================================
+# =============================================================================
 st.divider()
 st.subheader("⚙️ 3. Настройки")
-
 col_x, col_y = st.columns(2)
-
 with col_x:
     report_period = st.text_input("Период отчёта", value="Июнь 2026")
-    
 with col_y:
     color_theme = st.selectbox(
         "Цветовая тема",
@@ -120,30 +147,25 @@ with col_y:
         index=0
     )
 
-# ==========================================
+# =============================================================================
 # 🍕 ГЕНЕРАЦИЯ ПРЕЗЕНТАЦИИ
-# ==========================================
+# =============================================================================
 st.divider()
-
 if st.button("🍕 Сгенерировать презентацию", type="primary", use_container_width=True):
-    
     if not st.session_state.uploaded_files:
         st.error("❌ Загрузите хотя бы один файл!")
         st.stop()
-    
     if not presentation_structure.strip():
         st.error("❌ Опишите структуру презентации!")
         st.stop()
-    
+
     with st.spinner("🔥 Готовим презентацию... Анализируем данные из файлов..."):
-        
         progress_bar = st.progress(0)
         status_text = st.empty()
-        
+
         # Шаг 1: Парсинг всех файлов
-        status_text.text(" Читаем и парсим файлы...")
+        status_text.text("📂 Читаем и парсим файлы...")
         all_parsed_data = {}
-        
         for idx, file in enumerate(st.session_state.uploaded_files):
             file.seek(0)
             try:
@@ -151,31 +173,26 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
                 temp_path = f"temp_{file.name}"
                 with open(temp_path, 'wb') as f:
                     f.write(file.getbuffer())
-                
                 # Парсим файл
                 parsed = parse_kr_excel(temp_path)
                 all_parsed_data[file.name] = parsed
-                
                 # Удаляем временный файл
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
-                
                 progress_bar.progress((idx + 1) / len(st.session_state.uploaded_files) * 0.5)
             except Exception as e:
                 st.error(f"❌ Ошибка парсинга файла {file.name}: {e}")
                 st.stop()
-        
+
         # Шаг 2: Парсинг структуры
         status_text.text("📋 Анализируем структуру...")
         slides_structure = [line.strip() for line in presentation_structure.split('\n') if line.strip()]
         progress_bar.progress(0.7)
-        
+
         # Шаг 3: Генерация презентации
-        status_text.text(" Создаём слайды...")
-        
+        status_text.text("🎨 Создаём слайды...")
         safe_period = "".join(c for c in report_period if c.isalnum() or c in (' ', '_')).rstrip()
         output_filename = f"Презентация_КР_{safe_period}.pptx"
-        
         try:
             pptx_path = generate_flexible_presentation(
                 all_dataframes=all_parsed_data,
@@ -184,10 +201,8 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
                 theme=color_theme,
                 output_path=output_filename
             )
-            
             progress_bar.progress(1.0)
             status_text.text("✅ Презентация готова!")
-            
             with open(pptx_path, "rb") as file:
                 st.download_button(
                     label="💾 Скачать презентацию (PPTX)",
@@ -196,15 +211,13 @@ if st.button("🍕 Сгенерировать презентацию", type="pri
                     mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                     use_container_width=True
                 )
-            
             st.success(f"🎉 Презентация успешно создана! Слайдов: {len(slides_structure)}")
             st.info(f"📊 Использовано файлов: {len(st.session_state.uploaded_files)}")
-            
             if os.path.exists(pptx_path):
                 os.remove(pptx_path)
-                
-            st.balloons()
-            
+            # 🎈 Пастельные шарики при следующем рендере
+            if celebrate_report_success is not None:
+                celebrate_report_success()
         except Exception as e:
             st.error(f"❌ Ошибка генерации: {e}")
             import traceback

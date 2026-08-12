@@ -1,12 +1,11 @@
 """Пасхалка с динозавром — исправленная версия (не открывается автоматически).
 
-v2.0 (дизайн-система Sage & Sandstone):
-- Цвета диалога — на CSS-переменных текущей темы A/B
-  (вместо хардкода #005F6B / #000000).
-- st.dialog нативно закрывается по Esc и клику вне окна —
-  требование доступности выполнено без JS.
-- Логика сохранена полностью: ключи, счётчик кликов,
-  "Кристина лучшая ❤️" каждый 5-й клик, автозвук, фолбэк-gif.
+v2.1: принудительная темизация ВСЕХ внутренних слоёв модалки st.dialog
+(Baseweb-портал рендерит вложенные контейнеры со своим фоном —
+теперь каждый слой перекрашен в var(--card-bg), текст в var(--text-primary)).
+Логика сохранена полностью: ключи, счётчик кликов,
+"Кристина лучшая ❤️" каждый 5-й клик, автозвук, фолбэк-gif.
+st.dialog нативно закрывается по Esc и клику вне окна.
 """
 
 import html
@@ -30,10 +29,18 @@ def load_gif_base64(gif_path: str) -> str:
 @st.dialog("🦖 Динозавр приветствует тебя!")
 def dino_dialog(phrase: str, gif_src: str):
     """Нативная модалка Streamlit (Esc / клик вне — закрытие)."""
-    # CSS диалога — на переменных темы
     st.markdown(
         """
         <style>
+        /* ===== v2.1: КРАСИМ ВСЕ СЛОИ МОДАЛКИ (Baseweb-портал) ===== */
+        div[data-testid="stModal"], div[data-testid="stModal"] > div,
+        div[data-testid="stDialog"], div[data-testid="stDialog"] > div,
+        div[role="dialog"], div[role="dialog"] > div {
+            background-color: var(--card-bg, #FFFFFF) !important;
+            color: var(--text-primary, #2D3A2E) !important;
+            border: 1px solid var(--card-border, #D9D4CB) !important;
+            border-radius: 16px !important;
+        }
         /* Заголовок диалога */
         div[data-testid="stDialog"] h3 {
             color: var(--accent-strong, #557052) !important;
@@ -42,7 +49,12 @@ def dino_dialog(phrase: str, gif_src: str):
             text-align: center !important;
             margin-bottom: 20px !important;
         }
-        /* Маленькая круглая кнопка закрытия */
+        /* Весь текст внутри диалога */
+        div[data-testid="stDialog"] p,
+        div[data-testid="stDialog"] span {
+            color: var(--text-primary, #2D3A2E) !important;
+        }
+        /* Маленькая круглая кнопка закрытия (крестик портала) */
         div[data-testid="stDialog"] button[kind="secondary"] {
             background: var(--hover-bg, rgba(45,58,46,0.06)) !important;
             border: none !important;

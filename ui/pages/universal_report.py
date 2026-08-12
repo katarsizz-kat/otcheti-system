@@ -1,11 +1,14 @@
 """
 Визуальная часть универсального отчёта.
-
 Файл содержит только Streamlit-интерфейс.
 Логика расчётов и генерация Excel находятся в:
     report/universal_report.py
-"""
 
+v2.0 (дизайн-система Sage & Sandstone):
+- apply_subtle_theme в начале рендера (страница стала темизированной);
+- render_theme_controls() — блок "Оформление" в сайдбаре;
+- celebrate_report_success() после успешной генерации — пастельные шарики.
+"""
 from __future__ import annotations
 
 import io
@@ -13,7 +16,6 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
-
 
 # ==========================================================
 # ИМПОРТ ЛОГИКИ
@@ -33,6 +35,29 @@ try:
 except Exception as exc:
     LOGIC_IMPORT_ERROR = str(exc)
 
+# ==========================================================
+# ИМПОРТ ТЕМЫ И UI-ДОПОЛНЕНИЙ
+# ==========================================================
+try:
+    from styles import apply_subtle_theme
+    from config.greetings import get_current_greeting
+    from config.holidays import get_today_holiday
+    THEME_ENABLED = True
+except Exception:
+    apply_subtle_theme = None
+    get_current_greeting = None
+    get_today_holiday = None
+    THEME_ENABLED = False
+
+try:
+    from components import render_theme_controls
+except Exception:
+    render_theme_controls = None
+
+try:
+    from config.effects import celebrate_report_success
+except Exception:
+    celebrate_report_success = None
 
 # ==========================================================
 # КОНСТАНТЫ РЕЖИМОВ
@@ -60,7 +85,6 @@ DEFAULT_PIZZA_RULES = """Сырная
 Мексиканская
 Ветчина и Грибы"""
 
-
 # ==========================================================
 # HTML-БЛОКИ
 # ВАЖНО: HTML должен начинаться с нулевой колонки,
@@ -75,32 +99,35 @@ DESCRIPTION_HTML = """<div class="universal-card">
 <h3>📋 Как работает отчёт</h3>
 <h4>📝 Стандартный режим:</h4>
 <ul>
-<li>
-<b>Гибкий поиск:</b> введите название позиции — программа найдёт все совпадения.
-</li>
-<li>
-Если написано <code>Картофель из печи 150 гр</code> — считает только по этому весу.
-Если написано <code>Картофель из печи</code> — считает оба веса.
-</li>
-<li>
-<b>Результат:</b> количество и сумма по СПб и Тюмени для каждой позиции.
-</li>
+<li><b>Гибкий поиск:</b> введите название позиции — программа найдёт все совпадения.</li>
+<li>Если написано <code>Картофель из печи 150 гр</code> — считает только по этому весу.
+Если написано <code>Картофель из печи</code> — считает оба веса.</li>
+<li><b>Результат:</b> количество и сумма по СПб и Тюмени для каждой позиции.</li>
 </ul>
 <h4>🍕 Пиццы по размерам:</h4>
 <ul>
-<li>
-Если нужен отчёт по пиццам с разбивкой по размерам —
-переключитесь на режим <b>"🍕 Пиццы по размерам"</b>.
-</li>
-<li>
-Программа автоматически сгруппирует размеры: 15, 23, 30, 35, 40 см.
-</li>
-<li>
-Тонкое и традиционное тесто суммируются внутри каждого размера.
-</li>
+<li>Если нужен отчёт по пиццам с разбивкой по размерам —
+переключитесь на режим <b>"🍕 Пиццы по размерам"</b>.</li>
+<li>Программа автоматически сгруппирует размеры: 15, 23, 30, 35, 40 см.</li>
+<li>Тонкое и традиционное тесто суммируются внутри каждого размера.</li>
 </ul>
 </div>"""
 
+# ==========================================================
+# ТЕМА
+# ==========================================================
+def _apply_theme() -> None:
+    """Применяет lite-тему приложения для страницы отчёта."""
+    if not THEME_ENABLED or apply_subtle_theme is None:
+        return
+    try:
+        greeting_data = get_current_greeting() or {}
+        holiday = get_today_holiday() or {}
+        theme_name = greeting_data.get("theme") if isinstance(greeting_data, dict) else None
+        holiday_effects = holiday.get("effects") if isinstance(holiday, dict) else None
+        apply_subtle_theme(theme_name, holiday_effects)
+    except Exception:
+        pass
 
 # ==========================================================
 # ТОЧКА ВХОДА ДЛЯ СТРАНИЦЫ
@@ -110,6 +137,15 @@ def render_universal_report() -> None:
     Главный рендер страницы.
     Вызывается из pages/10_MINI.py.
     """
+    _apply_theme()
+
+    # Блок "Оформление" в сайдбаре (тема + праздничные эффекты)
+    if render_theme_controls is not None:
+        try:
+            render_theme_controls()
+        except Exception:
+            pass
+
     _inject_styles()
     _render_header()
     _render_description()
@@ -129,7 +165,6 @@ def render_universal_report() -> None:
 
     _render_report_section(uploaded_file, report_mode, rules_text)
 
-
 # ==========================================================
 # СТИЛИ
 # ==========================================================
@@ -140,7 +175,6 @@ def _inject_styles() -> None:
     """
     try:
         from styles import apply_universal_report_styles
-
         apply_universal_report_styles()
     except Exception:
         st.markdown(
@@ -160,20 +194,17 @@ def _inject_styles() -> None:
             unsafe_allow_html=True,
         )
 
-
 # ==========================================================
 # ШАПКА
 # ==========================================================
 def _render_header() -> None:
     st.markdown(HEADER_HTML, unsafe_allow_html=True)
 
-
 # ==========================================================
 # ОПИСАНИЕ
 # ==========================================================
 def _render_description() -> None:
     st.markdown(DESCRIPTION_HTML, unsafe_allow_html=True)
-
 
 # ==========================================================
 # ВЫБОР РЕЖИМА
@@ -188,7 +219,6 @@ def _render_mode_selector() -> str:
             "Пиццы по размерам — отчёт с разбивкой по размерам 15, 23, 30, 35, 40 см."
         ),
     )
-
 
 # ==========================================================
 # ПОЛЕ ВВОДА СПИСКА ПОЗИЦИЙ
@@ -207,7 +237,6 @@ def _render_rules_input(report_mode: str) -> str:
         "<p><b>Каждая строка = одна позиция в отчёте.</b></p>",
         unsafe_allow_html=True,
     )
-
     rules_text = st.text_area(
         "Список позиций:",
         value="",
@@ -216,9 +245,7 @@ def _render_rules_input(report_mode: str) -> str:
         label_visibility="visible",
         placeholder=default_rules,
     )
-
     return rules_text
-
 
 # ==========================================================
 # ЗАГРУЗКА ФАЙЛА
@@ -226,17 +253,13 @@ def _render_rules_input(report_mode: str) -> str:
 def _render_file_uploader():
     st.markdown('<div class="universal-card">', unsafe_allow_html=True)
     st.markdown("### 📂 Загрузка файла")
-
     uploaded_file = st.file_uploader(
         "Загрузите файл рейтинг_продукт (Excel)",
         type=["xlsx"],
         key="universal_file_uploader",
     )
-
     st.markdown("</div>", unsafe_allow_html=True)
-
     return uploaded_file
-
 
 # ==========================================================
 # ОСНОВНОЙ БЛОК ГЕНЕРАЦИИ
@@ -245,7 +268,6 @@ def _render_report_section(uploaded_file, report_mode: str, rules_text: str) -> 
     st.markdown('<div class="universal-card">', unsafe_allow_html=True)
 
     period_str, period_ok = _get_period(uploaded_file)
-
     if period_ok:
         st.info(f"📅 Период: **{period_str}**")
     else:
@@ -261,33 +283,32 @@ def _render_report_section(uploaded_file, report_mode: str, rules_text: str) -> 
             try:
                 df = read_file(uploaded_file)
                 rules = _parse_rules(rules_text)
-
                 if not rules:
                     st.error("❌ Введите хотя бы одну позицию в поле выше!")
                 elif report_mode == PIZZA_MODE:
                     data = aggregate_pizza_by_size(df, rules_text)
                     wb = create_pizza_excel(data, period_str, rules)
-
                     st.success("✅ Отчёт сформирован!")
+                    # 🎈 Пастельные шарики при следующем рендере
+                    if celebrate_report_success is not None:
+                        celebrate_report_success()
                     _render_pizza_preview(data, rules)
                     _render_download_button(wb, period_str, report_mode)
                 else:
                     data = aggregate_data(df, rules_text)
                     wb = create_excel(data, period_str, rules)
-
                     st.success("✅ Отчёт сформирован!")
+                    # 🎈 Пастельные шарики при следующем рендере
+                    if celebrate_report_success is not None:
+                        celebrate_report_success()
                     _render_standard_preview(data, rules)
                     _render_download_button(wb, period_str, report_mode)
-
             except Exception as exc:
                 st.error(f"❌ Ошибка: {exc}")
-
                 import traceback
-
                 st.code(traceback.format_exc())
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # ==========================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ UI
@@ -312,7 +333,6 @@ def _parse_rules(rules_text: str) -> list[str]:
 
 def _build_standard_preview(data: dict, rules: list[str], city: str) -> pd.DataFrame:
     preview_rows = []
-
     for rule in rules:
         preview_rows.append(
             {
@@ -321,36 +341,28 @@ def _build_standard_preview(data: dict, rules: list[str], city: str) -> pd.DataF
                 "Сумма, ₽": data[city][rule]["sum"],
             }
         )
-
     return pd.DataFrame(preview_rows)
 
 
 def _build_pizza_preview(data: dict, rules: list[str], city: str) -> pd.DataFrame:
     preview_rows = []
-
     for rule in rules:
         row = {"Позиция": rule}
-
         for size in PIZZA_SIZES:
             row[f"{size} см"] = data[city][rule][size]["qty"]
-
         row["Всего"] = data[city][rule]["Всего"]["qty"]
         preview_rows.append(row)
-
     return pd.DataFrame(preview_rows)
 
 
 def _render_standard_preview(data: dict, rules: list[str]) -> None:
     st.subheader("📋 Превью")
-
     tab_spb, tab_tyumen = st.tabs([f"🏙 {CITY_SPB}", f"🏙 {CITY_TYUMEN}"])
-
     with tab_spb:
         st.dataframe(
             _build_standard_preview(data, rules, CITY_SPB),
             use_container_width=True,
         )
-
     with tab_tyumen:
         st.dataframe(
             _build_standard_preview(data, rules, CITY_TYUMEN),
@@ -360,15 +372,12 @@ def _render_standard_preview(data: dict, rules: list[str]) -> None:
 
 def _render_pizza_preview(data: dict, rules: list[str]) -> None:
     st.subheader("📋 Превью")
-
     tab_spb, tab_tyumen = st.tabs([f"🏙 {CITY_SPB}", f"🏙 {CITY_TYUMEN}"])
-
     with tab_spb:
         st.dataframe(
             _build_pizza_preview(data, rules, CITY_SPB),
             use_container_width=True,
         )
-
     with tab_tyumen:
         st.dataframe(
             _build_pizza_preview(data, rules, CITY_TYUMEN),
@@ -380,10 +389,8 @@ def _render_download_button(wb, period_str: str, report_mode: str) -> None:
     output = io.BytesIO()
     wb.save(output)
     output.seek(0)
-
     file_prefix = "pizza_" if report_mode == PIZZA_MODE else ""
     file_name = f"Отчёт_{file_prefix}{period_str.replace('.', '-')}.xlsx"
-
     st.download_button(
         label="📥 Скачать Excel",
         data=output,

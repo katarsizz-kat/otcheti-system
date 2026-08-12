@@ -1,20 +1,41 @@
 """Визуальная часть страницы отчёта ОС.
 БЕЗ openpyxl. Один файл = одна задача.
-"""
-from datetime import datetime, timedelta
 
+v2.0 (дизайн-система Sage & Sandstone):
+- st.balloons() заменён на celebrate_report_success() — пастельные шарики;
+- render_theme_controls() — блок "Оформление" в сайдбаре (футера нет);
+- приветствие по московскому времени (UTC+3), по правилу проекта.
+"""
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import streamlit as st
 
 import report.os_report as logic
+
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
 from styles import apply_subtle_theme, get_os_styles
 
+# ==========================================================
+# ИМПОРТ UI-ДОПОЛНЕНИЙ (шарики успеха + блок "Оформление")
+# ==========================================================
+try:
+    from config.effects import celebrate_report_success
+except Exception:
+    celebrate_report_success = None
+
+try:
+    from components import render_theme_controls
+except Exception:
+    render_theme_controls = None
+
+# Московское время (правило проекта: UTC+3)
+MSK = timezone(timedelta(hours=3))
+
 
 def greeting_by_time():
     """Приветствие в зависимости от часа (МСК)."""
-    hour = datetime.now().hour
+    hour = datetime.now(MSK).hour
     if 5 <= hour < 12:
         return "🌅 Доброе утро!"
     if 12 <= hour < 18:
@@ -26,6 +47,13 @@ def greeting_by_time():
 
 def render():
     """Основная точка входа UI."""
+    # Блок "Оформление" в сайдбаре (тема + праздничные эффекты)
+    if render_theme_controls is not None:
+        try:
+            render_theme_controls()
+        except Exception:
+            pass
+
     # Тема
     greeting_data = get_current_greeting() or {}
     holiday = get_today_holiday() or {}
@@ -91,7 +119,6 @@ def render():
         (df_filtered['Исполнитель'].notna()) &
         (df_filtered['Исполнитель'] != 'Системный пользователь')
     ].copy()
-
     if not df_op_full.empty:
         df_op_full['Дата_МСК'] = df_op_full['Дата отзыва'] + logic.MSK_OFFSET
         df_op_full['Час_МСК'] = df_op_full['Дата_МСК'].dt.hour
@@ -131,7 +158,6 @@ def _render_filters(df):
     st.markdown("---")
     st.markdown("### 🔍 Фильтры")
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown("#### 🏙️ Город/регион")
         available_cities = (
@@ -186,7 +212,6 @@ def _render_filters(df):
 def _render_tab_operators(df_op, df_op_stats, h_stats, joint_df, total_days):
     st.subheader("Загрузка операторов и распределение по часам")
     st.caption("⏱ Только живые операторы. МСК (+3 ч). До 02:00 = предыдущий день.")
-
     if df_op.empty:
         st.warning("Нет данных по живым операторам.")
         return
@@ -215,7 +240,6 @@ def _render_tab_operators(df_op, df_op_stats, h_stats, joint_df, total_days):
 
 def _render_tab_complaints(df_f, p1_for_ui, p2_for_ui):
     st.subheader("Аналитика жалоб по категориям и ресторанам")
-
     st.markdown("##### 📋 Таблица 1: Детальные категории жалоб")
     col1, col2 = st.columns([1, 2])
     with col1:
@@ -225,7 +249,6 @@ def _render_tab_complaints(df_f, p1_for_ui, p2_for_ui):
         st.dataframe(p1_for_ui, use_container_width=True)
 
     st.markdown("---")
-
     st.markdown("##### 📋 Таблица 2: Укрупнённые категории жалоб")
     col3, col4 = st.columns([1, 2])
     with col3:
@@ -258,7 +281,7 @@ def _render_tab_bot(bot_df):
 
 
 def _render_tab_export(df_op_stats, h_stats, day_stats, wd_stats,
-                        p1, p2, bot_df, city_map):
+                       p1, p2, bot_df, city_map):
     st.subheader("📊 Генерация Excel-отчёта")
     st.info(
         "6 листов: Операторы · Часы · Дни · Жалобы (деталь) · "
@@ -284,6 +307,8 @@ def _render_tab_export(df_op_stats, h_stats, day_stats, wd_stats,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     key="os_download_btn",
                 )
-                st.balloons()
+                # 🎈 Пастельные шарики при следующем рендере
+                if celebrate_report_success is not None:
+                    celebrate_report_success()
             except Exception as e:
                 st.error(f"Ошибка при формировании Excel: {e}")

@@ -11,6 +11,18 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 # =========================
+# ТЕМА И БЛОК "ОФОРМЛЕНИЕ" (v2.0)
+# =========================
+from styles import apply_subtle_theme
+from config.greetings import get_current_greeting
+from config.holidays import get_today_holiday
+
+try:
+    from components import render_theme_controls
+except Exception:
+    render_theme_controls = None
+
+# =========================
 # Настройки времени UTC+3
 # =========================
 MSK = timezone(timedelta(hours=3))
@@ -1029,10 +1041,29 @@ def make_preview(blocks, rest_labels, matrix, limit=500):
 # Интерфейс страницы
 # =========================
 def main():
-    st.title("VOC: сводная таблица нарушений")
-    st.caption(
-        "Загрузите PDF-файлы VOC. В свод попадут только пункты, "
-        "по которым хотя бы в одном ресторане есть результат НЕТ."
+    st.set_page_config(page_title="VOC", page_icon="📋", layout="wide")
+
+    greeting_data = get_current_greeting() or {}
+    holiday = get_today_holiday() or {}
+    apply_subtle_theme(
+        greeting_data.get("theme") if isinstance(greeting_data, dict) else None,
+        holiday.get("effects") if isinstance(holiday, dict) else None,
+    )
+    if render_theme_controls is not None:
+        try:
+            render_theme_controls()
+        except Exception:
+            pass
+
+    st.markdown(
+        """
+        <div class="header-block">
+            <h1>📋 VOC: сводная таблица нарушений</h1>
+            <p>Загрузите PDF-файлы VOC. В свод попадут только пункты,
+            по которым хотя бы в одном ресторане есть результат НЕТ.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     if not PDF_LIB_OK:

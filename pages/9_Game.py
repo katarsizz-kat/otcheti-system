@@ -14,6 +14,28 @@ now_moscow = datetime.datetime.now(moscow_tz)
 
 st.set_page_config(page_title="Пиццамейкер", page_icon="🍕", layout="wide")
 
+# --- ТЕМА (lite) + БЛОК "ОФОРМЛЕНИЕ" ---
+from styles import apply_subtle_theme
+from config.greetings import get_current_greeting
+from config.holidays import get_today_holiday
+
+try:
+    from components import render_theme_controls
+except Exception:
+    render_theme_controls = None
+
+_greeting_data = get_current_greeting() or {}
+_holiday = get_today_holiday() or {}
+apply_subtle_theme(
+    _greeting_data.get("theme") if isinstance(_greeting_data, dict) else None,
+    _holiday.get("effects") if isinstance(_holiday, dict) else None,
+)
+if render_theme_controls is not None:
+    try:
+        render_theme_controls()
+    except Exception:
+        pass
+
 # --- CSS (анимации однострочные) ---
 st.markdown("""
 <style>

@@ -9,6 +9,28 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- ТЕМА (lite) + БЛОК "ОФОРМЛЕНИЕ" ---
+from styles import apply_subtle_theme
+from config.greetings import get_current_greeting
+from config.holidays import get_today_holiday
+
+try:
+    from components import render_theme_controls
+except Exception:
+    render_theme_controls = None
+
+_greeting_data = get_current_greeting() or {}
+_holiday = get_today_holiday() or {}
+apply_subtle_theme(
+    _greeting_data.get("theme") if isinstance(_greeting_data, dict) else None,
+    _holiday.get("effects") if isinstance(_holiday, dict) else None,
+)
+if render_theme_controls is not None:
+    try:
+        render_theme_controls()
+    except Exception:
+        pass
+
 # Время UTC+3
 MOSCOW_TZ = timezone(timedelta(hours=3))
 current_time = datetime.now(MOSCOW_TZ)
