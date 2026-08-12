@@ -1,0 +1,679 @@
+/* ============================================================
+   ДНЕВНИК ЭМОЦИОНАЛЬНОЙ ПОГОДЫ — СТИЛИ
+
+   Тёплый digital-блокнот:
+   - glassmorphism карточки
+   - плавные анимации
+   - микро-интеракции
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
+
+/* ============================================================
+   CSS-ПЕРЕМЕННЫЕ
+   ============================================================ */
+:root {
+    --mood-bg-primary: #fdf6f0;
+    --mood-bg-secondary: #fff4e6;
+    --mood-bg-card: rgba(255, 253, 248, 0.75);
+    --mood-text-primary: #4a3f35;
+    --mood-text-secondary: #8a7a6a;
+    --mood-text-accent: #e8a87c;
+    --mood-accent: #e8a87c;
+    --mood-accent-hover: #d9976b;
+    --mood-accent-soft: #fdf0e6;
+    --mood-border: rgba(232, 168, 124, 0.2);
+    --mood-shadow: 0 8px 32px rgba(120, 80, 50, 0.08);
+    --mood-shadow-hover: 0 12px 40px rgba(120, 80, 50, 0.12);
+    --mood-btn-primary: linear-gradient(135deg, #e8a87c 0%, #d9976b 100%);
+    --mood-btn-secondary: linear-gradient(135deg, #f5e6d3 0%, #e8d5c0 100%);
+    --mood-tab-active: linear-gradient(135deg, #e8a87c 0%, #d9976b 100%);
+    --mood-tab-inactive: #f5ede3;
+    --mood-color: #e8a87c;
+    --mood-color-soft: #fdf0e6;
+    --mood-color-text: #7a4a2a;
+}
+
+/* ============================================================
+   БАЗОВЫЕ СТИЛИ
+   ============================================================ */
+.main .block-container {
+    max-width: 1100px;
+    padding: 2rem 1.5rem;
+}
+
+.stMarkdown {
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+    color: var(--mood-text-primary);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Quicksand', 'Nunito', sans-serif !important;
+    color: var(--mood-text-primary) !important;
+    font-weight: 700 !important;
+}
+
+h1 {
+    font-size: 2rem !important;
+    background: linear-gradient(135deg, #e8a87c 0%, #ba68c8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ============================================================
+   GLASSMORPHISM КАРТОЧКИ
+   ============================================================ */
+.mood-card {
+    background: var(--mood-bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--mood-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--mood-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 1.5rem;
+}
+
+.mood-card:hover {
+    box-shadow: var(--mood-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.mood-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--mood-text-primary);
+}
+
+.mood-card-header .emoji {
+    font-size: 1.5rem;
+}
+
+/* ============================================================
+   ФОРМЫ
+   ============================================================ */
+div[data-testid="stSelectbox"] > label,
+div[data-testid="stDateInput"] > label,
+div[data-testid="stTextInput"] > label,
+div[data-testid="stTextArea"] > label {
+    font-family: 'Nunito', sans-serif !important;
+    font-weight: 600 !important;
+    color: var(--mood-text-secondary) !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+div[data-baseweb="select"] > div,
+div[data-testid="stDateInput"] input,
+div[data-testid="stTextInput"] input,
+div[data-testid="stTextArea"] textarea {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 1.5px solid var(--mood-border) !important;
+    border-radius: 12px !important;
+    font-family: 'Nunito', sans-serif !important;
+    color: var(--mood-text-primary) !important;
+    transition: all 0.25s ease !important;
+}
+
+div[data-baseweb="select"] > div:hover,
+div[data-testid="stDateInput"] input:hover,
+div[data-testid="stTextInput"] input:hover,
+div[data-testid="stTextArea"] textarea:hover,
+div[data-baseweb="select"] > div:focus-within,
+div[data-testid="stDateInput"] input:focus,
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stTextArea"] textarea:focus {
+    border-color: var(--mood-accent) !important;
+    box-shadow: 0 0 0 3px var(--mood-accent-soft) !important;
+}
+
+/* ============================================================
+   КНОПКИ ДЕЙСТВИЙ
+   ============================================================ */
+div[data-testid="stButton"] > button {
+    font-family: 'Quicksand', sans-serif !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    padding: 0.6rem 1.2rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: var(--mood-shadow) !important;
+}
+
+div[data-testid="stButton"] > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--mood-shadow-hover) !important;
+}
+
+div[data-testid="stButton"] > button:active {
+    transform: translateY(0) !important;
+}
+
+/* ============================================================
+   ВКЛАДКИ
+   ============================================================ */
+div[data-baseweb="tab-list"] {
+    gap: 0.5rem;
+    background: var(--mood-bg-secondary);
+    padding: 0.5rem;
+    border-radius: 16px;
+    box-shadow: inset 2px 2px 5px rgba(120, 80, 50, 0.05),
+                inset -2px -2px 5px rgba(255, 255, 255, 0.8);
+}
+
+button[data-baseweb="tab"] {
+    font-family: 'Quicksand', sans-serif !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    padding: 0.75rem 1.5rem !important;
+    background: var(--mood-tab-inactive) !important;
+    color: var(--mood-text-secondary) !important;
+    border: none !important;
+    transition: all 0.25s ease !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: var(--mood-tab-active) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(232, 168, 124, 0.3) !important;
+}
+
+button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+    background: #efe3d5 !important;
+    color: var(--mood-text-primary) !important;
+}
+
+/* ============================================================
+   КАЛЕНДАРЬ
+   ============================================================ */
+.mood-calendar-container {
+    background: var(--mood-bg-card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--mood-border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--mood-shadow);
+}
+
+.mood-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.mood-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+
+.mood-calendar-day-label {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--mood-text-secondary);
+    text-align: center;
+    padding: 0.5rem 0;
+    text-transform: uppercase;
+}
+
+.mood-calendar-cell {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1.5px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.mood-calendar-cell:hover {
+    border-color: var(--mood-accent);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(120, 80, 50, 0.1);
+}
+
+.mood-calendar-cell.today {
+    border-color: var(--mood-accent);
+    background: var(--mood-accent-soft);
+}
+
+.mood-calendar-cell.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.mood-calendar-cell.empty:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.mood-calendar-date {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--mood-text-secondary);
+}
+
+.mood-calendar-dots {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.mood-calendar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.mood-calendar-dot:hover {
+    transform: scale(1.3);
+}
+
+.mood-calendar-cell-shared {
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px;
+}
+
+.mood-calendar-stripe {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    display: flex;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.mood-calendar-stripe-segment {
+    flex: 1;
+    height: 100%;
+    border-radius: 2px;
+}
+
+/* ============================================================
+   ЛЕГЕНДА КАЛЕНДАРЯ
+   ============================================================ */
+.legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1rem;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+}
+
+.legend .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--mood-bg-secondary);
+    font-size: 0.8rem;
+    font-family: 'Nunito', sans-serif;
+    color: var(--mood-text-primary);
+}
+
+.legend .chip i {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    display: inline-block;
+}
+
+/* ============================================================
+   СТАТИСТИКА: КАРТОЧКИ
+   ============================================================ */
+.mood-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.mood-stat-card {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 16px;
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid var(--mood-border);
+    transition: all 0.25s ease;
+}
+
+.mood-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--mood-shadow);
+}
+
+.mood-stat-emoji {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.mood-stat-value {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--mood-text-primary);
+}
+
+.mood-stat-label {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.8rem;
+    color: var(--mood-text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* ============================================================
+   УЗОР МЕСЯЦА (точки)
+   ============================================================ */
+.mood-pattern-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    margin: 0.5rem 0;
+}
+
+.mood-pattern-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    cursor: default;
+}
+
+.mood-pattern-dot:hover {
+    transform: scale(1.4);
+}
+
+/* ============================================================
+   ПАЛИТРА: ИНСАЙТ-БЛОК
+   ============================================================ */
+.mood-insight {
+    background: rgba(255, 255, 255, 0.7);
+    border-left: 4px solid var(--mood-accent);
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
+    font-family: 'Nunito', sans-serif;
+    color: var(--mood-text-primary);
+    margin: 0.8rem 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* ============================================================
+   БАЛАНС ТЕПЛА: ПОЛОСА + ЛЕГЕНДА
+   ============================================================ */
+.mood-balance-bar {
+    display: flex;
+    height: 18px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0.8rem 0 0.4rem 0;
+    background: rgba(0, 0, 0, 0.04);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.mood-balance-segment {
+    height: 100%;
+    transition: flex-basis 0.3s ease;
+}
+
+.mood-balance-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    color: var(--mood-text-secondary);
+    font-family: 'Nunito', sans-serif;
+}
+
+/* ============================================================
+   РИТМЫ (НЕДЕЛЯ / ЧАСТИ ДНЯ)
+   ============================================================ */
+.mood-rhythm-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin: 0.5rem 0 1rem 0;
+}
+
+.mood-rhythm-row.parts {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.mood-rhythm-cell {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid var(--mood-border);
+    border-radius: 12px;
+    padding: 0.6rem 0.3rem;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.mood-rhythm-cell.warm {
+    background: #e8f5e3;
+    border-color: #a8d5a2;
+}
+
+.mood-rhythm-cell.tense {
+    background: #e8ebf9;
+    border-color: #a5b0e5;
+}
+
+.mood-rhythm-label {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--mood-text-secondary);
+    text-transform: uppercase;
+}
+
+.mood-rhythm-emoji {
+    font-size: 1.4rem;
+    margin-top: 0.3rem;
+}
+
+/* ============================================================
+   ДОСТИЖЕНИЯ
+   ============================================================ */
+.mood-achievement {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 16px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--mood-border);
+    transition: all 0.25s ease;
+}
+
+.mood-achievement:hover {
+    transform: translateX(4px);
+    box-shadow: var(--mood-shadow);
+}
+
+.mood-achievement-emoji {
+    font-size: 2rem;
+}
+
+.mood-achievement-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    color: var(--mood-text-primary);
+}
+
+.mood-achievement-desc {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.8rem;
+    color: var(--mood-text-secondary);
+}
+
+/* ============================================================
+   ПЯТИМИНУТКА НЕДЕЛИ
+   ============================================================ */
+.mood-ritual-card {
+    background: linear-gradient(135deg, #fff4e6 0%, #fdf0e6 100%);
+    border: 1px solid var(--mood-border);
+    border-radius: 16px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.mood-week-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0.6rem 0;
+}
+
+.mood-week-person {
+    font-size: 1.2rem;
+    min-width: 24px;
+}
+
+.mood-week-row .mood-pattern-dot {
+    width: 22px;
+    height: 22px;
+}
+
+.mood-ritual-question {
+    background: rgba(255, 255, 255, 0.7);
+    border-left: 3px solid var(--mood-accent);
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    font-family: 'Nunito', sans-serif;
+    color: var(--mood-text-primary);
+    font-size: 0.95rem;
+}
+
+/* ============================================================
+   ЗАПИСИ ДНЯ
+   ============================================================ */
+.mood-entry-item {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-left: 4px solid var(--mood-color);
+    transition: all 0.2s ease;
+}
+
+.mood-entry-item:hover {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--mood-shadow);
+}
+
+/* ============================================================
+   АНИМАЦИИ
+   ============================================================ */
+@keyframes moodFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes moodPop {
+    0% { transform: scale(0.8); opacity: 0; }
+    70% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.mood-fade-in {
+    animation: moodFadeIn 0.4s ease forwards;
+}
+
+.mood-pop {
+    animation: moodPop 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ============================================================
+   ЭКРАН ВХОДА
+   ============================================================ */
+.mood-auth-container {
+    max-width: 400px;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.mood-auth-card {
+    background: var(--mood-bg-card);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--mood-border);
+    border-radius: 24px;
+    padding: 2.5rem;
+    box-shadow: var(--mood-shadow);
+}
+
+.mood-auth-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #e8a87c 0%, #ba68c8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ============================================================
+   АДАПТИВНОСТЬ
+   ============================================================ */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding: 1rem;
+    }
+
+    .mood-calendar-grid {
+        gap: 4px;
+    }
+
+    .mood-calendar-cell {
+        border-radius: 8px;
+    }
+
+    .mood-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .mood-rhythm-row {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .mood-rhythm-row.parts {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   СКРЫТИЕ БРЕНДИНГА (НЕ трогаем header — там кнопка сайдбара!)
+   ============================================================ */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
