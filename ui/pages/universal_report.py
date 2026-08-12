@@ -20,6 +20,8 @@ import streamlit as st
 # ==========================================================
 try:
     from report.universal_report import (
+        CITY_SPB,
+        CITY_TYUMEN,
         aggregate_data,
         aggregate_pizza_by_size,
         create_excel,
@@ -66,30 +68,19 @@ DEFAULT_PIZZA_RULES = """Сырная
 # ==========================================================
 HEADER_HTML = """<div class="header-block">
 <h1>📊 Универсальный отчёт</h1>
-<p>Умный отчёт с разбивкой пицц по размерам и нечётким поиском</p>
+<p>Отчёт с разбивкой пицц по размерам и по конкретным позициям</p>
 </div>"""
 
-DESCRIPTION_HTML = """<div class="content-block">
+DESCRIPTION_HTML = """<div class="universal-card">
 <h3>📋 Как работает отчёт</h3>
 <h4>📝 Стандартный режим:</h4>
 <ul>
 <li>
-<b>Гибкий поиск:</b> введите название позиции — программа найдёт все совпадения,
-порядок слов не важен.
+<b>Гибкий поиск:</b> введите название позиции — программа найдёт все совпадения.
 </li>
 <li>
-<b>Примеры:</b>
-<code>Картофель из печи 150 гр</code>,
-<code>Рогалики с колбасками</code>,
-<code>Сырная пицца</code>.
-</li>
-<li>
-<b>Авто-очистка:</b> игнорируются слова
-<i>"пицца", "тонкое", "традиционное", "тесто", "см", "new"</i>.
-</li>
-<li>
-<b>Унификация:</b> <code>4 сыра</code> и <code>четыре сыра</code>
-считаются одной позицией.
+Если написано <code>Картофель из печи 150 гр</code> — считает только по этому весу.
+Если написано <code>Картофель из печи</code> — считает оба веса.
 </li>
 <li>
 <b>Результат:</b> количество и сумма по СПб и Тюмени для каждой позиции.
@@ -154,7 +145,13 @@ def _inject_styles() -> None:
     except Exception:
         st.markdown(
             "<style>"
-            ".input-box { background: #fff3cd; border: 3px solid #ffc107; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(255,193,7,0.4); } "
+            ".universal-card { background: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.7); border-radius: 14px; padding: 24px 28px; margin-bottom: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); } "
+            ".universal-card h3 { margin: 0 0 12px 0; } "
+            ".universal-card h4 { margin: 16px 0 8px 0; } "
+            ".universal-card p { margin: 0 0 12px 0; } "
+            ".universal-card ul { margin: 0 0 8px 0; padding-left: 22px; } "
+            ".universal-card li { margin-bottom: 6px; } "
+            ".universal-card code { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 6px; } "
             "[data-testid='stTextArea'] textarea { border: 2px solid #4a90e2 !important; border-radius: 8px !important; padding: 12px !important; font-size: 14px !important; background-color: #ffffff !important; min-height: 300px !important; } "
             "[data-testid='stTextArea'] textarea:focus { border-color: #2c5aa0 !important; box-shadow: 0 0 8px rgba(74,144,226,0.3) !important; outline: none !important; } "
             "[data-testid='stTextArea'] textarea::placeholder { color: #6c757d !important; font-style: italic; opacity: 0.8; } "
@@ -205,7 +202,6 @@ def _render_rules_input(report_mode: str) -> str:
         else "universal_rules_input_standard"
     )
 
-    st.markdown('<div class="input-box">', unsafe_allow_html=True)
     st.markdown("### ✏️ ВВЕДИТЕ СПИСОК ПОЗИЦИЙ")
     st.markdown(
         "<p><b>Каждая строка = одна позиция в отчёте.</b></p>",
@@ -214,14 +210,12 @@ def _render_rules_input(report_mode: str) -> str:
 
     rules_text = st.text_area(
         "Список позиций:",
-        value=default_rules,
+        value="",
         height=height,
         key=widget_key,
         label_visibility="visible",
         placeholder=default_rules,
     )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     return rules_text
 
@@ -230,7 +224,7 @@ def _render_rules_input(report_mode: str) -> str:
 # ЗАГРУЗКА ФАЙЛА
 # ==========================================================
 def _render_file_uploader():
-    st.markdown('<div class="content-block">', unsafe_allow_html=True)
+    st.markdown('<div class="universal-card">', unsafe_allow_html=True)
     st.markdown("### 📂 Загрузка файла")
 
     uploaded_file = st.file_uploader(
@@ -248,7 +242,7 @@ def _render_file_uploader():
 # ОСНОВНОЙ БЛОК ГЕНЕРАЦИИ
 # ==========================================================
 def _render_report_section(uploaded_file, report_mode: str, rules_text: str) -> None:
-    st.markdown('<div class="content-block">', unsafe_allow_html=True)
+    st.markdown('<div class="universal-card">', unsafe_allow_html=True)
 
     period_str, period_ok = _get_period(uploaded_file)
 
@@ -316,40 +310,70 @@ def _parse_rules(rules_text: str) -> list[str]:
     return [line.strip() for line in rules_text.splitlines() if line.strip()]
 
 
-def _render_standard_preview(data: dict, rules: list[str]) -> None:
-    st.subheader("📋 Превью (СПБ)")
-
+def _build_standard_preview(data: dict, rules: list[str], city: str) -> pd.DataFrame:
     preview_rows = []
 
     for rule in rules:
         preview_rows.append(
             {
                 "Позиция": rule,
-                "Количество": data["СПБ"][rule]["qty"],
-                "Сумма, ₽": data["СПБ"][rule]["sum"],
+                "Количество": data[city][rule]["qty"],
+                "Сумма, ₽": data[city][rule]["sum"],
             }
         )
 
-    preview = pd.DataFrame(preview_rows)
-    st.dataframe(preview, use_container_width=True)
+    return pd.DataFrame(preview_rows)
 
 
-def _render_pizza_preview(data: dict, rules: list[str]) -> None:
-    st.subheader("📋 Превью (СПБ)")
-
+def _build_pizza_preview(data: dict, rules: list[str], city: str) -> pd.DataFrame:
     preview_rows = []
 
     for rule in rules:
         row = {"Позиция": rule}
 
         for size in PIZZA_SIZES:
-            row[f"{size} см"] = data["СПБ"][rule][size]["qty"]
+            row[f"{size} см"] = data[city][rule][size]["qty"]
 
-        row["Всего"] = data["СПБ"][rule]["Всего"]["qty"]
+        row["Всего"] = data[city][rule]["Всего"]["qty"]
         preview_rows.append(row)
 
-    preview = pd.DataFrame(preview_rows)
-    st.dataframe(preview, use_container_width=True)
+    return pd.DataFrame(preview_rows)
+
+
+def _render_standard_preview(data: dict, rules: list[str]) -> None:
+    st.subheader("📋 Превью")
+
+    tab_spb, tab_tyumen = st.tabs([f"🏙 {CITY_SPB}", f"🏙 {CITY_TYUMEN}"])
+
+    with tab_spb:
+        st.dataframe(
+            _build_standard_preview(data, rules, CITY_SPB),
+            use_container_width=True,
+        )
+
+    with tab_tyumen:
+        st.dataframe(
+            _build_standard_preview(data, rules, CITY_TYUMEN),
+            use_container_width=True,
+        )
+
+
+def _render_pizza_preview(data: dict, rules: list[str]) -> None:
+    st.subheader("📋 Превью")
+
+    tab_spb, tab_tyumen = st.tabs([f"🏙 {CITY_SPB}", f"🏙 {CITY_TYUMEN}"])
+
+    with tab_spb:
+        st.dataframe(
+            _build_pizza_preview(data, rules, CITY_SPB),
+            use_container_width=True,
+        )
+
+    with tab_tyumen:
+        st.dataframe(
+            _build_pizza_preview(data, rules, CITY_TYUMEN),
+            use_container_width=True,
+        )
 
 
 def _render_download_button(wb, period_str: str, report_mode: str) -> None:
