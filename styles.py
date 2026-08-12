@@ -690,3 +690,43 @@ def apply_universal_report_styles():
         "</style>",
         unsafe_allow_html=True,
     )
+
+
+def get_os_styles():
+    """
+    Специфичные стили для страницы отчёта ОС (Отдел Обратной Связи).
+    Возвращает строку CSS, которую UI передаёт в st.markdown.
+    Включает: вкладки (tabs), метрики, таблицы, графики, загрузчик файлов,
+    алерты (success/info/warning/error), caption, разделители, оверлей фона.
+    НЕ вызывает st.markdown — это делает UI-слой.
+    """
+    return """
+<style>
+.stApp::before { content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.15); z-index: 0; pointer-events: none; }
+div[data-testid="stTabs"] { margin-bottom: 24px !important; }
+div[data-testid="stTabs"] button[kind="secondary"] { background: rgba(255, 255, 255, 0.6) !important; color: #2C3E50 !important; border: 2px solid rgba(0, 95, 107, 0.3) !important; border-radius: 10px !important; padding: 12px 24px !important; font-size: 16px !important; font-weight: 600 !important; transition: all 0.3s ease !important; margin-right: 8px !important; }
+div[data-testid="stTabs"] button[kind="secondary"]:hover { background: rgba(255, 255, 255, 0.9) !important; border-color: #005F6B !important; transform: translateY(-2px) !important; }
+div[data-testid="stTabs"] button[aria-selected="true"] { background: #005F6B !important; color: #FFFFFF !important; border-color: #005F6B !important; text-shadow: 0 1px 2px rgba(0,0,0,0.2) !important; }
+div[data-testid="stMetric"] { background: rgba(255, 255, 255, 0.95) !important; padding: 20px !important; border-radius: 12px !important; border: 2px solid rgba(0, 95, 107, 0.2) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important; }
+div[data-testid="stMetric"] label { font-size: 14px !important; font-weight: 600 !important; color: #005F6B !important; }
+div[data-testid="stMetric"] div[data-testid="stMetricValue"] { font-size: 32px !important; font-weight: 700 !important; color: #2C3E50 !important; }
+.stDataFrame { border-radius: 12px !important; overflow: hidden !important; border: 2px solid rgba(0, 95, 107, 0.2) !important; }
+.stPlotlyChart, .stBokehChart, .stAltairChart { background: rgba(255, 255, 255, 0.95) !important; border-radius: 12px !important; padding: 16px !important; border: 2px solid rgba(0, 95, 107, 0.2) !important; }
+section[data-testid="stSidebar"] { background: var(--bg-sidebar) !important; border-right: 1px solid var(--card-border) !important; opacity: 0.95 !important; }
+section[data-testid="stSidebar"] p, section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3, section[data-testid="stSidebar"] .stMarkdown, section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] button { color: var(--text-primary) !important; font-size: 15px !important; }
+.element-container:has( > .stFileUploader) { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+.stFileUploader { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 12px; border: 2px dashed rgba(0, 0, 0, 0.15); transition: all 0.3s ease; }
+.stFileUploader:hover { border-color: #005F6B; background: rgba(255, 255, 255, 1); }
+.stFileUploader > div > div { border: none !important; background: transparent !important; }
+.stFileUploader button { background: #005F6B !important; color: #FFFFFF !important; border: none !important; border-radius: 8px !important; padding: 8px 16px !important; font-weight: 600 !important; }
+.stFileUploader button:hover { background: #003D45 !important; }
+.stFileUploader small { color: #7F8C8D; font-size: 12px; }
+hr { border: none !important; border-top: 2px solid rgba(0, 95, 107, 0.2) !important; margin: 24px 0 !important; }
+.stCaption { font-size: 14px !important; color: #5D6D7E !important; font-style: italic !important; }
+.stSuccess { background: rgba(39, 174, 96, 0.15) !important; border: 2px solid rgba(39, 174, 96, 0.4) !important; border-radius: 12px !important; padding: 16px !important; }
+.stInfo { background: rgba(52, 152, 219, 0.15) !important; border: 2px solid rgba(52, 152, 219, 0.4) !important; border-radius: 12px !important; padding: 16px !important; }
+.stWarning { background: rgba(241, 196, 15, 0.15) !important; border: 2px solid rgba(241, 196, 15, 0.4) !important; border-radius: 12px !important; padding: 16px !important; }
+.stError { background: rgba(231, 76, 60, 0.15) !important; border: 2px solid rgba(231, 76, 60, 0.4) !important; border-radius: 12px !important; padding: 16px !important; }
+@keyframes osTabPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 95, 107, 0.4); } 50% { box-shadow: 0 0 0 6px rgba(0, 95, 107, 0); } }
+</style>
+"""
