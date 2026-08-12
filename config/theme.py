@@ -1,182 +1,218 @@
-"""Цветовые темы приложения."""
+"""Цветовые темы приложения.
 
-THEMES = {
-    #  Утро - голубое небо с лёгким розовым акцентом + бирюзовые кнопки из брендбука
-    "morning": {
-        "bg_main": "linear-gradient(135deg, #D6EAF8 0%, #AED6F1 50%, #FADBD8 100%)",
-        "bg_sidebar": "rgba(214, 234, 248, 0.9)",
-        "header_bg": "linear-gradient(135deg, #85C1E9 0%, #AED6F1 100%)",
-        "header_text": "#1B4F72",
-        "text_primary": "#1B4F72",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(214, 234, 248, 0.85)",
-        "card_border": "rgba(133, 193, 233, 0.4)",
-        "accent": "#005F6B",
-        "button_bg": "#005F6B",
+Архитектура v2.0 (дизайн-система "Sage & Sandstone"):
+
+1. Две базовые палитры:
+   - "light" (Вариант A, Premium Light) — утро и день;
+   - "dark"  (Вариант B) — вечер и ночь.
+
+2. Старые имена тем (morning, day, evening, night и праздничные)
+   больше не имеют собственных цветов:
+   - morning/day  -> light;
+   - evening/night -> dark;
+   - праздничные и сезонные (new_year, spring, magic, ...) НЕ меняют цвета,
+     а только добавляют декоративные эффекты поверх базы
+     (см. config/effects.py) и отключаются тумблером.
+
+3. Все дизайн-токены (цвета, тени, радиусы, типографика, motion)
+   собраны в этом файле — единый источник правды для styles.py.
+
+4. Время — Москва (UTC+3).
+"""
+
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+# Москва (правило проекта: UTC+3)
+_MSK = timezone(timedelta(hours=3))
+
+# =============================================================================
+# БАЗОВЫЕ ПАЛИТРЫ (Sage & Sandstone, контраст WCAG AA)
+# =============================================================================
+
+BASE_THEMES = {
+    # ----- Вариант A: Premium Light (утро/день) -----
+    "light": {
+        "bg_main": "#F7F5F1",
+        "bg_sidebar": "#F1EEE8",
+        "header_bg": "linear-gradient(135deg, #EDF0EA 0%, #E1E8DD 100%)",
+        "header_text": "#2D3A2E",
+        "text_primary": "#2D3A2E",
+        "text_secondary": "#5D6A5C",          # исправлено: было ~4.3:1, стало ~5.2:1
+        "card_bg": "#FFFFFF",
+        "card_border": "#D9D4CB",
+        "accent": "#8BA888",                  # декор: рамки, полоски, hover
+        "accent_strong": "#557052",           # интерактив: ссылки, кнопки (~5.5:1 с белым)
+        "button_bg": "#557052",
         "button_text": "#FFFFFF",
+        "button_secondary_bg": "#FFFFFF",
+        "button_secondary_text": "#2D3A2E",
+        "button_secondary_border": "#C9C3B8",
+        "success": "#4C7A50",
+        "warning": "#8A6D3B",
+        "error": "#B0563F",
+        "info": "#5B7F95",
+        "shadow_sm": "0 1px 2px rgba(45,58,46,0.05), 0 4px 12px rgba(45,58,46,0.08)",
+        "shadow_md": "0 4px 8px rgba(45,58,46,0.08), 0 12px 28px rgba(45,58,46,0.12)",
+        "focus_ring": "rgba(85,112,82,0.35)",
+        "overlay": "rgba(30,36,32,0.45)",
+        "logo_opacity": "0.6",
+        "is_dark": False,
     },
-    # ☀️ День - светло-голубое небо
-    "day": {
-        "bg_main": "linear-gradient(135deg, #B8D4E3 0%, #D6EAF8 100%)",
-        "bg_sidebar": "rgba(184, 212, 227, 0.9)",
-        "header_bg": "linear-gradient(135deg, #85C1E9 0%, #AED6F1 100%)",
-        "header_text": "#1B4F72",
-        "text_primary": "#1B4F72",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(214, 234, 248, 0.85)",
-        "card_border": "rgba(133, 193, 233, 0.4)",
-        "accent": "#5DADE2",
-        "button_bg": "#5DADE2",
-        "button_text": "#FFFFFF",
-    },
-    # 🌆 Вечер - розово-фиолетовый закат
-    "evening": {
-        "bg_main": "linear-gradient(135deg, #D7BDE2 0%, #FADBD8 50%, #AED6F1 100%)",
-        "bg_sidebar": "rgba(215, 189, 226, 0.9)",
-        "header_bg": "linear-gradient(135deg, #C39BD3 0%, #F1948A 100%)",
-        "header_text": "#4A235A",
-        "text_primary": "#4A235A",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(248, 220, 230, 0.85)",
-        "card_border": "rgba(195, 155, 211, 0.4)",
-        "accent": "#C39BD3",
-        "button_bg": "#C39BD3",
-        "button_text": "#FFFFFF",
-    },
-    # 🌙 Ночь - тёмно-бирюзовый со звёздами
-    "night": {
-        "bg_main": "linear-gradient(135deg, #0B3D4F 0%, #1A5276 50%, #1B4F72 100%)",
-        "bg_sidebar": "rgba(11, 61, 79, 0.95)",
-        "header_bg": "linear-gradient(135deg, #1A5276 0%, #2E86C1 100%)",
-        "header_text": "#EAF2F8",
-        "text_primary": "#EAF2F8",
-        "text_secondary": "#D4E6F1",
-        "card_bg": "rgba(26, 82, 118, 0.75)",
-        "card_border": "rgba(93, 173, 226, 0.4)",
-        "accent": "#5DADE2",
-        "button_bg": "#5DADE2",
-        "button_text": "#FFFFFF",
-    },
-    #  Праздничные темы
-    "new_year": {
-        "bg_main": "linear-gradient(135deg, #1B4F72 0%, #2E86C1 50%, #5DADE2 100%)",
-        "bg_sidebar": "rgba(27, 79, 114, 0.9)",
-        "header_bg": "linear-gradient(135deg, #2E86C1 0%, #5DADE2 100%)",
-        "header_text": "#EAF2F8",
-        "text_primary": "#EAF2F8",
-        "text_secondary": "#D4E6F1",
-        "card_bg": "rgba(214, 234, 248, 0.7)",
-        "card_border": "rgba(93, 173, 226, 0.5)",
-        "accent": "#F1C40F",
-        "button_bg": "#5DADE2",
-        "button_text": "#FFFFFF",
-    },
-    "spring": {
-        "bg_main": "linear-gradient(135deg, #AED6F1 0%, #D5F5E3 100%)",
-        "bg_sidebar": "rgba(174, 214, 241, 0.9)",
-        "header_bg": "linear-gradient(135deg, #85C1E9 0%, #A9DFBF 100%)",
-        "header_text": "#1B4F72",
-        "text_primary": "#1B4F72",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(236, 250, 240, 0.85)",
-        "card_border": "rgba(169, 223, 191, 0.4)",
-        "accent": "#5DADE2",
-        "button_bg": "#5DADE2",
-        "button_text": "#FFFFFF",
-    },
-    "summer": {
-        "bg_main": "linear-gradient(135deg, #FADBD8 0%, #F9E79F 100%)",
-        "bg_sidebar": "rgba(250, 219, 216, 0.9)",
-        "header_bg": "linear-gradient(135deg, #F1948A 0%, #F7DC6F 100%)",
-        "header_text": "#2C3E50",
-        "text_primary": "#2C3E50",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(255, 245, 230, 0.85)",
-        "card_border": "rgba(241, 148, 138, 0.4)",
-        "accent": "#F39C12",
-        "button_bg": "#F39C12",
-        "button_text": "#FFFFFF",
-    },
-    "childrens_day": {
-        "bg_main": "linear-gradient(135deg, #FADBD8 0%, #D7BDE2 50%, #AED6F1 100%)",
-        "bg_sidebar": "rgba(250, 219, 216, 0.9)",
-        "header_bg": "linear-gradient(135deg, #F1948A 0%, #BB8FCE 100%)",
-        "header_text": "#4A235A",
-        "text_primary": "#4A235A",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(255, 240, 245, 0.85)",
-        "card_border": "rgba(241, 148, 138, 0.4)",
-        "accent": "#BB8FCE",
-        "button_bg": "#BB8FCE",
-        "button_text": "#FFFFFF",
-    },
-    "knowledge_day": {
-        "bg_main": "linear-gradient(135deg, #85C1E9 0%, #BB8FCE 100%)",
-        "bg_sidebar": "rgba(133, 193, 233, 0.9)",
-        "header_bg": "linear-gradient(135deg, #5DADE2 0%, #A569BD 100%)",
-        "header_text": "#FFFFFF",
-        "text_primary": "#FFFFFF",
-        "text_secondary": "#EAF2F8",
-        "card_bg": "rgba(214, 234, 248, 0.7)",
-        "card_border": "rgba(93, 173, 226, 0.5)",
-        "accent": "#F1C40F",
-        "button_bg": "#5DADE2",
-        "button_text": "#FFFFFF",
-    },
-    "april_fools": {
-        "bg_main": "linear-gradient(135deg, #F9E79F 0%, #FADBD8 100%)",
-        "bg_sidebar": "rgba(249, 231, 159, 0.9)",
-        "header_bg": "linear-gradient(135deg, #F7DC6F 0%, #F1948A 100%)",
-        "header_text": "#2C3E50",
-        "text_primary": "#2C3E50",
-        "text_secondary": "#5D6D7E",
-        "card_bg": "rgba(255, 250, 230, 0.85)",
-        "card_border": "rgba(247, 220, 111, 0.4)",
-        "accent": "#F39C12",
-        "button_bg": "#F39C12",
-        "button_text": "#FFFFFF",
-    },
-    "magic": {
-        "bg_main": "linear-gradient(135deg, #2C3E50 0%, #4A235A 50%, #6C3483 100%)",
-        "bg_sidebar": "rgba(44, 62, 80, 0.95)",
-        "header_bg": "linear-gradient(135deg, #6C3483 0%, #8E44AD 100%)",
-        "header_text": "#EAF2F8",
-        "text_primary": "#EAF2F8",
-        "text_secondary": "#D4E6F1",
-        "card_bg": "rgba(108, 52, 131, 0.7)",
-        "card_border": "rgba(142, 68, 173, 0.5)",
-        "accent": "#F1C40F",
-        "button_bg": "#8E44AD",
-        "button_text": "#FFFFFF",
-    },
-    "scifi": {
-        "bg_main": "linear-gradient(135deg, #1B4F72 0%, #2E86C1 100%)",
-        "bg_sidebar": "rgba(27, 79, 114, 0.95)",
-        "header_bg": "linear-gradient(135deg, #2E86C1 0%, #5DADE2 100%)",
-        "header_text": "#EAF2F8",
-        "text_primary": "#EAF2F8",
-        "text_secondary": "#D4E6F1",
-        "card_bg": "rgba(46, 134, 193, 0.7)",
-        "card_border": "rgba(93, 173, 226, 0.5)",
-        "accent": "#5DADE2",
-        "button_bg": "#5DADE2",
-        "button_text": "#FFFFFF",
-    },
-    "military": {
-        "bg_main": "linear-gradient(135deg, #2C3E50 0%, #5D6D7E 100%)",
-        "bg_sidebar": "rgba(44, 62, 80, 0.9)",
-        "header_bg": "linear-gradient(135deg, #5D6D7E 0%, #7F8C8D 100%)",
-        "header_text": "#EAF2F8",
-        "text_primary": "#EAF2F8",
-        "text_secondary": "#D4E6F1",
-        "card_bg": "rgba(93, 109, 126, 0.7)",
-        "card_border": "rgba(127, 140, 141, 0.5)",
-        "accent": "#27AE60",
-        "button_bg": "#27AE60",
-        "button_text": "#FFFFFF",
+    # ----- Вариант B: вечер/ночь -----
+    "dark": {
+        "bg_main": "#1E2420",
+        "bg_sidebar": "#232A25",
+        "header_bg": "linear-gradient(135deg, #2B3330 0%, #35403A 100%)",
+        "header_text": "#ECEAE5",
+        "text_primary": "#ECEAE5",
+        "text_secondary": "#B0B8AD",
+        "card_bg": "#2B3330",
+        "card_border": "#45524A",
+        "accent": "#A8C5A3",
+        "accent_strong": "#A8C5A3",           # кнопки со светлым акцентом + тёмный текст (~8:1)
+        "button_bg": "#A8C5A3",
+        "button_text": "#1E2420",
+        "button_secondary_bg": "#2B3330",
+        "button_secondary_text": "#ECEAE5",
+        "button_secondary_border": "#45524A",
+        "success": "#8FCB94",
+        "warning": "#D9B36A",
+        "error": "#D98873",
+        "info": "#8FB3C9",
+        "shadow_sm": "0 1px 2px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.30)",
+        "shadow_md": "0 4px 8px rgba(0,0,0,0.30), 0 12px 28px rgba(0,0,0,0.40)",
+        "focus_ring": "rgba(168,197,163,0.40)",
+        "overlay": "rgba(0,0,0,0.60)",
+        "logo_opacity": "0.85",
+        "is_dark": True,
     },
 }
 
+# =============================================================================
+# ДИЗАЙН-ТОКЕНЫ (общие для обеих палитр)
+# =============================================================================
+
+DESIGN_TOKENS = {
+    # Радиусы
+    "radius_sm": "8px",
+    "radius_md": "12px",
+    "radius_lg": "16px",
+    # Типографика (заголовки страниц уменьшены на 2-3px по договорённости)
+    "font_stack": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', 'Helvetica Neue', Arial, sans-serif",
+    "type_xs": "12px",
+    "type_sm": "14px",
+    "type_md": "16px",
+    "type_lg": "20px",
+    "type_xl": "28px",
+    "type_xxl": "34px",
+    # Motion: короткий и спокойный
+    "motion_fast": "0.15s",
+    "motion_base": "0.2s",
+    "motion_slow": "0.3s",
+    # Отступы (сетка 4/8)
+    "space_1": "4px",
+    "space_2": "8px",
+    "space_3": "12px",
+    "space_4": "16px",
+    "space_6": "24px",
+    "space_8": "32px",
+}
+
+# =============================================================================
+# МАППИНГ СТАРЫХ ТЕМ НА БАЗЫ
+# =============================================================================
+
+LIGHT_TIME_THEMES = {"morning", "day"}
+DARK_TIME_THEMES = {"evening", "night"}
+
+# Праздничные/сезонные спец-режимы: цвета НЕ меняют,
+# только добавляют эффекты поверх базы (отключаются тумблером).
+SPECIAL_THEMES = {
+    "new_year", "spring", "summer", "childrens_day",
+    "knowledge_day", "april_fools", "magic", "scifi", "military",
+}
+
+# Обратная совместимость: старые импорты THEMES не сломаются
+THEMES = BASE_THEMES
+
+
+# =============================================================================
+# ФУНКЦИИ
+# =============================================================================
+
+def _msk_hour() -> int:
+    """Текущий час по Москве (UTC+3)."""
+    return datetime.now(_MSK).hour
+
+
+def get_base_name(theme: str) -> str:
+    """Возвращает имя базовой палитры ("light"/"dark") для любого имени темы.
+
+    - morning, day   -> "light";
+    - evening, night -> "dark";
+    - спец-темы и неизвестные имена -> по времени суток (Москва):
+      07:00–19:59 -> "light", 20:00–06:59 -> "dark".
+    """
+    if theme in LIGHT_TIME_THEMES:
+        return "light"
+    if theme in DARK_TIME_THEMES:
+        return "dark"
+    return "light" if 7 <= _msk_hour() <= 19 else "dark"
+
+
+def get_base_colors(base: str) -> dict:
+    """Палитра базы "light" или "dark" (фолбэк — light)."""
+    return BASE_THEMES.get(base, BASE_THEMES["light"])
+
+
 def get_theme_colors(theme: str) -> dict:
-    """Возвращает цветовую схему для заданной темы."""
-    return THEMES.get(theme, THEMES["day"])
+    """Обратно совместимая функция выбора цветов.
+
+    Раньше возвращала собственные цвета для 13 тем.
+    Теперь возвращает базовую палитру: цвета больше не зависят
+    от праздников — только от режима A/B.
+    """
+    return get_base_colors(get_base_name(theme))
+
+
+def is_dark_theme(theme: str) -> bool:
+    """Тёмная ли база у темы (для логотипов, модалок и т.п.)."""
+    return get_base_name(theme) == "dark"
+
+
+def is_special_theme(theme: str) -> bool:
+    """True, если тема — праздничный/сезонный спец-режим (эффекты поверх базы)."""
+    return theme in SPECIAL_THEMES
+
+
+def resolve_mode(override: Optional[str], time_theme: str) -> str:
+    """Финальный режим A/B с учётом ручного переключения.
+
+    override — выбор пользователя из query_params/localStorage
+    ("light"/"dark"); имеет приоритет над автоопределением.
+    time_theme — тема из greeting_data (morning/day/evening/night/спец).
+    """
+    if override in ("light", "dark"):
+        return override
+    return get_base_name(time_theme)
+
+
+# =============================================================================
+# EXPORTS
+# =============================================================================
+
+__all__ = [
+    "BASE_THEMES",
+    "DESIGN_TOKENS",
+    "LIGHT_TIME_THEMES",
+    "DARK_TIME_THEMES",
+    "SPECIAL_THEMES",
+    "THEMES",
+    "get_base_name",
+    "get_base_colors",
+    "get_theme_colors",
+    "is_dark_theme",
+    "is_special_theme",
+    "resolve_mode",
+]

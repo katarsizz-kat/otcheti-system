@@ -1,297 +1,374 @@
-"""Все эффекты и анимации приложения."""
+"""Декоративные эффекты приложения.
+
+Архитектура v2.0:
+
+1. Эффекты НЕ меняют цвета интерфейса — они накладываются поверх
+   базовой палитры A/B (см. config/theme.py).
+2. Темы времени суток: morning/day -> облака, evening/night -> звёзды.
+3. Праздничные/сезонные спец-темы маппятся на наборы эффектов
+   (снег, лепестки, конфетти, шарики и т.д.).
+4. Весь декор отключается тумблером (is_effects_enabled / set_effects_enabled).
+5. Пастельные шарики после успешного формирования отчёта:
+   страница вызывает celebrate_report_success(),
+   а styles.py при рендере забирает анимацию через consume_pending_balloons().
+6. Все анимации уважают prefers-reduced-motion.
+7. Расстановка элементов детерминированная — не "мигает" при rerun.
+"""
+
+import streamlit as st
+from typing import List, Optional
 
 # =============================================================================
-# ЭФФЕКТЫ ВРЕМЕНИ СУТОК
+# КОНСТАНТЫ
 # =============================================================================
 
-def get_morning_effect() -> str:
-    """Эффект утреннего рассвета (мягкий голубой свет + 2 заметных облака)."""
-    return (
-        "<style>"
-        ".morning-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at top,rgba(133,193,233,0.25) 0%,transparent 70%);z-index:0;pointer-events:none}"
-        ".cloud{position:fixed;background:rgba(255,255,255,0.75);border-radius:100px;z-index:0;pointer-events:none;animation:cloudFloat linear infinite}"
-        ".cloud::before,.cloud::after{content:'';position:absolute;background:rgba(255,255,255,0.75);border-radius:100px}"
-        ".cloud:nth-child(2){width:120px;height:50px;top:25%;left:-120px;animation-duration:30s}"
-        ".cloud:nth-child(2)::before{width:60px;height:60px;top:-30px;left:20px}"
-        ".cloud:nth-child(2)::after{width:70px;height:50px;top:-20px;right:20px}"
-        ".cloud:nth-child(3){width:100px;height:45px;top:55%;left:-100px;animation-duration:38s;animation-delay:8s}"
-        ".cloud:nth-child(3)::before{width:50px;height:50px;top:-25px;left:15px}"
-        ".cloud:nth-child(3)::after{width:60px;height:45px;top:-20px;right:15px}"
-        "@keyframes cloudFloat{0%{transform:translateX(0)}100%{transform:translateX(calc(100vw + 250px))}}"
-        "</style>"
-        "<div class='morning-glow'></div>"
-        "<div class='cloud'></div>"
-        "<div class='cloud'></div>"
-    )
+# Пастельные цвета шариков (утверждено)
+BALLOON_COLORS = ["#D4C5F9", "#F9D4C5", "#C5E8D4", "#F5E6C8", "#C5DCF9"]
 
-def get_clouds_effect() -> str:
-    """Эффект плывущих облаков (4 облака, светлые, без оранжевого)."""
-    return (
-        "<style>"
-        ".cloud{position:fixed;background:rgba(255,255,255,0.6);border-radius:100px;z-index:0;pointer-events:none;animation:cloudFloat linear infinite}"
-        ".cloud::before,.cloud::after{content:'';position:absolute;background:rgba(255,255,255,0.6);border-radius:100px}"
-        ".cloud:nth-child(1){width:100px;height:40px;top:20%;left:-100px;animation-duration:25s}"
-        ".cloud:nth-child(1)::before{width:50px;height:50px;top:-25px;left:15px}"
-        ".cloud:nth-child(1)::after{width:60px;height:40px;top:-15px;right:15px}"
-        ".cloud:nth-child(2){width:80px;height:30px;top:40%;left:-80px;animation-duration:30s;animation-delay:5s}"
-        ".cloud:nth-child(2)::before{width:40px;height:40px;top:-20px;left:10px}"
-        ".cloud:nth-child(3){width:120px;height:45px;top:60%;left:-120px;animation-duration:35s;animation-delay:10s}"
-        ".cloud:nth-child(3)::before{width:60px;height:50px;top:-25px;left:20px}"
-        ".cloud:nth-child(3)::after{width:70px;height:45px;top:-20px;right:20px}"
-        ".cloud:nth-child(4){width:90px;height:35px;top:75%;left:-90px;animation-duration:32s;animation-delay:15s}"
-        ".cloud:nth-child(4)::before{width:45px;height:45px;top:-22px;left:12px}"
-        ".cloud:nth-child(4)::after{width:55px;height:38px;top:-18px;right:18px}"
-        "@keyframes cloudFloat{0%{transform:translateX(0)}100%{transform:translateX(calc(100vw + 200px))}}"
-        "</style>"
-        "<div class='cloud'></div>"
-        "<div class='cloud'></div>"
-        "<div class='cloud'></div>"
-        "<div class='cloud'></div>"
-    )
+# Ключи session_state
+_FX_KEY = "fx_effects_enabled"
+_BALLOONS_KEY = "fx_balloons_pending"
 
-def get_stars_effect() -> str:
-    """Эффект мерцающих звёзд (12 звёзд)."""
-    return (
-        "<style>"
-        ".star{position:fixed;background:white;border-radius:50%;z-index:0;pointer-events:none;animation:twinkle ease-in-out infinite}"
-        ".star:nth-child(1){width:2px;height:2px;top:10%;left:15%;animation-duration:3s}"
-        ".star:nth-child(2){width:3px;height:3px;top:25%;left:45%;animation-duration:4s;animation-delay:1s}"
-        ".star:nth-child(3){width:2px;height:2px;top:40%;left:75%;animation-duration:3.5s;animation-delay:2s}"
-        ".star:nth-child(4){width:3px;height:3px;top:55%;left:25%;animation-duration:4.5s;animation-delay:0.5s}"
-        ".star:nth-child(5){width:2px;height:2px;top:70%;left:60%;animation-duration:3s;animation-delay:1.5s}"
-        ".star:nth-child(6){width:3px;height:3px;top:85%;left:85%;animation-duration:4s;animation-delay:2.5s}"
-        ".star:nth-child(7){width:2px;height:2px;top:15%;left:90%;animation-duration:3.5s;animation-delay:0.8s}"
-        ".star:nth-child(8){width:3px;height:3px;top:50%;left:10%;animation-duration:4s;animation-delay:1.2s}"
-        ".star:nth-child(9){width:2px;height:2px;top:30%;left:30%;animation-duration:3.2s;animation-delay:0.3s}"
-        ".star:nth-child(10){width:3px;height:3px;top:65%;left:50%;animation-duration:4.2s;animation-delay:1.8s}"
-        ".star:nth-child(11){width:2px;height:2px;top:80%;left:20%;animation-duration:3.8s;animation-delay:2.2s}"
-        ".star:nth-child(12){width:3px;height:3px;top:5%;left:70%;animation-duration:4.3s;animation-delay:0.7s}"
-        "@keyframes twinkle{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}"
-        "</style>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-        "<div class='star'></div>"
-    )
-
-def get_sunset_effect() -> str:
-    """Эффект закатного неба (розово-фиолетовый, без оранжевого)."""
-    return (
-        "<style>"
-        ".sunset-glow{position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at bottom,rgba(195,155,211,0.2) 0%,rgba(241,148,138,0.15) 50%,transparent 70%);z-index:0;pointer-events:none}"
-        "</style>"
-        "<div class='sunset-glow'></div>"
-    )
-
-def get_theme_effect(theme: str) -> str:
-    """Возвращает эффекты для темы времени суток."""
-    effects = {
-        "morning": get_morning_effect(),
-        "day": get_clouds_effect(),
-        "evening": get_sunset_effect(),
-        "night": get_stars_effect(),
-    }
-    return effects.get(theme, "")
-
-
-# =============================================================================
-# ПРАЗДНИЧНЫЕ ЭФФЕКТЫ
-# =============================================================================
-
-def get_snow_effect() -> str:
-    """Эффект падающего снега."""
-    return (
-        "<style>"
-        ".snowflake{position:fixed;color:white;font-size:1.5em;z-index:0;pointer-events:none;animation:fall linear infinite}"
-        ".snowflake:nth-child(1){left:10%;animation-duration:8s}"
-        ".snowflake:nth-child(2){left:25%;animation-duration:10s;animation-delay:2s}"
-        ".snowflake:nth-child(3){left:40%;animation-duration:9s;animation-delay:4s}"
-        ".snowflake:nth-child(4){left:55%;animation-duration:11s;animation-delay:1s}"
-        ".snowflake:nth-child(5){left:70%;animation-duration:8s;animation-delay:3s}"
-        ".snowflake:nth-child(6){left:85%;animation-duration:10s;animation-delay:5s}"
-        "@keyframes fall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(360deg);opacity:0.3}}"
-        "</style>"
-        "<div class='snowflake'>❄</div>"
-        "<div class='snowflake'>❅</div>"
-        "<div class='snowflake'>❆</div>"
-        "<div class='snowflake'>❄</div>"
-        "<div class='snowflake'>❅</div>"
-        "<div class='snowflake'>❆</div>"
-    )
-
-def get_confetti_effect() -> str:
-    """Эффект падающего конфетти."""
-    return (
-        "<style>"
-        ".confetti{position:fixed;width:10px;height:10px;z-index:0;pointer-events:none;animation:confettiFall linear infinite}"
-        ".confetti:nth-child(1){left:10%;background:#E74C3C;animation-duration:6s}"
-        ".confetti:nth-child(2){left:25%;background:#F1C40F;animation-duration:7s;animation-delay:1s}"
-        ".confetti:nth-child(3){left:40%;background:#2ECC71;animation-duration:8s;animation-delay:2s}"
-        ".confetti:nth-child(4){left:55%;background:#3498DB;animation-duration:6s;animation-delay:0.5s}"
-        ".confetti:nth-child(5){left:70%;background:#9B59B6;animation-duration:9s;animation-delay:1.5s}"
-        ".confetti:nth-child(6){left:85%;background:#E67E22;animation-duration:7s;animation-delay:3s}"
-        "@keyframes confettiFall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0.5}}"
-        "</style>"
-        "<div class='confetti'></div>"
-        "<div class='confetti'></div>"
-        "<div class='confetti'></div>"
-        "<div class='confetti'></div>"
-        "<div class='confetti'></div>"
-        "<div class='confetti'></div>"
-    )
-
-def get_falling_pizza_effect() -> str:
-    """Эффект падающей пиццы."""
-    return (
-        "<style>"
-        ".falling-pizza{position:fixed;font-size:2em;z-index:0;pointer-events:none;animation:pizzaFall linear infinite}"
-        ".falling-pizza:nth-child(1){left:15%;animation-duration:7s}"
-        ".falling-pizza:nth-child(2){left:35%;animation-duration:9s;animation-delay:1s}"
-        ".falling-pizza:nth-child(3){left:55%;animation-duration:8s;animation-delay:3s}"
-        ".falling-pizza:nth-child(4){left:75%;animation-duration:10s;animation-delay:2s}"
-        "@keyframes pizzaFall{0%{transform:translateY(-100px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0.5}}"
-        "</style>"
-        "<div class='falling-pizza'></div>"
-        "<div class='falling-pizza'>🍕</div>"
-        "<div class='falling-pizza'>🍕</div>"
-        "<div class='falling-pizza'>🍕</div>"
-    )
-
-def get_pumpkins_effect() -> str:
-    """Эффект парящих тыкв."""
-    return (
-        "<style>"
-        ".pumpkin{position:fixed;font-size:2.5em;z-index:0;pointer-events:none;animation:pumpkinFloat 4s ease-in-out infinite}"
-        ".pumpkin:nth-child(1){top:20%;left:5%}"
-        ".pumpkin:nth-child(2){top:40%;right:10%;animation-delay:1s}"
-        ".pumpkin:nth-child(3){bottom:20%;left:15%;animation-delay:2s}"
-        "@keyframes pumpkinFloat{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-20px) rotate(5deg)}}"
-        "</style>"
-        "<div class='pumpkin'>🎃</div>"
-        "<div class='pumpkin'>🎃</div>"
-        "<div class='pumpkin'>🎃</div>"
-    )
-
-def get_hearts_effect() -> str:
-    """Эффект парящих сердечек."""
-    return (
-        "<style>"
-        ".heart{position:fixed;font-size:1.5em;z-index:0;pointer-events:none;animation:heartFloat linear infinite}"
-        ".heart:nth-child(1){left:10%;animation-duration:6s}"
-        ".heart:nth-child(2){left:30%;animation-duration:8s;animation-delay:1s}"
-        ".heart:nth-child(3){left:50%;animation-duration:7s;animation-delay:2s}"
-        ".heart:nth-child(4){left:70%;animation-duration:9s;animation-delay:0.5s}"
-        ".heart:nth-child(5){left:90%;animation-duration:6s;animation-delay:1.5s}"
-        "@keyframes heartFloat{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-100px) scale(1.5);opacity:0}}"
-        "</style>"
-        "<div class='heart'>❤️</div>"
-        "<div class='heart'>💕</div>"
-        "<div class='heart'>💖</div>"
-        "<div class='heart'>💗</div>"
-        "<div class='heart'>💝</div>"
-    )
-
-def get_leaves_effect() -> str:
-    """Эффект падающих листьев."""
-    return (
-        "<style>"
-        ".leaf{position:fixed;font-size:1.5em;z-index:0;pointer-events:none;animation:leafFall linear infinite}"
-        ".leaf:nth-child(1){left:15%;animation-duration:8s}"
-        ".leaf:nth-child(2){left:35%;animation-duration:10s;animation-delay:2s}"
-        ".leaf:nth-child(3){left:55%;animation-duration:9s;animation-delay:4s}"
-        ".leaf:nth-child(4){left:75%;animation-duration:11s;animation-delay:1s}"
-        ".leaf:nth-child(5){left:90%;animation-duration:8s;animation-delay:3s}"
-        "@keyframes leafFall{0%{transform:translateY(-100px) rotate(0deg) translateX(0);opacity:1}100%{transform:translateY(100vh) rotate(720deg) translateX(100px);opacity:0.3}}"
-        "</style>"
-        "<div class='leaf'>🍂</div>"
-        "<div class='leaf'>🍁</div>"
-        "<div class='leaf'>🍃</div>"
-        "<div class='leaf'>🍂</div>"
-        "<div class='leaf'>🍁</div>"
-    )
-
-def get_fireworks_effect() -> str:
-    """Эффект фейерверка."""
-    return (
-        "<style>"
-        ".firework{position:fixed;width:4px;height:4px;border-radius:50%;z-index:0;pointer-events:none;animation:fireworkExplode 2s ease-out infinite}"
-        ".firework:nth-child(1){top:30%;left:20%;background:#E74C3C;animation-delay:0s}"
-        ".firework:nth-child(2){top:40%;left:50%;background:#F1C40F;animation-delay:0.5s}"
-        ".firework:nth-child(3){top:25%;left:80%;background:#2ECC71;animation-delay:1s}"
-        ".firework:nth-child(4){top:50%;left:35%;background:#3498DB;animation-delay:1.5s}"
-        ".firework:nth-child(5){top:35%;left:65%;background:#9B59B6;animation-delay:0.3s}"
-        "@keyframes fireworkExplode{0%{transform:scale(0);opacity:1;box-shadow:0 0 0 0 currentColor}50%{transform:scale(1);opacity:1;box-shadow:0 0 20px 10px currentColor}100%{transform:scale(0);opacity:0;box-shadow:0 0 0 0 currentColor}}"
-        "</style>"
-        "<div class='firework'></div>"
-        "<div class='firework'></div>"
-        "<div class='firework'></div>"
-        "<div class='firework'></div>"
-        "<div class='firework'></div>"
-    )
-
-def get_rain_effect() -> str:
-    """Эффект дождя."""
-    return (
-        "<style>"
-        ".raindrop{position:fixed;width:2px;height:20px;background:linear-gradient(to bottom,transparent,rgba(174,194,224,0.6));z-index:0;pointer-events:none;animation:rainFall linear infinite}"
-        ".raindrop:nth-child(1){left:10%;animation-duration:1s}"
-        ".raindrop:nth-child(2){left:20%;animation-duration:1.2s;animation-delay:0.1s}"
-        ".raindrop:nth-child(3){left:30%;animation-duration:0.9s;animation-delay:0.2s}"
-        ".raindrop:nth-child(4){left:40%;animation-duration:1.1s;animation-delay:0.3s}"
-        ".raindrop:nth-child(5){left:50%;animation-duration:1s;animation-delay:0.4s}"
-        ".raindrop:nth-child(6){left:60%;animation-duration:1.3s;animation-delay:0.5s}"
-        ".raindrop:nth-child(7){left:70%;animation-duration:0.8s;animation-delay:0.6s}"
-        ".raindrop:nth-child(8){left:80%;animation-duration:1.1s;animation-delay:0.7s}"
-        ".raindrop:nth-child(9){left:90%;animation-duration:1s;animation-delay:0.8s}"
-        "@keyframes rainFall{0%{transform:translateY(-100px);opacity:1}100%{transform:translateY(100vh);opacity:0.3}}"
-        "</style>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-        "<div class='raindrop'></div>"
-    )
-
-
-# =============================================================================
-# СБОРЩИК ЭФФЕКТОВ
-# =============================================================================
-
-HOLIDAY_EFFECTS = {
-    "snow": get_snow_effect,
-    "confetti": get_confetti_effect,
-    "falling_pizza": get_falling_pizza_effect,
-    "pumpkins": get_pumpkins_effect,
-    "hearts": get_hearts_effect,
-    "leaves": get_leaves_effect,
-    "fireworks": get_fireworks_effect,
-    "rain": get_rain_effect,
+# Маппинг спец-тем на наборы эффектов (поверх базы A/B)
+SPECIAL_EFFECT_MAP = {
+    "new_year": ["snow"],
+    "spring": ["petals"],
+    "summer": ["motes"],
+    "childrens_day": ["balloons"],
+    "knowledge_day": ["confetti"],
+    "april_fools": ["confetti"],
+    "magic": ["sparkles", "stars"],
+    "scifi": ["scifi"],
+    "military": [],
 }
 
-def get_holiday_effect(effect_name: str) -> str:
-    """Возвращает CSS и HTML для одного праздничного эффекта."""
-    effect_func = HOLIDAY_EFFECTS.get(effect_name)
-    if effect_func:
-        return effect_func()
-    return ""
+# =============================================================================
+# ТУМБЛЕР ЭФФЕКТОВ
+# =============================================================================
 
-def get_holiday_effects(effects_list: list) -> str:
-    """Возвращает CSS и HTML для списка праздничных эффектов."""
-    if not effects_list:
+def is_effects_enabled() -> bool:
+    """Включён ли праздничный декор (по умолчанию — да)."""
+    return bool(st.session_state.get(_FX_KEY, True))
+
+
+def set_effects_enabled(enabled: bool) -> None:
+    """Включить/выключить праздничный декор."""
+    st.session_state[_FX_KEY] = bool(enabled)
+
+# =============================================================================
+# ШАРИКИ ПОСЛЕ УСПЕШНОГО ОТЧЁТА
+# =============================================================================
+
+def celebrate_report_success() -> None:
+    """Отметить успешное формирование отчёта.
+
+    Вызывается на страницах отчётов (КР месяц, КР неделя, ОС, Продукт)
+    после успешной генерации файла. Анимацию заберёт styles.py
+    через consume_pending_balloons() при следующем рендере.
+    """
+    st.session_state[_BALLOONS_KEY] = True
+
+
+def consume_pending_balloons() -> str:
+    """Возвращает HTML одноразовых шариков и сбрасывает флаг.
+
+    Шарики успеха — это feedback действия, поэтому тумблером
+    праздничных эффектов НЕ отключаются (только prefers-reduced-motion).
+    """
+    if not st.session_state.get(_BALLOONS_KEY):
         return ""
-    result = ""
-    for effect_name in effects_list:
-        result += get_holiday_effect(effect_name)
-    return result
+    st.session_state[_BALLOONS_KEY] = False
+    return _balloons(loop=False)
+
+# =============================================================================
+# ПУБЛИЧНЫЕ ГЕНЕРАТОРЫ (обратно совместимый API)
+# =============================================================================
+
+def get_theme_effect(theme: str) -> str:
+    """Эффекты темы времени суток / спец-темы.
+
+    - morning/day  -> лёгкие облака;
+    - evening/night -> звёзды;
+    - спец-темы -> свой набор эффектов поверх базы;
+    - выключенный тумблер -> пустая строка.
+    """
+    if not is_effects_enabled():
+        return ""
+    if theme in ("morning", "day"):
+        return _clouds()
+    if theme in ("evening", "night"):
+        return _stars()
+    parts = []
+    for name in SPECIAL_EFFECT_MAP.get(theme, []):
+        gen = EFFECT_PRESETS.get(name)
+        if gen:
+            parts.append(gen())
+    return "".join(parts)
+
+
+def get_holiday_effects(effects: Optional[List[str]]) -> str:
+    """Эффекты из конфига праздника (список имён).
+
+    Неизвестные имена игнорируются — старые конфиги не сломают новый код.
+    """
+    if not effects or not is_effects_enabled():
+        return ""
+    parts = []
+    for name in effects:
+        gen = EFFECT_PRESETS.get(str(name).lower())
+        if gen:
+            parts.append(gen())
+    return "".join(parts)
+
+# =============================================================================
+# СЛУЖЕБНОЕ
+# =============================================================================
+
+def _wrap(css: str, inner: str) -> str:
+    """Оборачивает эффект: фиксированный слой + reduced-motion."""
+    base = (
+        ".fx-layer { position: fixed; inset: 0; pointer-events: none; "
+        "z-index: 1; overflow: hidden; } "
+    )
+    reduced = (
+        "@media (prefers-reduced-motion: reduce) { "
+        ".fx-layer * { animation: none !important; opacity: 0.3; } } "
+    )
+    return (
+        f"<style>{base}{css}{reduced}</style>"
+        f"<div class='fx-layer' aria-hidden='true'>{inner}</div>"
+    )
+
+# =============================================================================
+# ГЕНЕРАТОРЫ ЭФФЕКТОВ
+# =============================================================================
+
+def _clouds() -> str:
+    """Лёгкие облака для светлой базы."""
+    css = (
+        ".fx-cloud { position: absolute; left: -30%; border-radius: 999px; "
+        "background: radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0)); "
+        "opacity: 0.45; animation: fxDrift linear infinite; } "
+        "@keyframes fxDrift { from { transform: translateX(0); } to { transform: translateX(165vw); } } "
+    )
+    inner = []
+    for i in range(4):
+        top = 6 + i * 9 + (i * 13) % 5
+        w = 180 + (i * 97) % 140
+        h = w // 3
+        dur = 70 + (i * 29) % 50
+        delay = -((i * 31) % dur)
+        inner.append(
+            f"<div class='fx-cloud' style='top:{top}%;width:{w}px;height:{h}px;"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _stars() -> str:
+    """Мерцающие звёзды для тёмной базы."""
+    css = (
+        ".fx-star { position: absolute; width: 3px; height: 3px; border-radius: 50%; "
+        "background: var(--text-primary, #ECEAE5); opacity: 0.5; "
+        "animation: fxTwinkle 3.2s ease-in-out infinite; } "
+        "@keyframes fxTwinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.75; } } "
+    )
+    inner = []
+    for i in range(18):
+        left = (i * 53) % 100
+        top = (i * 37) % 90
+        delay = round((i * 0.4) % 3.2, 1)
+        inner.append(
+            f"<div class='fx-star' style='left:{left}%;top:{top}%;"
+            f"animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _snow() -> str:
+    """Снежинки (новый год)."""
+    css = (
+        ".fx-snow { position: absolute; top: -6%; color: var(--text-secondary, #B0B8AD); "
+        "opacity: 0.5; animation: fxFall linear infinite; } "
+        "@keyframes fxFall { 0% { transform: translateY(-8vh) translateX(0); } "
+        "50% { transform: translateY(52vh) translateX(18px); } "
+        "100% { transform: translateY(112vh) translateX(-12px); } } "
+    )
+    inner = []
+    for i in range(14):
+        left = (i * 47) % 100
+        size = 10 + (i * 7) % 10
+        dur = 9 + (i * 3) % 8
+        delay = -((i * 2) % dur)
+        inner.append(
+            f"<span class='fx-snow' style='left:{left}%;font-size:{size}px;"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'>❄</span>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _petals() -> str:
+    """Лепестки (весна)."""
+    css = (
+        ".fx-petal { position: absolute; top: -6%; width: 10px; height: 10px; "
+        "border-radius: 60% 40% 55% 45%; background: #F9D4C5; opacity: 0.7; "
+        "animation: fxFall linear infinite; } "
+        "@keyframes fxFall { 0% { transform: translateY(-8vh) translateX(0) rotate(0deg); } "
+        "50% { transform: translateY(52vh) translateX(20px) rotate(160deg); } "
+        "100% { transform: translateY(112vh) translateX(-12px) rotate(320deg); } } "
+    )
+    inner = []
+    for i in range(12):
+        left = (i * 61) % 100
+        dur = 10 + (i * 5) % 8
+        delay = -((i * 3) % dur)
+        inner.append(
+            f"<div class='fx-petal' style='left:{left}%;animation-duration:{dur}s;"
+            f"animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _confetti() -> str:
+    """Конфети (1 сентября, 1 апреля, праздники)."""
+    css = (
+        ".fx-confetti { position: absolute; top: -6%; width: 8px; height: 12px; "
+        "border-radius: 2px; opacity: 0.85; animation: fxSpin linear infinite; } "
+        "@keyframes fxSpin { from { transform: translateY(-8vh) rotate(0deg); } "
+        "to { transform: translateY(112vh) rotate(680deg); } } "
+    )
+    inner = []
+    for i in range(16):
+        left = (i * 43) % 100
+        color = BALLOON_COLORS[i % len(BALLOON_COLORS)]
+        dur = 6 + (i * 3) % 6
+        delay = -((i * 2) % dur)
+        inner.append(
+            f"<div class='fx-confetti' style='left:{left}%;background:{color};"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _sparkles() -> str:
+    """Искры (магия)."""
+    css = (
+        ".fx-sparkle { position: absolute; color: var(--accent, #A8C5A3); opacity: 0.6; "
+        "animation: fxTwinkle 2.6s ease-in-out infinite; } "
+        "@keyframes fxTwinkle { 0%, 100% { opacity: 0.2; transform: scale(0.9); } "
+        "50% { opacity: 0.8; transform: scale(1.1); } } "
+    )
+    inner = []
+    for i in range(12):
+        left = (i * 59) % 100
+        top = (i * 41) % 90
+        size = 12 + (i * 5) % 8
+        delay = round((i * 0.3) % 2.6, 1)
+        sym = "✦" if i % 2 == 0 else "✨"
+        inner.append(
+            f"<span class='fx-sparkle' style='left:{left}%;top:{top}%;font-size:{size}px;"
+            f"animation-delay:{delay}s;'>{sym}</span>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _motes() -> str:
+    """Тёплые пылинки, плывущие вверх (лето)."""
+    css = (
+        ".fx-mote { position: absolute; bottom: -4%; width: 6px; height: 6px; "
+        "border-radius: 50%; background: #F5E6C8; opacity: 0.6; "
+        "animation: fxFloatUp linear infinite; } "
+        "@keyframes fxFloatUp { from { transform: translateY(0); opacity: 0; } "
+        "15% { opacity: 0.7; } to { transform: translateY(-110vh); opacity: 0; } } "
+    )
+    inner = []
+    for i in range(10):
+        left = (i * 71) % 100
+        dur = 12 + (i * 7) % 10
+        delay = -((i * 4) % dur)
+        inner.append(
+            f"<div class='fx-mote' style='left:{left}%;animation-duration:{dur}s;"
+            f"animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _scifi() -> str:
+    """Медленная сканирующая линия (sci-fi)."""
+    css = (
+        ".fx-scan { position: absolute; left: 0; width: 100%; height: 2px; "
+        "background: linear-gradient(90deg, transparent, var(--accent, #A8C5A3), transparent); "
+        "opacity: 0.25; animation: fxScan 9s linear infinite; } "
+        "@keyframes fxScan { from { top: -5%; } to { top: 105%; } } "
+    )
+    inner = (
+        "<div class='fx-scan' style='animation-delay:0s;'></div>"
+        "<div class='fx-scan' style='animation-delay:-4.5s;'></div>"
+    )
+    return _wrap(css, inner)
+
+
+def _balloons(loop: bool = True) -> str:
+    """Пастельные шарики.
+
+    loop=True  — праздничные (летают постоянно);
+    loop=False — одноразовые после успешного отчёта (~6 сек и исчезают).
+    """
+    mode = "infinite" if loop else "forwards"
+    css = (
+        ".fx-balloon { position: absolute; bottom: -90px; width: 34px; height: 42px; "
+        "border-radius: 50% 50% 48% 52% / 55% 55% 45% 45%; "
+        f"animation: fxRise 6s ease-in {mode}; }} "
+        "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } "
+        "12% { opacity: 0.95; } "
+        "50% { transform: translateY(-58vh) translateX(26px); } "
+        "100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
+    )
+    inner = []
+    count = 14 if loop else 20
+    for i in range(count):
+        left = (i * 47) % 100
+        color = BALLOON_COLORS[i % len(BALLOON_COLORS)]
+        dur = round(5.5 + (i % 5) * 0.5, 1)
+        if loop:
+            delay = -round((i * 1.3) % 6, 1)
+        else:
+            delay = round((i * 0.18) % 1.5, 2)
+        bg = f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.75), {color} 65%)"
+        inner.append(
+            f"<div class='fx-balloon' style='left:{left}%;background:{bg};"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+# =============================================================================
+# РЕЕСТР ПРЕСЕТОВ (имя -> генератор)
+# =============================================================================
+
+EFFECT_PRESETS = {
+    "clouds": _clouds,
+    "stars": _stars,
+    "snow": _snow,
+    "petals": _petals,
+    "confetti": _confetti,
+    "sparkles": _sparkles,
+    "motes": _motes,
+    "scifi": _scifi,
+    "balloons": _balloons,
+}
+
+# =============================================================================
+# EXPORTS
+# =============================================================================
+
+__all__ = [
+    "BALLOON_COLORS",
+    "SPECIAL_EFFECT_MAP",
+    "EFFECT_PRESETS",
+    "is_effects_enabled",
+    "set_effects_enabled",
+    "celebrate_report_success",
+    "consume_pending_balloons",
+    "get_theme_effect",
+    "get_holiday_effects",
+]

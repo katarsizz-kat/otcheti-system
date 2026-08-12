@@ -1,5 +1,3 @@
-# ui/pages/kr.py
-
 """
 UI-слой объединённой страницы КР.
 
@@ -16,8 +14,15 @@ UI-слой объединённой страницы КР.
 - генерации Excel-файла;
 - маппинга ресторанов;
 - анализа отзывов.
-"""
 
+v2.0 (дизайн-система Sage & Sandstone):
+- apply_subtle_theme вместо apply_theme (lite-режим для отчётов);
+- убран _apply_local_css: он хардкодил белую шапку и ломал тёмную тему,
+  шапка теперь берёт общий темизированный .header-block из styles.py;
+- после успешной генерации вызывается celebrate_report_success() —
+  пастельные шарики при следующем рендере;
+- render_theme_controls() — блок "Оформление" в сайдбаре.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -35,7 +40,6 @@ except Exception:
 
 MODE_MONTH = getattr(c, "MODE_MONTH", "month")
 MODE_WEEK = getattr(c, "MODE_WEEK", "week")
-
 MODE_LABELS = getattr(
     c,
     "MODE_LABELS",
@@ -44,7 +48,6 @@ MODE_LABELS = getattr(
         MODE_WEEK: "📆 Неделя",
     },
 )
-
 MONTH_MODE_LABEL = MODE_LABELS.get(MODE_MONTH, "📅 Месяц")
 WEEK_MODE_LABEL = MODE_LABELS.get(MODE_WEEK, "📆 Неделя")
 
@@ -54,35 +57,21 @@ PAGE_SUBTITLE = getattr(
     "PAGE_SUBTITLE",
     "Отчёт по отзывам из трёх источников: сайт, агрегаторы, геосервисы",
 )
-
 MONTHS = getattr(
     c,
     "MONTHS",
     [
-        "Январь",
-        "Февраль",
-        "Март",
-        "Апрель",
-        "Май",
-        "Июнь",
-        "Июль",
-        "Август",
-        "Сентябрь",
-        "Октябрь",
-        "Ноябрь",
-        "Декабрь",
+        "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
     ],
 )
-
 DEFAULT_PRICE_THRESHOLD = getattr(c, "DEFAULT_PRICE_THRESHOLD", 749)
-
 DEFAULT_YEAR_MIN = getattr(c, "DEFAULT_YEAR_MIN", 2020)
 DEFAULT_YEAR_MAX = getattr(c, "DEFAULT_YEAR_MAX", 2035)
 
 SOURCE_SITE = getattr(c, "SOURCE_SITE", "site")
 SOURCE_AGG = getattr(c, "SOURCE_AGG", "agg")
 SOURCE_GEO = getattr(c, "SOURCE_GEO", "geo")
-
 SOURCE_LABELS = getattr(
     c,
     "SOURCE_LABELS",
@@ -92,7 +81,6 @@ SOURCE_LABELS = getattr(
         SOURCE_GEO: "Геосервисы",
     },
 )
-
 ACCEPTED_FILE_TYPES = getattr(c, "ACCEPTED_FILE_TYPES", ["xlsx", "xls"])
 
 # ==========================================================
@@ -106,7 +94,6 @@ try:
         KRSourceFiles,
         KRWeekSettings,
     )
-
     MODELS_AVAILABLE = True
 except Exception:
     KRMonthSettings = None
@@ -121,26 +108,36 @@ except Exception:
 # ==========================================================
 try:
     from report.kr.builder import build_kr_report
-
     BUILDER_AVAILABLE = True
 except Exception:
     build_kr_report = None
     BUILDER_AVAILABLE = False
 
 # ==========================================================
-# ИМПОРТ ТЕМЫ
+# ИМПОРТ ТЕМЫ (lite-режим для страницы отчёта)
 # ==========================================================
 try:
-    from styles import apply_theme
+    from styles import apply_subtle_theme
     from config.greetings import get_current_greeting
     from config.holidays import get_today_holiday
-
     THEME_ENABLED = True
 except Exception:
-    apply_theme = None
+    apply_subtle_theme = None
     get_current_greeting = None
     get_today_holiday = None
     THEME_ENABLED = False
+
+# ==========================================================
+# ИМПОРТ UI-ДОПОЛНЕНИЙ (шарики успеха + блок "Оформление")
+# ==========================================================
+try:
+    from config.effects import celebrate_report_success
+    from components import render_theme_controls
+    UI_EXTRAS = True
+except Exception:
+    celebrate_report_success = None
+    render_theme_controls = None
+    UI_EXTRAS = False
 
 # ==========================================================
 # МОСКОВСКОЕ ВРЕМЯ
@@ -151,16 +148,15 @@ MSK = timezone(timedelta(hours=3))
 # ==========================================================
 # ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 # ==========================================================
+
 def _get_attr(obj: Any, name: str, default: Any = None) -> Any:
     """
     Безопасно получает атрибут из объекта или ключ из словаря.
     """
     if obj is None:
         return default
-
     if isinstance(obj, dict):
         return obj.get(name, default)
-
     return getattr(obj, name, default)
 
 
@@ -169,16 +165,12 @@ def _greeting_by_time() -> str:
     Возвращает приветствие по московскому времени.
     """
     hour = datetime.now(MSK).hour
-
     if 5 <= hour < 12:
         return "🌅 Доброе утро!"
-
     if 12 <= hour < 18:
         return "🌤 Добрый день!"
-
     if 18 <= hour < 23:
         return "🌙 Добрый вечер!"
-
     return "🌜 Доброй ночи!"
 
 
@@ -187,10 +179,8 @@ def _default_month_year() -> tuple[str, int]:
     Возвращает месяц и год по умолчанию: предыдущий месяц.
     """
     now = datetime.now(MSK)
-
     if now.month == 1:
         return MONTHS[-1], now.year - 1
-
     return MONTHS[now.month - 2], now.year
 
 
@@ -200,80 +190,48 @@ def _default_week_period() -> tuple[Any, Any]:
     с 1 числа месяца последней завершённой недели до её конца.
     """
     today = datetime.now(MSK).date()
-
-    # Последний воскресенье строго до сегодняшнего дня.
+    # Последнее воскресенье строго до сегодняшнего дня.
     days_since_sunday = (today.weekday() + 1) % 7
-
     if days_since_sunday == 0:
         days_since_sunday = 7
-
     end_date = today - timedelta(days=days_since_sunday)
     start_date = end_date.replace(day=1)
-
     return start_date, end_date
 
 
 def _apply_theme() -> None:
     """
-    Применяет общую тему приложения.
+    Применяет lite-тему приложения для страницы отчёта.
     """
     if not THEME_ENABLED:
         return
-
     try:
         theme_name = None
         holiday_effects = None
-
         if get_current_greeting is not None:
             greeting_data = get_current_greeting()
-
             if isinstance(greeting_data, dict):
                 theme_name = greeting_data.get("theme")
-
         if get_today_holiday is not None:
             holiday = get_today_holiday()
-
             if isinstance(holiday, dict):
                 holiday_effects = holiday.get("effects")
-
-        if apply_theme is not None:
-            apply_theme(theme_name, holiday_effects)
+        if apply_subtle_theme is not None:
+            apply_subtle_theme(theme_name, holiday_effects)
     except Exception:
         pass
 
 
-def _apply_local_css() -> None:
+def _render_theme_controls_safe() -> None:
     """
-    Минимальные локальные стили для заголовка страницы.
+    Блок "Оформление" в сайдбаре (если доступен).
     """
-    st.markdown(
-        """
-        <style>
-        .header-block {
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            background: rgba(255, 255, 255, 0.75);
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-        }
-
-        .header-block h1 {
-            margin: 0;
-            font-size: 34px;
-            font-weight: 800;
-        }
-
-        .header-block p {
-            margin-top: 8px;
-            margin-bottom: 0;
-            font-size: 17px;
-            opacity: 0.85;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    if not UI_EXTRAS or render_theme_controls is None:
+        return
+    try:
+        render_theme_controls()
+    except Exception:
+        pass
 
 
 def _seek_file(file_obj: Any) -> None:
@@ -282,7 +240,6 @@ def _seek_file(file_obj: Any) -> None:
     """
     if file_obj is None:
         return
-
     try:
         file_obj.seek(0)
     except Exception:
@@ -292,6 +249,7 @@ def _seek_file(file_obj: Any) -> None:
 # ==========================================================
 # ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА
 # ==========================================================
+
 def _render_result(result: Any) -> None:
     """
     Отображает результат формирования отчёта.
@@ -339,7 +297,6 @@ def _render_result(result: Any) -> None:
                 excel.seek(0)
             except Exception:
                 pass
-
         st.download_button(
             label="📥 Скачать Excel",
             data=excel,
@@ -356,13 +313,10 @@ def _render_result(result: Any) -> None:
     positives = _get_attr(data, "positives")
 
     available_tabs: list[str] = []
-
     if preview is not None:
         available_tabs.append("📈 Общий итог")
-
     if complaints is not None:
         available_tabs.append("😠 Жалобы")
-
     if positives is not None:
         available_tabs.append("😊 Позитив")
 
@@ -370,20 +324,16 @@ def _render_result(result: Any) -> None:
         return
 
     st.subheader("📊 Просмотр данных")
-
     tabs = st.tabs(available_tabs)
     tab_index = 0
-
     if preview is not None:
         with tabs[tab_index]:
             st.dataframe(preview, use_container_width=True)
         tab_index += 1
-
     if complaints is not None:
         with tabs[tab_index]:
             st.dataframe(complaints, use_container_width=True)
         tab_index += 1
-
     if positives is not None:
         with tabs[tab_index]:
             st.dataframe(positives, use_container_width=True)
@@ -393,6 +343,7 @@ def _render_result(result: Any) -> None:
 # ==========================================================
 # ОСНОВНАЯ ФУНКЦИЯ СТРАНИЦЫ
 # ==========================================================
+
 def render_page() -> None:
     """
     Точка входа для страницы КР.
@@ -405,10 +356,10 @@ def render_page() -> None:
     )
 
     _apply_theme()
-    _apply_local_css()
+    _render_theme_controls_safe()
 
     # ------------------------------------------------------
-    # ЗАГОЛОВОК
+    # ЗАГОЛОВОК (общий темизированный .header-block из styles.py)
     # ------------------------------------------------------
     st.markdown(
         f"""
@@ -429,7 +380,6 @@ def render_page() -> None:
         [MONTH_MODE_LABEL, WEEK_MODE_LABEL],
         horizontal=True,
     )
-
     is_month = mode_label == MONTH_MODE_LABEL
     mode = MODE_MONTH if is_month else MODE_WEEK
 
@@ -442,11 +392,10 @@ def render_page() -> None:
     # ЗАГРУЗКА ФАЙЛОВ
     # ------------------------------------------------------
     st.markdown("### 📂 Загрузка файлов")
-
     col_site, col_agg, col_geo = st.columns(3)
 
     with col_site:
-        st.markdown(f"#### 📱 {SOURCE_LABELS.get(SOURCE_SITE, 'Сайт / приложение')}")
+        st.markdown(f"#### 📱 {SOURCE_LABELS.get(SOURCE_SITE, 'Сайт')}")
         file_site = st.file_uploader(
             "Загрузите Excel",
             type=ACCEPTED_FILE_TYPES,
@@ -484,18 +433,15 @@ def render_page() -> None:
             "Месячный режим: удалённые отзывы из геосервисов не учитываются. "
             "Порог суммы применяется только к сайту."
         )
-
         default_month, default_year = _default_month_year()
 
         col_month, col_year, col_threshold = st.columns(3)
-
         with col_month:
             selected_month = st.selectbox(
                 "Месяц отчёта",
                 MONTHS,
                 index=MONTHS.index(default_month),
             )
-
         with col_year:
             selected_year = st.number_input(
                 "Год",
@@ -504,7 +450,6 @@ def render_page() -> None:
                 max_value=DEFAULT_YEAR_MAX,
                 step=1,
             )
-
         with col_threshold:
             price_threshold = st.number_input(
                 "Минимальная сумма заказа",
@@ -517,13 +462,11 @@ def render_page() -> None:
         start_date = None
         end_date = None
         custom_label = ""
-
     else:
         st.caption(
             "Недельный режим: удалённые отзывы из геосервисов учитываются. "
             "Порог суммы не применяется."
         )
-
         period_enabled = st.checkbox(
             "Ограничить период датами",
             value=False,
@@ -535,18 +478,14 @@ def render_page() -> None:
 
         start_date = None
         end_date = None
-
         if period_enabled:
             default_start, default_end = _default_week_period()
-
             col_start, col_end = st.columns(2)
-
             with col_start:
                 start_date = st.date_input(
                     "Дата начала",
                     value=default_start,
                 )
-
             with col_end:
                 end_date = st.date_input(
                     "Дата конца",
@@ -581,11 +520,9 @@ def render_page() -> None:
         if not MODELS_AVAILABLE:
             st.error("⚠️ Не удалось импортировать модели из `report/kr/models.py`.")
             st.stop()
-
         if not BUILDER_AVAILABLE or build_kr_report is None:
             st.error("⚠️ Не удалось импортировать `build_kr_report` из `report/kr/builder.py`.")
             st.stop()
-
         if not (file_site and file_agg and file_geo):
             st.error("⚠️ Пожалуйста, загрузите все три Excel-файла.")
             st.stop()
@@ -607,9 +544,8 @@ def render_page() -> None:
                         "или снимите галочку «Ограничить период датами»."
                     )
                     st.stop()
-
                 if end_date < start_date:
-                    st.error("⚠️ Дата конца не может быть раньше даты начала.")
+                    st.error("❌ Дата конца не может быть раньше даты начала.")
                     st.stop()
 
             settings = KRReportSettings(
@@ -632,7 +568,6 @@ def render_page() -> None:
             agg=file_agg,
             geo=file_geo,
         )
-
         request = KRReportRequest(
             files=files,
             settings=settings,
@@ -649,6 +584,10 @@ def render_page() -> None:
             st.session_state["kr_report_result"] = result
             st.session_state["kr_report_mode"] = mode
 
+            # 🎈 Пастельные шарики при следующем рендере
+            if celebrate_report_success is not None:
+                celebrate_report_success()
+
         except Exception as exc:
             st.error(f"❌ Произошла ошибка при формировании отчёта: {exc}")
             st.exception(exc)
@@ -658,7 +597,6 @@ def render_page() -> None:
     # ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА
     # ------------------------------------------------------
     result = st.session_state.get("kr_report_result")
-
     if result is None:
         st.info(
             "Загрузите файлы, настройте параметры и нажмите "
