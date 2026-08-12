@@ -730,3 +730,12 @@ hr { border: none !important; border-top: 2px solid rgba(0, 95, 107, 0.2) !impor
 @keyframes osTabPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 95, 107, 0.4); } 50% { box-shadow: 0 0 0 6px rgba(0, 95, 107, 0); } }
 </style>
 """
+
+
+# ===== EXPORTS =====
+__all__ = [
+    "apply_theme",
+    "apply_subtle_theme",
+    "apply_universal_report_styles",
+    "get_os_styles",
+]
