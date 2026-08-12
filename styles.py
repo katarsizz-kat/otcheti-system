@@ -12,7 +12,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
     2. Базовые стили интерфейса (header, sidebar, карточки)
     3. Подключение эффектов времени суток
     4. Подключение праздничных эффектов
-    
+
     ВАЖНО: Базовая тема управляется через .streamlit/config.toml
     """
     if holiday_effects is None:
@@ -40,8 +40,8 @@ def apply_theme(theme: str, holiday_effects: list = None):
         f"  --card-bg: {colors['card_bg']}; "
         f"  --card-border: {colors['card_border']}; "
         f"  --accent: {colors['accent']}; "
-        f"  --button-bg: #F5F5DC; "
-        f"  --button-text: #2C2C2C; "
+        "  --button-bg: #F5F5DC; "
+        "  --button-text: #2C2C2C; "
         f"  --logo-opacity: {logo_opacity}; "
         "} "
 
@@ -151,7 +151,7 @@ def apply_theme(theme: str, holiday_effects: list = None):
         "   opacity: 0.9; "
         " } "
 
-       # ===== HEADER-BLOCK (ЗАГОЛОВОК СТРАНИЦЫ С ГРАДИЕНТОМ) =====
+        # ===== HEADER-BLOCK (ЗАГОЛОВОК СТРАНИЦЫ С ГРАДИЕНТОМ) =====
         " .header-block { "
         "   background: var(--header-bg); "
         "   padding: 32px; "
@@ -229,7 +229,6 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " .stButton > button[kind='tertiary'] { "
         "   background: #F5F5DC !important; "
         "   color: #2C2C2C !important; "
-        "   border: 2px solid #005F6B !important; "
         "   border: none !important; "
         "   border-radius: 10px !important; "
         "   font-weight: 600 !important; "
@@ -294,22 +293,10 @@ def apply_theme(theme: str, holiday_effects: list = None):
         " } "
 
         # ===== АНИМАЦИИ =====
-        " @keyframes float { "
-        "   0%, 100% { transform: translateY(0); } "
-        "   50% { transform: translateY(-10px); } "
-        " } "
-        " @keyframes pulse { "
-        "   0%, 100% { transform: scale(1); } "
-        "   50% { transform: scale(1.02); } "
-        " } "
-        " @keyframes fadeIn { "
-        "   from { opacity: 0; transform: translateY(20px); } "
-        "   to { opacity: 1; transform: translateY(0); } "
-        " } "
-        " @keyframes scaleIn { "
-        "   from { opacity: 0; transform: scale(0.8); } "
-        "   to { opacity: 1; transform: scale(1); } "
-        " } "
+        " @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } } "
+        " @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } } "
+        " @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } "
+        " @keyframes scaleIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } } "
 
         # ===== КЛАССЫ АНИМАЦИИ =====
         " .fade-in { animation: fadeIn 0.6s ease-out; } "
@@ -487,8 +474,8 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
         f"  --text-secondary: {colors['text_secondary']}; "
         f"  --card-bg: {colors['card_bg']}; "
         f"  --card-border: {colors['card_border']}; "
-        "  --accent: {colors['accent']}; "
-        "  --button-bg: {colors['button_bg']}; "
+        f"  --accent: {colors['accent']}; "
+        f"  --button-bg: {colors['button_bg']}; "
         f"  --button-text: {colors['button_text']}; "
         "} "
 
@@ -581,6 +568,16 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
         "   text-shadow: 1px 1px 2px rgba(0,0,0,0.2); "
         " } "
 
+        # ===== КОНТЕНТНЫЕ БЛОКИ =====
+        " .content-block { "
+        "   background: var(--card-bg); "
+        "   padding: 24px; "
+        "   border-radius: 12px; "
+        "   margin-bottom: 24px; "
+        "   border: 1px solid var(--card-border); "
+        "   backdrop-filter: blur(10px); "
+        " } "
+
         # Кнопки
         " div[data-testid='stButton'] > button, "
         " .stButton > button { "
@@ -641,3 +638,49 @@ def apply_subtle_theme(theme: str, holiday_effects: list = None):
 
     # Выводим стили (БЕЗ эффектов облаков/звёзд)
     st.markdown(subtle_css, unsafe_allow_html=True)
+
+
+def apply_universal_report_styles():
+    """
+    Стили для универсального отчёта.
+    Используется на странице:
+        pages/10_MINI.py
+    через:
+        ui/pages/universal_report.py
+    """
+    st.markdown(
+        "<style>"
+        ".input-box { "
+        "   background: #fff3cd; "
+        "   border: 3px solid #ffc107; "
+        "   border-radius: 12px; "
+        "   padding: 20px; "
+        "   margin-bottom: 24px; "
+        "   box-shadow: 0 4px 15px rgba(255,193,7,0.4); "
+        "} "
+        "[data-testid='stTextArea'] textarea { "
+        "   border: 2px solid #4a90e2 !important; "
+        "   border-radius: 8px !important; "
+        "   padding: 12px !important; "
+        "   font-size: 14px !important; "
+        "   background-color: #ffffff !important; "
+        "   min-height: 300px !important; "
+        "} "
+        "[data-testid='stTextArea'] textarea:focus { "
+        "   border-color: #2c5aa0 !important; "
+        "   box-shadow: 0 0 8px rgba(74,144,226,0.3) !important; "
+        "   outline: none !important; "
+        "} "
+        "[data-testid='stTextArea'] textarea::placeholder { "
+        "   color: #6c757d !important; "
+        "   font-style: italic; "
+        "   opacity: 0.8; "
+        "} "
+        "[data-testid='stTextArea'] label { "
+        "   font-weight: 600; "
+        "   color: #333; "
+        "   margin-bottom: 8px; "
+        "} "
+        "</style>",
+        unsafe_allow_html=True,
+    )
