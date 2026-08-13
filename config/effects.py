@@ -1,18 +1,19 @@
 """Декоративные эффекты приложения.
 
-Архитектура v2.0:
-
-1. Эффекты НЕ меняют цвета интерфейса — они накладываются поверх
-   базовой палитры A/B (см. config/theme.py).
-2. Темы времени суток: morning/day -> облака, evening/night -> звёзды.
-3. Праздничные/сезонные спец-темы маппятся на наборы эффектов
-   (снег, лепестки, конфетти, шарики и т.д.).
-4. Весь декор отключается тумблером (is_effects_enabled / set_effects_enabled).
-5. Пастельные шарики после успешного формирования отчёта:
-   страница вызывает celebrate_report_success(),
-   а styles.py при рендере забирает анимацию через consume_pending_balloons().
-6. Все анимации уважают prefers-reduced-motion.
-7. Расстановка элементов детерминированная — не "мигает" при rerun.
+Архитектура v3.0:
+- Эффекты НЕ меняют цвета интерфейса — только декор поверх базы A/B.
+- Три вида "веселья" (никогда не накладываются друг на друга):
+  1) Шарики успеха — пастельные, с градиентом и бликом;
+     летят ТОЛЬКО после успешной генерации отчётов
+     (celebrate_report_success -> consume_pending_balloons);
+  2) Праздничные шарики — другой дизайн: ярче, градиент из двух цветов,
+     верёвочка и покачивание; летят на обычные праздники БЕЗ эффектов;
+  3) Тематические эффекты (снег, пицца, тыквы, конфетти, лепестки...) —
+     только на праздники, где они прописаны; шарики в этот день не летят.
+- Весь декор отключается тумблером (is_effects_enabled / set_effects_enabled),
+  кроме шариков успеха (это feedback действия).
+- prefers-reduced-motion уважается везде.
+- Расстановка элементов детерминированная — не "мигает" при rerun.
 """
 
 import streamlit as st
@@ -22,8 +23,17 @@ from typing import List, Optional
 # КОНСТАНТЫ
 # =============================================================================
 
-# Пастельные цвета шариков (утверждено)
+# Пастельные цвета шариков успеха (утверждены)
 BALLOON_COLORS = ["#D4C5F9", "#F9D4C5", "#C5E8D4", "#F5E6C8", "#C5DCF9"]
+
+# Праздничные шарики: пары (светлый -> насыщенный) для градиента
+HOLIDAY_BALLOON_GRADIENTS = [
+    ("#FF9A9E", "#FAD0C4"),   # розово-персиковый
+    ("#A18CD1", "#FBC2EB"),   # лаванда-розовый
+    ("#84FAB0", "#8FD3F4"),   # мята-небо
+    ("#FCCB90", "#D57EEB"),   # персик-фиалка
+    ("#E0C3FC", "#8EC5FC"),   # сирень-голубой
+]
 
 # Ключи session_state
 _FX_KEY = "fx_effects_enabled"
@@ -31,10 +41,10 @@ _BALLOONS_KEY = "fx_balloons_pending"
 
 # Маппинг спец-тем на наборы эффектов (поверх базы A/B)
 SPECIAL_EFFECT_MAP = {
-    "new_year": ["snow"],
+    "new_year": ["snow", "confetti"],
     "spring": ["petals"],
     "summer": ["motes"],
-    "childrens_day": ["balloons"],
+    "childrens_day": ["balloons_festive"],
     "knowledge_day": ["confetti"],
     "april_fools": ["confetti"],
     "magic": ["sparkles", "stars"],
@@ -56,29 +66,53 @@ def set_effects_enabled(enabled: bool) -> None:
     st.session_state[_FX_KEY] = bool(enabled)
 
 # =============================================================================
-# ШАРИКИ ПОСЛЕ УСПЕШНОГО ОТЧЁТА
+# ШАРИКИ УСПЕХА (пастельные) — ТОЛЬКО после генерации отчётов
 # =============================================================================
 
 def celebrate_report_success() -> None:
     """Отметить успешное формирование отчёта.
 
-    Вызывается на страницах отчётов (КР месяц, КР неделя, ОС, Продукт)
-    после успешной генерации файла. Анимацию заберёт styles.py
-    через consume_pending_balloons() при следующем рендере.
+    Вызывается на страницах отчётов после успешной генерации.
+    Анимацию забирает styles.py через consume_pending_balloons().
     """
     st.session_state[_BALLOONS_KEY] = True
 
 
 def consume_pending_balloons() -> str:
-    """Возвращает HTML одноразовых шариков и сбрасывает флаг.
+    """Возвращает HTML пастельных шариков и сбрасывает флаг.
 
-    Шарики успеха — это feedback действия, поэтому тумблером
-    праздничных эффектов НЕ отключаются (только prefers-reduced-motion).
+    Шарики успеха — feedback действия, поэтому тумблером
+    праздничных эффектов НЕ отключаются.
     """
     if not st.session_state.get(_BALLOONS_KEY):
         return ""
     st.session_state[_BALLOONS_KEY] = False
-    return _balloons(loop=False)
+    return _report_balloons()
+
+# =============================================================================
+# ПРАЗДНИЧНЫЕ ШАРИКИ (другой дизайн) — на обычные праздники
+# =============================================================================
+
+def should_show_holiday_balloons(holiday: dict) -> bool:
+    """True, если на праздник летят праздничные шарики.
+
+    Правило "не накладывается": если у праздника есть тематические
+    эффекты (снег/пицца/тыквы/...) — летят они, шарики НЕТ.
+    Если эффектов нет — летят праздничные шарики.
+    """
+    if not isinstance(holiday, dict):
+        return False
+    if not is_effects_enabled():
+        return False
+    effects = holiday.get("effects") or []
+    return len(effects) == 0
+
+
+def get_holiday_balloons_html() -> str:
+    """HTML праздничных шариков (яркие, градиент, верёвочка, покачивание)."""
+    if not is_effects_enabled():
+        return ""
+    return _festive_balloons()
 
 # =============================================================================
 # ПУБЛИЧНЫЕ ГЕНЕРАТОРЫ (обратно совместимый API)
@@ -87,9 +121,9 @@ def consume_pending_balloons() -> str:
 def get_theme_effect(theme: str) -> str:
     """Эффекты темы времени суток / спец-темы.
 
-    - morning/day  -> лёгкие облака;
+    - morning/day   -> лёгкие облака;
     - evening/night -> звёзды;
-    - спец-темы -> свой набор эффектов поверх базы;
+    - спец-темы     -> свой набор эффектов;
     - выключенный тумблер -> пустая строка.
     """
     if not is_effects_enabled():
@@ -109,7 +143,7 @@ def get_theme_effect(theme: str) -> str:
 def get_holiday_effects(effects: Optional[List[str]]) -> str:
     """Эффекты из конфига праздника (список имён).
 
-    Неизвестные имена игнорируются — старые конфиги не сломают новый код.
+    Неизвестные имена игнорируются — старые конфиги не сломают код.
     """
     if not effects or not is_effects_enabled():
         return ""
@@ -125,7 +159,7 @@ def get_holiday_effects(effects: Optional[List[str]]) -> str:
 # =============================================================================
 
 def _wrap(css: str, inner: str) -> str:
-    """Оборачивает эффект: фиксированный слой + reduced-motion."""
+    """Фиксированный декоративный слой + reduced-motion."""
     base = (
         ".fx-layer { position: fixed; inset: 0; pointer-events: none; "
         "z-index: 1; overflow: hidden; } "
@@ -140,11 +174,64 @@ def _wrap(css: str, inner: str) -> str:
     )
 
 # =============================================================================
-# ГЕНЕРАТОРЫ ЭФФЕКТОВ
+# ШАРИКИ УСПЕХА: пастельные, градиент + блик (текущий дизайн)
+# =============================================================================
+
+def _report_balloons() -> str:
+    css = (
+        ".fx-balloon { position: absolute; bottom: -90px; width: 34px; height: 42px; "
+        "border-radius: 50% 50% 48% 52% / 55% 55% 45% 45%; "
+        "animation: fxRise 6s ease-in forwards; } "
+        "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 12% { opacity: 0.95; } 50% { transform: translateY(-58vh) translateX(26px); } 100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
+    )
+    inner = []
+    for i in range(20):
+        left = (i * 47) % 100
+        color = BALLOON_COLORS[i % len(BALLOON_COLORS)]
+        dur = round(5.5 + (i % 5) * 0.5, 1)
+        delay = round((i * 0.18) % 1.5, 2)
+        bg = f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.75), {color} 65%)"
+        inner.append(
+            f"<div class='fx-balloon' style='left:{left}%;background:{bg};"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+# =============================================================================
+# ПРАЗДНИЧНЫЕ ШАРИКИ: яркий градиент + верёвочка + покачивание
+# =============================================================================
+
+def _festive_balloons() -> str:
+    css = (
+        ".fx-hballoon { position: absolute; bottom: -130px; width: 38px; height: 46px; "
+        "border-radius: 50% 50% 47% 53% / 55% 55% 45% 45%; "
+        "animation: fxRiseSway 7s ease-in forwards; } "
+        ".fx-hballoon::after { content: ''; position: absolute; left: 50%; top: 99%; "
+        "width: 1.5px; height: 46px; background: rgba(120,120,120,0.4); "
+        "transform: translateX(-50%); } "
+        "@keyframes fxRiseSway { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 0.95; } 25% { transform: translateY(-30vh) translateX(18px) rotate(6deg); } 50% { transform: translateY(-60vh) translateX(-16px) rotate(-6deg); } 75% { transform: translateY(-90vh) translateX(14px) rotate(4deg); } 100% { transform: translateY(-125vh) translateX(-8px) rotate(0deg); opacity: 0; } } "
+    )
+    inner = []
+    for i in range(16):
+        left = (i * 53) % 100
+        c1, c2 = HOLIDAY_BALLOON_GRADIENTS[i % len(HOLIDAY_BALLOON_GRADIENTS)]
+        dur = round(6.0 + (i % 4) * 0.6, 1)
+        delay = round((i * 0.22) % 1.8, 2)
+        bg = (
+            f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.85), "
+            f"{c1} 45%, {c2} 100%)"
+        )
+        inner.append(
+            f"<div class='fx-hballoon' style='left:{left}%;background:{bg};"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+        )
+    return _wrap(css, "".join(inner))
+
+# =============================================================================
+# ТЕМАТИЧЕСКИЕ ЭФФЕКТЫ
 # =============================================================================
 
 def _clouds() -> str:
-    """Лёгкие облака для светлой базы."""
     css = (
         ".fx-cloud { position: absolute; left: -30%; border-radius: 999px; "
         "background: radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0)); "
@@ -166,7 +253,6 @@ def _clouds() -> str:
 
 
 def _stars() -> str:
-    """Мерцающие звёзды для тёмной базы."""
     css = (
         ".fx-star { position: absolute; width: 3px; height: 3px; border-radius: 50%; "
         "background: var(--text-primary, #ECEAE5); opacity: 0.5; "
@@ -186,13 +272,10 @@ def _stars() -> str:
 
 
 def _snow() -> str:
-    """Снежинки (новый год)."""
     css = (
         ".fx-snow { position: absolute; top: -6%; color: var(--text-secondary, #B0B8AD); "
         "opacity: 0.5; animation: fxFall linear infinite; } "
-        "@keyframes fxFall { 0% { transform: translateY(-8vh) translateX(0); } "
-        "50% { transform: translateY(52vh) translateX(18px); } "
-        "100% { transform: translateY(112vh) translateX(-12px); } } "
+        "@keyframes fxFall { 0% { transform: translateY(-8vh) translateX(0); } 50% { transform: translateY(52vh) translateX(18px); } 100% { transform: translateY(112vh) translateX(-12px); } } "
     )
     inner = []
     for i in range(14):
@@ -208,14 +291,11 @@ def _snow() -> str:
 
 
 def _petals() -> str:
-    """Лепестки (весна)."""
     css = (
         ".fx-petal { position: absolute; top: -6%; width: 10px; height: 10px; "
         "border-radius: 60% 40% 55% 45%; background: #F9D4C5; opacity: 0.7; "
         "animation: fxFall linear infinite; } "
-        "@keyframes fxFall { 0% { transform: translateY(-8vh) translateX(0) rotate(0deg); } "
-        "50% { transform: translateY(52vh) translateX(20px) rotate(160deg); } "
-        "100% { transform: translateY(112vh) translateX(-12px) rotate(320deg); } } "
+        "@keyframes fxFall { 0% { transform: translateY(-8vh) translateX(0) rotate(0deg); } 50% { transform: translateY(52vh) translateX(20px) rotate(160deg); } 100% { transform: translateY(112vh) translateX(-12px) rotate(320deg); } } "
     )
     inner = []
     for i in range(12):
@@ -230,12 +310,10 @@ def _petals() -> str:
 
 
 def _confetti() -> str:
-    """Конфети (1 сентября, 1 апреля, праздники)."""
     css = (
         ".fx-confetti { position: absolute; top: -6%; width: 8px; height: 12px; "
         "border-radius: 2px; opacity: 0.85; animation: fxSpin linear infinite; } "
-        "@keyframes fxSpin { from { transform: translateY(-8vh) rotate(0deg); } "
-        "to { transform: translateY(112vh) rotate(680deg); } } "
+        "@keyframes fxSpin { from { transform: translateY(-8vh) rotate(0deg); } to { transform: translateY(112vh) rotate(680deg); } } "
     )
     inner = []
     for i in range(16):
@@ -251,12 +329,10 @@ def _confetti() -> str:
 
 
 def _sparkles() -> str:
-    """Искры (магия)."""
     css = (
         ".fx-sparkle { position: absolute; color: var(--accent, #A8C5A3); opacity: 0.6; "
         "animation: fxTwinkle 2.6s ease-in-out infinite; } "
-        "@keyframes fxTwinkle { 0%, 100% { opacity: 0.2; transform: scale(0.9); } "
-        "50% { opacity: 0.8; transform: scale(1.1); } } "
+        "@keyframes fxTwinkle { 0%, 100% { opacity: 0.2; transform: scale(0.9); } 50% { opacity: 0.8; transform: scale(1.1); } } "
     )
     inner = []
     for i in range(12):
@@ -273,13 +349,11 @@ def _sparkles() -> str:
 
 
 def _motes() -> str:
-    """Тёплые пылинки, плывущие вверх (лето)."""
     css = (
         ".fx-mote { position: absolute; bottom: -4%; width: 6px; height: 6px; "
         "border-radius: 50%; background: #F5E6C8; opacity: 0.6; "
         "animation: fxFloatUp linear infinite; } "
-        "@keyframes fxFloatUp { from { transform: translateY(0); opacity: 0; } "
-        "15% { opacity: 0.7; } to { transform: translateY(-110vh); opacity: 0; } } "
+        "@keyframes fxFloatUp { from { transform: translateY(0); opacity: 0; } 15% { opacity: 0.7; } to { transform: translateY(-110vh); opacity: 0; } } "
     )
     inner = []
     for i in range(10):
@@ -294,7 +368,6 @@ def _motes() -> str:
 
 
 def _scifi() -> str:
-    """Медленная сканирующая линия (sci-fi)."""
     css = (
         ".fx-scan { position: absolute; left: 0; width: 100%; height: 2px; "
         "background: linear-gradient(90deg, transparent, var(--accent, #A8C5A3), transparent); "
@@ -308,38 +381,49 @@ def _scifi() -> str:
     return _wrap(css, inner)
 
 
-def _balloons(loop: bool = True) -> str:
-    """Пастельные шарики.
-
-    loop=True  — праздничные (летают постоянно);
-    loop=False — одноразовые после успешного отчёта (~6 сек и исчезают).
-    """
-    mode = "infinite" if loop else "forwards"
+def _falling_pizza() -> str:
     css = (
-        ".fx-balloon { position: absolute; bottom: -90px; width: 34px; height: 42px; "
-        "border-radius: 50% 50% 48% 52% / 55% 55% 45% 45%; "
-        f"animation: fxRise 6s ease-in {mode}; }} "
-        "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } "
-        "12% { opacity: 0.95; } "
-        "50% { transform: translateY(-58vh) translateX(26px); } "
-        "100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
+        ".fx-pizza { position: absolute; top: -8%; opacity: 0.8; "
+        "animation: fxPizzaFall linear infinite; } "
+        "@keyframes fxPizzaFall { 0% { transform: translateY(-8vh) rotate(0deg); } 100% { transform: translateY(115vh) rotate(360deg); } } "
     )
     inner = []
-    count = 14 if loop else 20
-    for i in range(count):
-        left = (i * 47) % 100
-        color = BALLOON_COLORS[i % len(BALLOON_COLORS)]
-        dur = round(5.5 + (i % 5) * 0.5, 1)
-        if loop:
-            delay = -round((i * 1.3) % 6, 1)
-        else:
-            delay = round((i * 0.18) % 1.5, 2)
-        bg = f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.75), {color} 65%)"
+    for i in range(12):
+        left = (i * 49) % 100
+        size = 14 + (i * 5) % 12
+        dur = 7 + (i * 3) % 6
+        delay = -((i * 2) % dur)
         inner.append(
-            f"<div class='fx-balloon' style='left:{left}%;background:{bg};"
-            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+            f"<span class='fx-pizza' style='left:{left}%;font-size:{size}px;"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'>🍕</span>"
         )
     return _wrap(css, "".join(inner))
+
+
+def _pumpkins() -> str:
+    css = (
+        ".fx-pumpkin { position: absolute; top: -8%; opacity: 0.85; "
+        "filter: drop-shadow(0 0 6px rgba(243,156,18,0.6)); "
+        "animation: fxPumpkinFall linear infinite; } "
+        "@keyframes fxPumpkinFall { 0% { transform: translateY(-8vh) translateX(0) rotate(-8deg); } 50% { transform: translateY(52vh) translateX(22px) rotate(8deg); } 100% { transform: translateY(115vh) translateX(-14px) rotate(-8deg); } } "
+    )
+    inner = []
+    for i in range(10):
+        left = (i * 57) % 100
+        size = 16 + (i * 5) % 12
+        dur = 8 + (i * 3) % 7
+        delay = -((i * 3) % dur)
+        inner.append(
+            f"<span class='fx-pumpkin' style='left:{left}%;font-size:{size}px;"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'>🎃</span>"
+        )
+    return _wrap(css, "".join(inner))
+
+
+def _balloons_festive_loop() -> str:
+    """Зацикленные праздничные шарики (для спец-тем, например 1 июня)."""
+    html = _festive_balloons()
+    return html.replace("forwards", "infinite")
 
 # =============================================================================
 # РЕЕСТР ПРЕСЕТОВ (имя -> генератор)
@@ -354,7 +438,10 @@ EFFECT_PRESETS = {
     "sparkles": _sparkles,
     "motes": _motes,
     "scifi": _scifi,
-    "balloons": _balloons,
+    "falling_pizza": _falling_pizza,
+    "pumpkins": _pumpkins,
+    "balloons": _report_balloons,
+    "balloons_festive": _festive_balloons,
 }
 
 # =============================================================================
@@ -363,12 +450,15 @@ EFFECT_PRESETS = {
 
 __all__ = [
     "BALLOON_COLORS",
+    "HOLIDAY_BALLOON_GRADIENTS",
     "SPECIAL_EFFECT_MAP",
     "EFFECT_PRESETS",
     "is_effects_enabled",
     "set_effects_enabled",
     "celebrate_report_success",
     "consume_pending_balloons",
+    "should_show_holiday_balloons",
+    "get_holiday_balloons_html",
     "get_theme_effect",
     "get_holiday_effects",
 ]
