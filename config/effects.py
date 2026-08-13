@@ -1,9 +1,9 @@
 """Декоративные эффекты приложения.
 
-Архитектура v3.2:
+Архитектура v3.3:
 - Эффекты НЕ меняют цвета интерфейса — только декор поверх базы A/B.
 - Три вида "веселья" (никогда не накладываются друг на друга):
-  1) Шарики успеха — насыщенные, с градиентом, бликом, узелком и верёвочкой;
+  1) Шарики успеха — НАСЫЩЕННЫЕ, с цветным свечением, 36 штук (3 ряда);
      летят ТОЛЬКО после успешной генерации отчётов
      (celebrate_report_success -> consume_pending_balloons);
   2) Праздничные шарики — другой дизайн: градиент из двух цветов,
@@ -24,8 +24,8 @@ from typing import List, Optional
 # КОНСТАНТЫ
 # =============================================================================
 
-# Насыщенные цвета шариков успеха (v3.2: сочнее, чем пастель v3.0)
-BALLOON_COLORS = ["#B490F5", "#F9A17C", "#7BD8AE", "#F6CE6B", "#7FB9F7"]
+# Насыщенные цвета шариков успеха (v3.3: ярче + цветное свечение)
+BALLOON_COLORS = ["#9B6DF6", "#FB8A4E", "#34D399", "#FACC15", "#4BA3F8"]
 
 # Праздничные шарики: пары (светлый -> насыщенный) для градиента
 HOLIDAY_BALLOON_GRADIENTS = [
@@ -175,17 +175,13 @@ def _wrap(css: str, inner: str) -> str:
     )
 
 # =============================================================================
-# ШАРИКИ УСПЕХА: насыщенные, с узелком и верёвочкой
-# v3.2: сочнее цвета, меньше белого блика, верёвочка у всех шариков
+# ШАРИКИ УСПЕХА: v3.3 — 36 штук (3 ряда), насыщенные, с цветным свечением
 # =============================================================================
 
 def _report_balloons() -> str:
     css = (
         ".fx-balloon { position: absolute; bottom: -150px; "
         "border-radius: 50% 50% 48% 52% / 55% 55% 45% 45%; "
-        "box-shadow: 0 10px 24px rgba(0,0,0,0.16), "
-        "inset -8px -10px 18px rgba(0,0,0,0.10), "
-        "inset 6px 8px 12px rgba(255,255,255,0.35); "
         "animation: fxRise 6s ease-in forwards; } "
         # Узелок внизу шарика (наследует градиент шарика)
         ".fx-balloon::before { content: ''; position: absolute; bottom: -7px; "
@@ -194,41 +190,43 @@ def _report_balloons() -> str:
         # Верёвочка (видна на светлом и тёмном фоне)
         ".fx-balloon::after { content: ''; position: absolute; top: 100%; "
         "margin-top: 6px; left: 50%; width: 2px; height: 54px; "
-        "background: linear-gradient(rgba(90,90,90,0.55), rgba(90,90,90,0.15)); "
+        "background: linear-gradient(rgba(90,90,90,0.6), rgba(90,90,90,0.15)); "
         "transform: translateX(-50%); border-radius: 1px; } "
         "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translateY(-58vh) translateX(26px); } 100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
     )
     inner = []
-    for i in range(24):
-        left = (i * 47) % 100
+    for i in range(36):
+        left = (i * 37) % 100
         color = BALLOON_COLORS[i % len(BALLOON_COLORS)]
-        w = 46 + (i % 4) * 6          # 46 / 52 / 58 / 64 px
+        w = 48 + (i % 4) * 6          # 48 / 54 / 60 / 66 px
         h = round(w * 1.25)
         dur = round(5.5 + (i % 5) * 0.5, 1)
-        delay = round((i * 0.18) % 1.5, 2)
+        delay = round((i * 0.21) % 2.1, 2)   # шире разброс -> 3 ряда
         bg = (
-            f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.65), "
-            f"{color} 52%)"
+            f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.5) 0%, "
+            f"{color} 48%, {color} 100%)"
+        )
+        glow = (
+            f"0 8px 28px {color}66, "
+            f"inset -8px -10px 18px rgba(0,0,0,0.15), "
+            f"inset 6px 8px 12px rgba(255,255,255,0.3)"
         )
         inner.append(
             f"<div class='fx-balloon' style='left:{left}%;width:{w}px;height:{h}px;"
-            f"background:{bg};animation-duration:{dur}s;"
-            f"animation-delay:{delay}s;'></div>"
+            f"background:{bg};box-shadow:{glow};"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
         )
     return _wrap(css, "".join(inner))
 
 # =============================================================================
 # ПРАЗДНИЧНЫЕ ШАРИКИ: яркий градиент + узелок + длинная верёвочка + покачивание
-# v3.2: верёвочка темнее и длиннее, добавлен узелок
+# v3.3: 24 штуки, добавлено цветное свечение
 # =============================================================================
 
 def _festive_balloons() -> str:
     css = (
         ".fx-hballoon { position: absolute; bottom: -170px; "
         "border-radius: 50% 50% 47% 53% / 55% 55% 45% 45%; "
-        "box-shadow: 0 10px 24px rgba(0,0,0,0.18), "
-        "inset -8px -10px 18px rgba(0,0,0,0.12), "
-        "inset 6px 8px 12px rgba(255,255,255,0.4); "
         "animation: fxRiseSway 7s ease-in forwards; } "
         # Узелок
         ".fx-hballoon::before { content: ''; position: absolute; bottom: -7px; "
@@ -237,12 +235,12 @@ def _festive_balloons() -> str:
         # Длинная верёвочка
         ".fx-hballoon::after { content: ''; position: absolute; top: 100%; "
         "margin-top: 6px; left: 50%; width: 2px; height: 64px; "
-        "background: linear-gradient(rgba(70,70,70,0.6), rgba(70,70,70,0.2)); "
+        "background: linear-gradient(rgba(70,70,70,0.65), rgba(70,70,70,0.2)); "
         "transform: translateX(-50%); border-radius: 1px; } "
         "@keyframes fxRiseSway { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 25% { transform: translateY(-30vh) translateX(18px) rotate(6deg); } 50% { transform: translateY(-60vh) translateX(-16px) rotate(-6deg); } 75% { transform: translateY(-90vh) translateX(14px) rotate(4deg); } 100% { transform: translateY(-125vh) translateX(-8px) rotate(0deg); opacity: 0; } } "
     )
     inner = []
-    for i in range(16):
+    for i in range(24):
         left = (i * 53) % 100
         c1, c2 = HOLIDAY_BALLOON_GRADIENTS[i % len(HOLIDAY_BALLOON_GRADIENTS)]
         w = 50 + (i % 4) * 6          # 50 / 56 / 62 / 68 px
@@ -253,10 +251,15 @@ def _festive_balloons() -> str:
             f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.85), "
             f"{c1} 45%, {c2} 100%)"
         )
+        glow = (
+            f"0 8px 28px {c2}66, "
+            f"inset -8px -10px 18px rgba(0,0,0,0.12), "
+            f"inset 6px 8px 12px rgba(255,255,255,0.35)"
+        )
         inner.append(
             f"<div class='fx-hballoon' style='left:{left}%;width:{w}px;height:{h}px;"
-            f"background:{bg};animation-duration:{dur}s;"
-            f"animation-delay:{delay}s;'></div>"
+            f"background:{bg};box-shadow:{glow};"
+            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
         )
     return _wrap(css, "".join(inner))
 
