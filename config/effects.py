@@ -1,13 +1,13 @@
 """Декоративные эффекты приложения.
 
-Архитектура v3.1:
+Архитектура v3.2:
 - Эффекты НЕ меняют цвета интерфейса — только декор поверх базы A/B.
 - Три вида "веселья" (никогда не накладываются друг на друга):
-  1) Шарики успеха — пастельные, градиент, блик, объёмная тень;
-     крупные (46–64px) и непрозрачные; летят ТОЛЬКО после успешной
-     генерации отчётов (celebrate_report_success -> consume_pending_balloons);
-  2) Праздничные шарики — другой дизайн: ярче, градиент из двух цветов,
-     верёвочка и покачивание; крупные (50–68px); летят на обычные
+  1) Шарики успеха — насыщенные, с градиентом, бликом, узелком и верёвочкой;
+     летят ТОЛЬКО после успешной генерации отчётов
+     (celebrate_report_success -> consume_pending_balloons);
+  2) Праздничные шарики — другой дизайн: градиент из двух цветов,
+     узелок и длинная верёвочка, покачивание; летят на обычные
      праздники БЕЗ тематических эффектов;
   3) Тематические эффекты (снег, пицца, тыквы, конфетти, лепестки...) —
      только на праздники, где они прописаны; шарики в этот день не летят.
@@ -24,8 +24,8 @@ from typing import List, Optional
 # КОНСТАНТЫ
 # =============================================================================
 
-# Пастельные цвета шариков успеха (утверждены)
-BALLOON_COLORS = ["#D4C5F9", "#F9D4C5", "#C5E8D4", "#F5E6C8", "#C5DCF9"]
+# Насыщенные цвета шариков успеха (v3.2: сочнее, чем пастель v3.0)
+BALLOON_COLORS = ["#B490F5", "#F9A17C", "#7BD8AE", "#F6CE6B", "#7FB9F7"]
 
 # Праздничные шарики: пары (светлый -> насыщенный) для градиента
 HOLIDAY_BALLOON_GRADIENTS = [
@@ -67,7 +67,7 @@ def set_effects_enabled(enabled: bool) -> None:
     st.session_state[_FX_KEY] = bool(enabled)
 
 # =============================================================================
-# ШАРИКИ УСПЕХА (пастельные) — ТОЛЬКО после генерации отчётов
+# ШАРИКИ УСПЕХА (насыщенные) — ТОЛЬКО после генерации отчётов
 # =============================================================================
 
 def celebrate_report_success() -> None:
@@ -80,7 +80,7 @@ def celebrate_report_success() -> None:
 
 
 def consume_pending_balloons() -> str:
-    """Возвращает HTML пастельных шариков и сбрасывает флаг.
+    """Возвращает HTML насыщенных шариков и сбрасывает флаг.
 
     Шарики успеха — feedback действия, поэтому тумблером
     праздничных эффектов НЕ отключаются.
@@ -110,7 +110,7 @@ def should_show_holiday_balloons(holiday: dict) -> bool:
 
 
 def get_holiday_balloons_html() -> str:
-    """HTML праздничных шариков (яркие, градиент, верёвочка, покачивание)."""
+    """HTML праздничных шариков (градиент, узелок, верёвочка, покачивание)."""
     if not is_effects_enabled():
         return ""
     return _festive_balloons()
@@ -175,17 +175,27 @@ def _wrap(css: str, inner: str) -> str:
     )
 
 # =============================================================================
-# ШАРИКИ УСПЕХА: пастельные, крупные, непрозрачные, с объёмом
-# v3.1: размер 46–64px, opacity 1, сочнее градиент, тени объёма
+# ШАРИКИ УСПЕХА: насыщенные, с узелком и верёвочкой
+# v3.2: сочнее цвета, меньше белого блика, верёвочка у всех шариков
 # =============================================================================
 
 def _report_balloons() -> str:
     css = (
-        ".fx-balloon { position: absolute; bottom: -110px; "
+        ".fx-balloon { position: absolute; bottom: -150px; "
         "border-radius: 50% 50% 48% 52% / 55% 55% 45% 45%; "
-        "box-shadow: 0 8px 20px rgba(0,0,0,0.12), "
-        "inset -6px -8px 14px rgba(0,0,0,0.08); "
+        "box-shadow: 0 10px 24px rgba(0,0,0,0.16), "
+        "inset -8px -10px 18px rgba(0,0,0,0.10), "
+        "inset 6px 8px 12px rgba(255,255,255,0.35); "
         "animation: fxRise 6s ease-in forwards; } "
+        # Узелок внизу шарика (наследует градиент шарика)
+        ".fx-balloon::before { content: ''; position: absolute; bottom: -7px; "
+        "left: 50%; transform: translateX(-50%); width: 10px; height: 8px; "
+        "background: inherit; border-radius: 3px; } "
+        # Верёвочка (видна на светлом и тёмном фоне)
+        ".fx-balloon::after { content: ''; position: absolute; top: 100%; "
+        "margin-top: 6px; left: 50%; width: 2px; height: 54px; "
+        "background: linear-gradient(rgba(90,90,90,0.55), rgba(90,90,90,0.15)); "
+        "transform: translateX(-50%); border-radius: 1px; } "
         "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translateY(-58vh) translateX(26px); } 100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
     )
     inner = []
@@ -197,8 +207,8 @@ def _report_balloons() -> str:
         dur = round(5.5 + (i % 5) * 0.5, 1)
         delay = round((i * 0.18) % 1.5, 2)
         bg = (
-            f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.55), "
-            f"{color} 50%)"
+            f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.65), "
+            f"{color} 52%)"
         )
         inner.append(
             f"<div class='fx-balloon' style='left:{left}%;width:{w}px;height:{h}px;"
@@ -208,20 +218,27 @@ def _report_balloons() -> str:
     return _wrap(css, "".join(inner))
 
 # =============================================================================
-# ПРАЗДНИЧНЫЕ ШАРИКИ: яркий градиент + верёвочка + покачивание
-# v3.1: размер 50–68px, opacity 1, верёвочка длиннее и заметнее
+# ПРАЗДНИЧНЫЕ ШАРИКИ: яркий градиент + узелок + длинная верёвочка + покачивание
+# v3.2: верёвочка темнее и длиннее, добавлен узелок
 # =============================================================================
 
 def _festive_balloons() -> str:
     css = (
-        ".fx-hballoon { position: absolute; bottom: -150px; "
+        ".fx-hballoon { position: absolute; bottom: -170px; "
         "border-radius: 50% 50% 47% 53% / 55% 55% 45% 45%; "
-        "box-shadow: 0 8px 20px rgba(0,0,0,0.14), "
-        "inset -6px -8px 14px rgba(0,0,0,0.10); "
+        "box-shadow: 0 10px 24px rgba(0,0,0,0.18), "
+        "inset -8px -10px 18px rgba(0,0,0,0.12), "
+        "inset 6px 8px 12px rgba(255,255,255,0.4); "
         "animation: fxRiseSway 7s ease-in forwards; } "
-        ".fx-hballoon::after { content: ''; position: absolute; left: 50%; top: 99%; "
-        "width: 2px; height: 60px; background: rgba(120,120,120,0.45); "
-        "transform: translateX(-50%); } "
+        # Узелок
+        ".fx-hballoon::before { content: ''; position: absolute; bottom: -7px; "
+        "left: 50%; transform: translateX(-50%); width: 10px; height: 8px; "
+        "background: inherit; border-radius: 3px; } "
+        # Длинная верёвочка
+        ".fx-hballoon::after { content: ''; position: absolute; top: 100%; "
+        "margin-top: 6px; left: 50%; width: 2px; height: 64px; "
+        "background: linear-gradient(rgba(70,70,70,0.6), rgba(70,70,70,0.2)); "
+        "transform: translateX(-50%); border-radius: 1px; } "
         "@keyframes fxRiseSway { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 25% { transform: translateY(-30vh) translateX(18px) rotate(6deg); } 50% { transform: translateY(-60vh) translateX(-16px) rotate(-6deg); } 75% { transform: translateY(-90vh) translateX(14px) rotate(4deg); } 100% { transform: translateY(-125vh) translateX(-8px) rotate(0deg); opacity: 0; } } "
     )
     inner = []
