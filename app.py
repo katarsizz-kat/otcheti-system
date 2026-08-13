@@ -1,4 +1,14 @@
-"""Главная страница приложения."""
+"""Главная страница приложения.
+
+v3.0 (дизайн-система Sage & Sandstone):
+- Критический CSS без "мигания": фон из палитры; если в URL есть
+  ?theme=dark — сразу тёмный.
+- Карточки событий — на CSS-переменных + html.escape (фикс XSS).
+- Состояние ошибки БД отделено от "событий нет".
+- "Ближайшие праздники" — 5 дней вперёд.
+- Динозавр только здесь: render_footer(show_dino=True).
+- Убраны мёртвые импорты (get_reports, render_report_card).
+"""
 import html
 import streamlit as st
 from datetime import date
@@ -10,8 +20,8 @@ st.set_page_config(page_title="Система отчётов", page_icon="🦖",
 
 # =============================================================================
 # 2. КРИТИЧЕСКИЙ CSS (МГНОВЕННОЕ ПРИМЕНЕНИЕ)
-# Фон берётся из палитры Sage & Sandstone; если в URL уже есть
-# ?theme=dark — красим сразу в тёмный, чтобы не было мигания.
+# Фон берётся из палитры; при override ?theme=dark — сразу тёмный,
+# чтобы не было мигания светлым при перезагрузке.
 # =============================================================================
 _override = st.query_params.get("theme")
 _crit_bg = "#1E2420" if _override == "dark" else "#F7F5F1"
@@ -33,11 +43,10 @@ body,
 )
 
 # =============================================================================
-# 3. ЛЁГКИЕ ИМПОРТЫ (конфиги — без БД, мигания не будет)
+# 3. ИМПОРТЫ
 # =============================================================================
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday, get_upcoming_holidays
-from config.theme import resolve_mode
 from styles import apply_theme
 from components import (
     render_app_header,
@@ -58,7 +67,7 @@ if "main_page_dino_modal_open" not in st.session_state:
 # =============================================================================
 greeting_data = get_current_greeting()
 holiday = get_today_holiday()
-upcoming_holidays = get_upcoming_holidays(days=7)
+upcoming_holidays = get_upcoming_holidays(days=5)
 holiday_effects = holiday.get("effects") if holiday and isinstance(holiday, dict) else None
 
 # Применяем тему (база A/B + эффекты поверх, с учётом override из URL)
@@ -213,7 +222,7 @@ if holiday:
     render_holiday_banner(holiday)
 
 # =============================================================================
-# Ближайшие праздники
+# Ближайшие праздники (5 дней вперёд)
 # =============================================================================
 if upcoming_holidays:
     render_upcoming_holidays_section(upcoming_holidays)

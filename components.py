@@ -1,27 +1,38 @@
 """Компоненты интерфейса: шапка, карточки, баннеры, кнопки, подвал.
 
-v2.3 (дизайн-система Sage & Sandstone):
+v3.0 (дизайн-система Sage & Sandstone):
 - Никаких хардкод-цветов: только CSS-переменные, которые выставляет styles.py.
 - Все строки, вставляемые в HTML, проходят html.escape (фикс XSS).
-- Блок "Оформление" в сайдбаре:
-  * переключатель A/B — ссылка с полной перезагрузкой (?theme=light/dark),
-    относительная query-ссылка сохраняет текущий путь страницы;
-  * "↺ Авто" — кнопка: чистит URL и session_state, возвращает
-    автоопределение по времени суток (Москва, UTC+3);
-  * выбор переживает переходы между страницами через session_state
-    (styles.py v2.2 читает override оттуда же).
+- Блок "Оформление" в сайдбаре: переключатель A/B (ссылка с полной
+  перезагрузкой ?theme=light/dark), "↺ Авто", тумблер праздничных эффектов.
+- Праздничный UI v3.0:
+  * st.balloons() убран полностью;
+  * popup больше не рендерится — остаётся только карточка Дино;
+  * праздничные шарики (другой дизайн) летят только на обычные праздники
+    (без тематических эффектов) и только раз в день;
+  * secret и кнопки действий сохранены.
 - Динозавр — только на главной: render_footer(show_dino=True).
 """
-
 import html
 import os
 import re
 import datetime
 import streamlit as st
+from typing import Optional
 
 from config.greetings import get_current_greeting
 from config.theme import resolve_mode
 from config.effects import is_effects_enabled, set_effects_enabled
+
+# Защитный импорт новых функций эффектов (если effects.py ещё старый —
+# компоненты не упадут, праздничные шарики просто не полетят)
+try:
+    from config.effects import should_show_holiday_balloons, get_holiday_balloons_html
+    HOLIDAY_BALLOONS_AVAILABLE = True
+except Exception:
+    should_show_holiday_balloons = None
+    get_holiday_balloons_html = None
+    HOLIDAY_BALLOONS_AVAILABLE = False
 
 # =============================================================================
 # СЛУЖЕБНОЕ
@@ -65,7 +76,7 @@ def render_theme_controls() -> None:
     - Ссылка-переключатель темы с полной перезагрузкой страницы:
       Streamlit применяет базовую тему из URL при загрузке.
     - "↺ Авто" (кнопка, видна только при ручном override) — возврат
-      к автоопределению по времени суток.
+      к автоопределению по времени суток (Москва, UTC+3).
     - Тумблер праздничных эффектов (session_state).
     """
     greeting_theme = get_current_greeting()["theme"]
@@ -157,11 +168,11 @@ def render_welcome_block(icon: str, greeting: str, subtitle: str = " "):
     )
 
 # =============================================================================
-# ПРАЗДНИЧНЫЙ БАННЕР И ПОПАП
+# ПРАЗДНИЧНЫЙ БАННЕР И КАРТОЧКА ДИНО
 # =============================================================================
 
 def render_holiday_banner(holiday: dict):
-    """Кнопка-баннер сегодняшнего праздника + попап по клику."""
+    """Кнопка-баннер сегодняшнего праздника + карточка по клику."""
     if not holiday:
         return
 
@@ -189,46 +200,50 @@ def render_holiday_banner(holiday: dict):
         st.session_state[state_key] = True
 
     if st.session_state.get(state_key):
-        _render_holiday_popup(holiday, safe_title, state_key)
+        _render_holiday_card(holiday, safe_title, state_key)
 
 
-def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
-    """Попап праздника: все цвета — на CSS-переменных."""
+def _render_holiday_card(holiday: dict, safe_title: str, state_key: str):
+    """Карточка праздника v3.0: только Дино + secret + действие.
+
+    - popup не рендерится;
+    - st.balloons() нет;
+    - праздничные шарики летят только если у праздника НЕТ тематических
+      эффектов (правило "не накладывается"), один раз в день.
+    """
     from config.actions import execute_action
 
-    popup = holiday.get("popup") if isinstance(holiday.get("popup"), dict) else {}
     mascot = holiday.get("mascot") if isinstance(holiday.get("mascot"), dict) else {}
+    mascot_text = mascot.get("text", "")
     secret = holiday.get("secret") if isinstance(holiday.get("secret"), dict) else {}
     button = holiday.get("button") if isinstance(holiday.get("button"), dict) else {}
+    action_key = f"action_executed_{safe_title}"
 
-    if not st.session_state.get(f"balloons_shown_{safe_title}"):
-        st.balloons()
-        st.session_state[f"balloons_shown_{safe_title}"] = True
+    # Праздничные шарики (другой дизайн) — только на обычные праздники, 1 раз в день
+    if (
+        HOLIDAY_BALLOONS_AVAILABLE
+        and should_show_holiday_balloons(holiday)
+        and not st.session_state.get(f"holiday_balloons_{safe_title}")
+    ):
+        st.session_state[f"holiday_balloons_{safe_title}"] = True
+        balloons_html = get_holiday_balloons_html()
+        if balloons_html:
+            st.markdown(balloons_html, unsafe_allow_html=True)
 
-    if popup.get("enabled"):
-        st.markdown(
-            f"""<div style="background: var(--warning-bg); padding: 24px;
-            border-radius: 16px; margin: 16px 0; border: 1px solid var(--warning);">
-            <h3 style="margin-top: 0; color: var(--warning); font-size: 28px;">
-            {_esc(popup.get('title', 'Поздравляем!'))}</h3>
-            <p style="margin-bottom: 0; font-size: 18px; color: var(--text-primary);">
-            {_esc(popup.get('text', ''))}</p>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-
-    if mascot.get("enabled"):
+    # Карточка Дино — единственный праздничный текст
+    if mascot_text:
         st.markdown(
             f"""<div style="background: var(--success-bg); padding: 16px 20px;
             border-radius: 12px; margin: 16px 0; display: flex; align-items: center;
             gap: 12px; border: 1px solid var(--success);">
             <span style="font-size: 36px;">🦖</span>
             <p style="margin: 0; font-style: italic; font-size: 18px;
-            color: var(--text-primary);">{_esc(mascot.get('text', ''))}</p>
+            color: var(--text-primary);">{_esc(mascot_text)}</p>
             </div>""",
             unsafe_allow_html=True,
         )
 
+    # Пасхалка (если включена)
     if secret.get("enabled"):
         st.markdown(
             f"""<div style="background: var(--info-bg); padding: 16px 20px;
@@ -240,16 +255,15 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
             unsafe_allow_html=True,
         )
 
-    action_key = f"action_executed_{safe_title}"
+    # Кнопка действия (если есть)
     if button.get("enabled") and button.get("action"):
-        action_name = button["action"]
         if st.button(
-            "Выполнить действие",
+            button.get("text", "Выполнить действие"),
             key=f"action_btn_{safe_title}",
             use_container_width=True,
             type="primary",
         ):
-            result = execute_action(action_name, holiday)
+            result = execute_action(button["action"], holiday)
             st.session_state[action_key] = result
 
         if action_key in st.session_state:
@@ -258,7 +272,6 @@ def _render_holiday_popup(holiday: dict, safe_title: str, state_key: str):
     st.markdown("---")
     if st.button("✖ Закрыть", key=f"close_{safe_title}", use_container_width=True):
         st.session_state[state_key] = False
-        st.session_state[f"balloons_shown_{safe_title}"] = False
         if action_key in st.session_state:
             del st.session_state[action_key]
         st.rerun()
