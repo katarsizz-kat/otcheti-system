@@ -1,13 +1,14 @@
 """Декоративные эффекты приложения.
 
-Архитектура v3.0:
+Архитектура v3.1:
 - Эффекты НЕ меняют цвета интерфейса — только декор поверх базы A/B.
 - Три вида "веселья" (никогда не накладываются друг на друга):
-  1) Шарики успеха — пастельные, с градиентом и бликом;
-     летят ТОЛЬКО после успешной генерации отчётов
-     (celebrate_report_success -> consume_pending_balloons);
+  1) Шарики успеха — пастельные, градиент, блик, объёмная тень;
+     крупные (46–64px) и непрозрачные; летят ТОЛЬКО после успешной
+     генерации отчётов (celebrate_report_success -> consume_pending_balloons);
   2) Праздничные шарики — другой дизайн: ярче, градиент из двух цветов,
-     верёвочка и покачивание; летят на обычные праздники БЕЗ эффектов;
+     верёвочка и покачивание; крупные (50–68px); летят на обычные
+     праздники БЕЗ тематических эффектов;
   3) Тематические эффекты (снег, пицца, тыквы, конфетти, лепестки...) —
      только на праздники, где они прописаны; шарики в этот день не летят.
 - Весь декор отключается тумблером (is_effects_enabled / set_effects_enabled),
@@ -174,47 +175,61 @@ def _wrap(css: str, inner: str) -> str:
     )
 
 # =============================================================================
-# ШАРИКИ УСПЕХА: пастельные, градиент + блик (текущий дизайн)
+# ШАРИКИ УСПЕХА: пастельные, крупные, непрозрачные, с объёмом
+# v3.1: размер 46–64px, opacity 1, сочнее градиент, тени объёма
 # =============================================================================
 
 def _report_balloons() -> str:
     css = (
-        ".fx-balloon { position: absolute; bottom: -90px; width: 34px; height: 42px; "
+        ".fx-balloon { position: absolute; bottom: -110px; "
         "border-radius: 50% 50% 48% 52% / 55% 55% 45% 45%; "
+        "box-shadow: 0 8px 20px rgba(0,0,0,0.12), "
+        "inset -6px -8px 14px rgba(0,0,0,0.08); "
         "animation: fxRise 6s ease-in forwards; } "
-        "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 12% { opacity: 0.95; } 50% { transform: translateY(-58vh) translateX(26px); } 100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
+        "@keyframes fxRise { 0% { transform: translateY(0) translateX(0); opacity: 0; } 10% { opacity: 1; } 50% { transform: translateY(-58vh) translateX(26px); } 100% { transform: translateY(-118vh) translateX(-14px); opacity: 0; } } "
     )
     inner = []
-    for i in range(20):
+    for i in range(24):
         left = (i * 47) % 100
         color = BALLOON_COLORS[i % len(BALLOON_COLORS)]
+        w = 46 + (i % 4) * 6          # 46 / 52 / 58 / 64 px
+        h = round(w * 1.25)
         dur = round(5.5 + (i % 5) * 0.5, 1)
         delay = round((i * 0.18) % 1.5, 2)
-        bg = f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.75), {color} 65%)"
+        bg = (
+            f"radial-gradient(circle at 30% 25%, rgba(255,255,255,0.55), "
+            f"{color} 50%)"
+        )
         inner.append(
-            f"<div class='fx-balloon' style='left:{left}%;background:{bg};"
-            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+            f"<div class='fx-balloon' style='left:{left}%;width:{w}px;height:{h}px;"
+            f"background:{bg};animation-duration:{dur}s;"
+            f"animation-delay:{delay}s;'></div>"
         )
     return _wrap(css, "".join(inner))
 
 # =============================================================================
 # ПРАЗДНИЧНЫЕ ШАРИКИ: яркий градиент + верёвочка + покачивание
+# v3.1: размер 50–68px, opacity 1, верёвочка длиннее и заметнее
 # =============================================================================
 
 def _festive_balloons() -> str:
     css = (
-        ".fx-hballoon { position: absolute; bottom: -130px; width: 38px; height: 46px; "
+        ".fx-hballoon { position: absolute; bottom: -150px; "
         "border-radius: 50% 50% 47% 53% / 55% 55% 45% 45%; "
+        "box-shadow: 0 8px 20px rgba(0,0,0,0.14), "
+        "inset -6px -8px 14px rgba(0,0,0,0.10); "
         "animation: fxRiseSway 7s ease-in forwards; } "
         ".fx-hballoon::after { content: ''; position: absolute; left: 50%; top: 99%; "
-        "width: 1.5px; height: 46px; background: rgba(120,120,120,0.4); "
+        "width: 2px; height: 60px; background: rgba(120,120,120,0.45); "
         "transform: translateX(-50%); } "
-        "@keyframes fxRiseSway { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 0.95; } 25% { transform: translateY(-30vh) translateX(18px) rotate(6deg); } 50% { transform: translateY(-60vh) translateX(-16px) rotate(-6deg); } 75% { transform: translateY(-90vh) translateX(14px) rotate(4deg); } 100% { transform: translateY(-125vh) translateX(-8px) rotate(0deg); opacity: 0; } } "
+        "@keyframes fxRiseSway { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 25% { transform: translateY(-30vh) translateX(18px) rotate(6deg); } 50% { transform: translateY(-60vh) translateX(-16px) rotate(-6deg); } 75% { transform: translateY(-90vh) translateX(14px) rotate(4deg); } 100% { transform: translateY(-125vh) translateX(-8px) rotate(0deg); opacity: 0; } } "
     )
     inner = []
     for i in range(16):
         left = (i * 53) % 100
         c1, c2 = HOLIDAY_BALLOON_GRADIENTS[i % len(HOLIDAY_BALLOON_GRADIENTS)]
+        w = 50 + (i % 4) * 6          # 50 / 56 / 62 / 68 px
+        h = round(w * 1.25)
         dur = round(6.0 + (i % 4) * 0.6, 1)
         delay = round((i * 0.22) % 1.8, 2)
         bg = (
@@ -222,8 +237,9 @@ def _festive_balloons() -> str:
             f"{c1} 45%, {c2} 100%)"
         )
         inner.append(
-            f"<div class='fx-hballoon' style='left:{left}%;background:{bg};"
-            f"animation-duration:{dur}s;animation-delay:{delay}s;'></div>"
+            f"<div class='fx-hballoon' style='left:{left}%;width:{w}px;height:{h}px;"
+            f"background:{bg};animation-duration:{dur}s;"
+            f"animation-delay:{delay}s;'></div>"
         )
     return _wrap(css, "".join(inner))
 
@@ -422,8 +438,7 @@ def _pumpkins() -> str:
 
 def _balloons_festive_loop() -> str:
     """Зацикленные праздничные шарики (для спец-тем, например 1 июня)."""
-    html = _festive_balloons()
-    return html.replace("forwards", "infinite")
+    return _festive_balloons().replace("forwards", "infinite")
 
 # =============================================================================
 # РЕЕСТР ПРЕСЕТОВ (имя -> генератор)
