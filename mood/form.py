@@ -1,7 +1,7 @@
 """
 Форма ввода настроения: две колонки (Катя и Кристина).
 
-Общий блок: вопрос дня (один на страницу, один в день).
+Общий блок: вопрос дня + рефлексия (ответы обеих девушек).
 Каждая колонка: дата, часть дня, эмоция, интенсивность 1–5,
 заметка «почему я это чувствую», кнопки «Сохранить» и «Пауза»,
 список записей дня.
@@ -86,6 +86,55 @@ def _show_flash(person: str) -> None:
     flash = st.session_state.pop(f"mood_flash_{person}", None)
     if flash:
         st.success(flash)
+
+
+# ============================================================
+# ВОПРОС ДНЯ + РЕФЛЕКСИЯ
+# ============================================================
+
+def _render_daily_reflection() -> None:
+    """Вопрос дня и поля для ответов обеих девушек."""
+    question = _daily_question()
+    today = _today_moscow()
+
+    st.markdown(
+        f'<div class="mood-daily-question">'
+        f'❓ Вопрос дня: {question}</div>',
+        unsafe_allow_html=True,
+    )
+
+    flash = st.session_state.pop("mood_flash_reflection", None)
+    if flash:
+        st.success(flash)
+
+    existing = db.get_reflections_for_date(today)
+    by_person = {r["person"]: r for r in existing}
+
+    cols = st.columns(2, gap="large")
+    answers = {}
+    for col, person in zip(cols, PERSONS):
+        with col:
+            saved = by_person.get(person)
+            answers[person] = st.text_area(
+                f"💬 Ответ — {person}",
+                value=saved["answer"] if saved else "",
+                height=90,
+                key=f"mood_reflection_{person}",
+                placeholder="Пара строк о своём…",
+            )
+
+    if st.button(
+        "💬 Сохранить ответы",
+        key="mood_reflection_save",
+    ):
+        for person in PERSONS:
+            db.save_reflection(
+                person, today, question, answers[person]
+            )
+        st.session_state["mood_flash_reflection"] = (
+            "Ответы сохранены 🌿"
+        )
+        st.rerun()
 
 
 # ============================================================
@@ -289,13 +338,9 @@ def _render_person_column(person: str) -> None:
 # ============================================================
 
 def render_entry_form() -> None:
-    """Рендерит вопрос дня + две колонки формы."""
-    # Вопрос дня — один на страницу, один в течение дня
-    st.markdown(
-        f'<div class="mood-daily-question">'
-        f'❓ Вопрос дня: {_daily_question()}</div>',
-        unsafe_allow_html=True,
-    )
+    """Рендерит вопрос дня с рефлексией + две колонки формы."""
+    # Вопрос дня + ответы на него
+    _render_daily_reflection()
 
     cols = st.columns(2, gap="large")
     for col, person in zip(cols, PERSONS):

@@ -634,3 +634,59 @@ def get_week_pattern(person: str) -> List[Dict]:
             item["pause"] = True
         pattern.append(item)
     return pattern
+# ============================================================
+# РЕФЛЕКСИЯ ДНЯ (ответы на вопрос дня)
+# ============================================================
+
+REFLECTION_TABLE = "mood_reflections"
+
+
+def save_reflection(
+    person: str,
+    reflection_date,
+    question: str,
+    answer: str,
+):
+    """
+    Сохранить ответ на вопрос дня (один на человека на день).
+
+    Пустой ответ = удалить прежний (рефлексия не навязывается).
+    """
+    supabase = get_supabase_client()
+    d = _date_str(reflection_date)
+
+    (
+        supabase.table(REFLECTION_TABLE)
+        .delete()
+        .eq("person", person)
+        .eq("date", d)
+        .execute()
+    )
+
+    answer = (answer or "").strip()
+    if not answer:
+        return None
+
+    data = {
+        "person": person,
+        "date": d,
+        "question": question,
+        "answer": answer,
+    }
+    response = (
+        supabase.table(REFLECTION_TABLE).insert(data).execute()
+    )
+    return response.data[0]["id"]
+
+
+def get_reflections_for_date(target_date) -> List[Dict]:
+    """Получить ответы на вопрос дня за дату."""
+    supabase = get_supabase_client()
+    d = _date_str(target_date)
+    response = (
+        supabase.table(REFLECTION_TABLE)
+        .select("*")
+        .eq("date", d)
+        .execute()
+    )
+    return response.data or []
