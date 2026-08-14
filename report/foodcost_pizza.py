@@ -29,11 +29,11 @@ NO_FILL = PatternFill(fill_type=None)
 COST_NAME_COL = 2
 VALID_SIZES = {23, 30, 35, 40}
 
-SIZE_TO_COLUMNS = {
-    23: {"menu": 3, "target": 4},
-    30: {"menu": 6, "target": 7},
-    35: {"menu": 9, "target": 10},
-    40: {"menu": 12, "target": 13},
+FALLBACK_SIZE_COLUMNS = {
+    23: 4,
+    30: 7,
+    35: 10,
+    40: 13,
 }
 
 
@@ -72,8 +72,6 @@ TEMPLATE_PIZZA_NAMES_RAW = [
 ]
 
 
-# Явно маппим все позиции шаблона сами в себя,
-# чтобы прямые названия гарантированно находились.
 PIZZA_COST_ALIAS_RAW = {name: name for name in TEMPLATE_PIZZA_NAMES_RAW}
 PIZZA_COST_ALIAS_RAW.update(
     {
@@ -428,9 +426,7 @@ def _read_sales_items(
     size_idx = None
     qty_idx = None
 
-    # Динамически ищем шапку, чтобы не падать,
-    # если сверху есть пустая строка или шапка чуть смещена.
-    for row_index, row in df.iterrows():
+    for idx, row in df.iterrows():
         values = [_normalize(cell).replace(" ", "") for cell in row.values]
 
         name_idxs = [
@@ -452,7 +448,7 @@ def _read_sales_items(
         ]
 
         if name_idxs and qty_idxs:
-            header_row = row_index
+            header_row = idx
             name_idx = name_idxs[0]
             qty_idx = qty_idxs[0]
 
@@ -544,27 +540,25 @@ def _read_sales_items(
     return mapped_items, all_items
 
 
-def _find_cc_item_rows(ws: Any) -> List[Tuple[int, str]]:
-    header_row = None
+def _find_header_row(ws: Any, required_tokens: Set[str]) -> int:
+    max_col = min(ws.max_column, 40)
 
     for row_index in range(1, ws.max_row + 1):
-        name_header = _normalize(ws.cell(row=row_index, column=2).value)
-        menu_header = _normalize(ws.cell(row=row_index, column=3).value)
-        cc_header = _normalize(ws.cell(row=row_index, column=4).value)
+        values = {
+            _normalize(ws.cell(row=row_index, column=col_index).value)
+            for col_index in range(1, max_col + 1)
+        }
 
-        if (
-            name_header == "пиццы"
-            and menu_header == "в меню"
-            and cc_header == "сс"
-        ):
-            header_row = row_index
-            break
+        if all(token in values for token in required_tokens):
+            return row_index
 
-    if header_row is None:
-        raise ValueError(
-            "Не удалось найти блок СС в шаблоне пиццы."
-        )
+    raise ValueError(
+        f"Не удалось найти заголовок на листе {ws.title}. "
+        f"Искал: {', '.join(sorted(required_tokens))}"
+    )
 
+
+def _collect_item_rows(ws: Any, header_row: int) -> List[Tuple[int, str]]:
     rows: List[Tuple[int, str]] = []
     started = False
 
@@ -586,46 +580,57 @@ def _find_cc_item_rows(ws: Any) -> List[Tuple[int, str]]:
     return rows
 
 
-def _find_sales_item_rows(ws: Any) -> List[Tuple[int, str]]:
-    header_row = None
+def _detect_target_columns(
+    ws: Any,
+    header_row: int,
+    target_token: str,
+) -> Dict[int, int]:
+    """
+    Динамически ищем целевые столбцы:
+    - для листа СС: столбцы с заголовком 'сс';
+    - для листа продаж: столбцы с заголовком 'кол-во'.
 
-    for row_index in range(1, ws.max_row + 1):
-        menu_header = _normalize(ws.cell(row=row_index, column=3).value)
-        qty_header = _normalize(ws.cell(row=row_index, column=4).value)
-        total_header = _normalize(ws.cell(row=row_index, column=5).value)
+    Размер берём из строки выше, где написано 23 ТР / 30 ТР / 35 ТР / 40 ТР.
+    """
+    size_row = header_row - 1
+    max_col = min(ws.max_column, 40)
 
-        if (
-            menu_header == "в меню"
-            and qty_header == "кол во"
-            and total_header == "итого"
-        ):
-            header_row = row_index
-            break
+    size_by_col: Dict[int, Optional[int]] = {}
+    last_size: Optional[int] = None
 
-    if header_row is None:
-        raise ValueError(
-            "Не удалось найти блок продаж в шаблоне пиццы."
-        )
+    if size_row >= 1:
+        for col_index in range(2, max_col + 1):
+            label = _normalize(ws.cell(row=size_row, column=col_index).value)
 
-    rows: List[Tuple[int, str]] = []
-    started = False
+            found_size = None
+            if label:
+                for size in VALID_SIZES:
+                    if str(size) in label:
+                        found_size = size
+                        break
 
-    for row_index in range(header_row + 1, ws.max_row + 1):
-        raw_name = ws.cell(row=row_index, column=2).value
+            if found_size is not None:
+                last_size = found_size
 
-        if raw_name is None or not str(raw_name).strip():
-            if started:
-                break
+            size_by_col[col_index] = last_size
+
+    result: Dict[int, int] = {}
+
+    for col_index in range(2, max_col + 1):
+        header_value = _normalize(ws.cell(row=header_row, column=col_index).value)
+
+        if header_value != target_token:
             continue
 
-        key = _normalize(raw_name)
-        if not key or key == "пиццы":
-            break
+        size = size_by_col.get(col_index)
+        if size in VALID_SIZES and size not in result:
+            result[size] = col_index
 
-        started = True
-        rows.append((row_index, key))
+    for size, col_index in FALLBACK_SIZE_COLUMNS.items():
+        if size not in result:
+            result[size] = col_index
 
-    return rows
+    return result
 
 
 def _write_extra_positions_sheet(
@@ -751,8 +756,17 @@ def build_pizza_report(
     cc_ws = _get_sheet(wb, {"сс", "cc"}, 0)
     sales_ws = _get_sheet(wb, {"продажи", "продажа", "sales"}, 1)
 
-    cc_rows = _find_cc_item_rows(cc_ws)
-    sales_rows = _find_sales_item_rows(sales_ws)
+    cc_header_row = _find_header_row(cc_ws, {"пиццы", "в меню", "сс"})
+    cc_rows = _collect_item_rows(cc_ws, cc_header_row)
+    cc_target_cols = _detect_target_columns(cc_ws, cc_header_row, "сс")
+
+    try:
+        sales_header_row = _find_header_row(sales_ws, {"в меню", "кол во", "итого"})
+    except ValueError:
+        sales_header_row = _find_header_row(sales_ws, {"в меню", "кол во"})
+
+    sales_rows = _collect_item_rows(sales_ws, sales_header_row)
+    sales_target_cols = _detect_target_columns(sales_ws, sales_header_row, "кол во")
 
     if not cc_rows:
         raise ValueError("Не удалось найти строки пицц на листе СС.")
@@ -765,9 +779,12 @@ def build_pizza_report(
     sales_actions: List[Tuple[int, int, str, int]] = []
 
     for row_index, template_key in cc_rows:
-        for size, cols in SIZE_TO_COLUMNS.items():
-            menu_col = cols["menu"]
-            target_col = cols["target"]
+        for size in sorted(cc_target_cols.keys()):
+            target_col = cc_target_cols[size]
+            menu_col = target_col - 1
+
+            if menu_col < 1:
+                continue
 
             if not _is_positive_menu(cc_ws, row_index, menu_col):
                 continue
@@ -779,9 +796,12 @@ def build_pizza_report(
             cc_actions.append((row_index, target_col, template_key, size))
 
     for row_index, template_key in sales_rows:
-        for size, cols in SIZE_TO_COLUMNS.items():
-            menu_col = cols["menu"]
-            target_col = cols["target"]
+        for size in sorted(sales_target_cols.keys()):
+            target_col = sales_target_cols[size]
+            menu_col = target_col - 1
+
+            if menu_col < 1:
+                continue
 
             if not _is_positive_menu(sales_ws, row_index, menu_col):
                 continue
