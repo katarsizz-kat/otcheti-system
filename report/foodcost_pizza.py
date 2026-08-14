@@ -110,17 +110,6 @@ def _normalize(name: Any) -> str:
     return " ".join(tokens).strip()
 
 
-TEMPLATE_PIZZA_KEYS = {_normalize(name) for name in TEMPLATE_PIZZA_NAMES_RAW}
-
-
-def _build_alias_map(raw: Dict[str, str]) -> Dict[str, str]:
-    return {_normalize(key): _normalize(value) for key, value in raw.items()}
-
-
-PIZZA_COST_ALIASES = _build_alias_map(PIZZA_COST_ALIAS_RAW)
-PIZZA_SALES_ALIASES = _build_alias_map(PIZZA_SALES_ALIAS_RAW)
-
-
 def _to_float(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -138,7 +127,25 @@ def _to_float(value: Any) -> Optional[float]:
     if not s:
         return None
 
-    s = s.replace(" ", "").replace(",", ".").replace("₽", "")
+    s = s.replace("\u00a0", " ").replace("₽", "").strip()
+    s = re.sub(r"\s+", "", s)
+
+    if not s:
+        return None
+
+    # Примеры:
+    # 36,599 -> 36599
+    # 1,079 -> 1079
+    # 69.88 -> 69.88
+    # 69,88 -> 69.88
+    # 1 234 -> 1234
+    if "," in s and "." in s:
+        s = s.replace(",", "")
+    elif "," in s:
+        if re.fullmatch(r"-?\d{1,3}(,\d{3})+", s):
+            s = s.replace(",", "")
+        else:
+            s = s.replace(",", ".")
 
     try:
         return float(s)
@@ -189,6 +196,15 @@ def _get_sheet(wb: Any, names: Set[str], fallback_index: int) -> Any:
         return wb.worksheets[fallback_index]
 
     return wb.active
+
+
+def _build_alias_map(raw: Dict[str, str]) -> Dict[str, str]:
+    return {_normalize(key): _normalize(value) for key, value in raw.items()}
+
+
+TEMPLATE_PIZZA_KEYS = {_normalize(name) for name in TEMPLATE_PIZZA_NAMES_RAW}
+PIZZA_COST_ALIASES = _build_alias_map(PIZZA_COST_ALIAS_RAW)
+PIZZA_SALES_ALIASES = _build_alias_map(PIZZA_SALES_ALIAS_RAW)
 
 
 def _map_cost_base(base_key: str) -> Optional[str]:
@@ -451,16 +467,21 @@ def _find_cc_item_rows(ws: Any) -> List[Tuple[int, str]]:
         )
 
     rows: List[Tuple[int, str]] = []
+    started = False
 
     for row_index in range(header_row + 1, ws.max_row + 1):
         raw_name = ws.cell(row=row_index, column=2).value
+
         if raw_name is None or not str(raw_name).strip():
-            break
+            if started:
+                break
+            continue
 
         key = _normalize(raw_name)
         if not key or key == "пиццы":
             break
 
+        started = True
         rows.append((row_index, key))
 
     return rows
@@ -488,16 +509,21 @@ def _find_sales_item_rows(ws: Any) -> List[Tuple[int, str]]:
         )
 
     rows: List[Tuple[int, str]] = []
+    started = False
 
     for row_index in range(header_row + 1, ws.max_row + 1):
         raw_name = ws.cell(row=row_index, column=2).value
+
         if raw_name is None or not str(raw_name).strip():
-            break
+            if started:
+                break
+            continue
 
         key = _normalize(raw_name)
         if not key or key == "пиццы":
             break
 
+        started = True
         rows.append((row_index, key))
 
     return rows

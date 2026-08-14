@@ -29,8 +29,11 @@ NO_FILL = PatternFill(fill_type=None)
 COST_NAME_COL = 2
 CURRENT_CC_COL = 2
 CURRENT_MENU_COL = 3
-SALES_NAME_COL = 12
-SALES_QTY_COL = 13
+
+# ВАЖНО: в шаблоне закусок блок "Продажи" начинается с 13-й колонки.
+# 13 — название позиции, 14 — количество.
+SALES_NAME_COL = 13
+SALES_QTY_COL = 14
 
 
 SKIP_ROW_KEYS = {
@@ -55,15 +58,6 @@ SKIP_MENU_KEYS = {
     "сейчас",
     "изменения",
     "продажи",
-}
-
-COST_CATEGORY_SKIP = {
-    "блюда",
-    "закуски",
-    "борты",
-    "джонеры",
-    "куриные крылышки попперсы",
-    "пицца",
 }
 
 
@@ -208,8 +202,6 @@ def _normalize(name: Any) -> str:
     s = s.replace("\u00a0", " ")
     s = s.replace("ё", "е")
 
-    # Аккуратно лечим частый артефакт, когда в русском слове
-    # может встречаться латинская "o", например в слове "борщ".
     if re.search("[а-я]", s):
         s = s.replace("o", "о")
 
@@ -243,7 +235,25 @@ def _to_float(value: Any) -> float | None:
     if not s:
         return None
 
-    s = s.replace(" ", "").replace(",", ".")
+    s = s.replace("\u00a0", " ").replace("₽", "").strip()
+    s = re.sub(r"\s+", "", s)
+
+    if not s:
+        return None
+
+    # Примеры:
+    # 36,599 -> 36599
+    # 1,079 -> 1079
+    # 69.88 -> 69.88
+    # 69,88 -> 69.88
+    # 1 234 -> 1234
+    if "," in s and "." in s:
+        s = s.replace(",", "")
+    elif "," in s:
+        if re.fullmatch(r"-?\d{1,3}(,\d{3})+", s):
+            s = s.replace(",", "")
+        else:
+            s = s.replace(",", ".")
 
     try:
         return float(s)
@@ -330,9 +340,6 @@ def _read_cost_items(
 
         key = _normalize(name)
         if not key:
-            continue
-
-        if key in COST_CATEGORY_SKIP:
             continue
 
         value = _to_float(row[city_col])
@@ -530,7 +537,7 @@ def _write_extra_positions_sheet(
 
     if cost_extras:
         for original_name, value in cost_extras:
-            ws.append([original_name, value])
+            ws.append([original_name, _round_cost(value)])
             for col_index in range(1, 3):
                 ws.cell(row=ws.max_row, column=col_index).fill = GREY_FILL
     else:
