@@ -72,23 +72,39 @@ TEMPLATE_PIZZA_NAMES_RAW = [
 ]
 
 
-PIZZA_COST_ALIAS_RAW = {
-    "Пицца 8 сыров NEW": "8 сыров",
-    "Четыре Сыра": "4 сыра",
-    "Сырная": "Сырная Пицца",
-}
+# Явно маппим все позиции шаблона сами в себя,
+# чтобы прямые названия гарантированно находились.
+PIZZA_COST_ALIAS_RAW = {name: name for name in TEMPLATE_PIZZA_NAMES_RAW}
+PIZZA_COST_ALIAS_RAW.update(
+    {
+        "Пицца 8 сыров NEW": "8 сыров",
+        "Четыре Сыра": "4 сыра",
+        "Сырная": "Сырная Пицца",
+    }
+)
 
-
-PIZZA_SALES_ALIAS_RAW = {
-    "Пицца 8 сыров": "8 сыров",
-    "Четыре Сыра": "4 сыра",
-    "Сырная": "Сырная Пицца",
-}
+PIZZA_SALES_ALIAS_RAW = {name: name for name in TEMPLATE_PIZZA_NAMES_RAW}
+PIZZA_SALES_ALIAS_RAW.update(
+    {
+        "Пицца 8 сыров": "8 сыров",
+        "8 сыров": "8 сыров",
+        "Четыре Сыра": "4 сыра",
+        "4 сыра": "4 сыра",
+        "Сырная": "Сырная Пицца",
+        "Сырная Пицца": "Сырная Пицца",
+    }
+)
 
 
 def _normalize(name: Any) -> str:
     if name is None:
         return ""
+
+    try:
+        if pd.isna(name):
+            return ""
+    except Exception:
+        pass
 
     s = str(name).lower().strip()
     s = s.replace("\u00a0", " ")
@@ -108,6 +124,13 @@ def _normalize(name: Any) -> str:
     ]
 
     return " ".join(tokens).strip()
+
+
+def _seek(file: Any) -> None:
+    try:
+        file.seek(0)
+    except Exception:
+        pass
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -133,12 +156,10 @@ def _to_float(value: Any) -> Optional[float]:
     if not s:
         return None
 
-    # Примеры:
     # 36,599 -> 36599
     # 1,079 -> 1079
     # 69.88 -> 69.88
     # 69,88 -> 69.88
-    # 1 234 -> 1234
     if "," in s and "." in s:
         s = s.replace(",", "")
     elif "," in s:
@@ -160,14 +181,14 @@ def _parse_size(value: Any) -> Optional[int]:
         return size if size in VALID_SIZES else None
 
     s = str(value).lower()
-    match = re.search(r"(23|30|35|40)", s)
+    match = re.search(r"(?<!\d)(23|30|35|40)(?!\d)", s)
     if not match:
         return None
 
     return int(match.group(1))
 
 
-def _round_cost(value: float) -> int | float:
+def _round_cost(value: float):
     if value < 50:
         return round(value, 1)
 
@@ -183,7 +204,14 @@ def _is_formula(cell: Any) -> bool:
 
 
 def _is_positive_menu(ws: Any, row: int, column: int) -> bool:
-    value = _to_float(ws.cell(row=row, column=column).value)
+    cell = ws.cell(row=row, column=column)
+
+    # Если меню формулой — считаем размер рабочим,
+    # иначе openpyxl без data_only не видит значение.
+    if _is_formula(cell):
+        return True
+
+    value = _to_float(cell.value)
     return value is not None and value > 0
 
 
@@ -233,6 +261,12 @@ def _parse_cost_pizza_name(raw_name: Any) -> Optional[Tuple[str, int]]:
     if raw_name is None:
         return None
 
+    try:
+        if pd.isna(raw_name):
+            return None
+    except Exception:
+        pass
+
     name = str(raw_name).strip()
     if not name or "(" not in name:
         return None
@@ -262,7 +296,7 @@ def _parse_cost_pizza_name(raw_name: Any) -> Optional[Tuple[str, int]]:
     if "трад" not in s:
         return None
 
-    size_match = re.search(r"(23|30|35|40)", s)
+    size_match = re.search(r"(?<!\d)(23|30|35|40)(?!\d)", s)
     if not size_match:
         return None
 
@@ -283,6 +317,8 @@ def _read_cost_items(
     cost_file: Any,
     city_normalized: str,
 ) -> Tuple[Dict[Tuple[str, int], Dict[str, Any]], Dict[Tuple[str, int], Dict[str, Any]]]:
+    _seek(cost_file)
+
     df = pd.read_excel(cost_file, header=None)
 
     header_row = None
@@ -316,18 +352,32 @@ def _read_cost_items(
 
     mapped_items: Dict[Tuple[str, int], Dict[str, Any]] = {}
     all_items: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    seen: List[str] = []
 
     for row in df.iloc[header_row + 1 :].itertuples(index=False, name=None):
         if len(row) <= max(COST_NAME_COL, city_col):
             continue
 
         raw_name = row[COST_NAME_COL]
-        if raw_name is None or pd.isna(raw_name):
+        if raw_name is None:
             continue
 
-        parsed = _parse_cost_pizza_name(raw_name)
+        try:
+            if pd.isna(raw_name):
+                continue
+        except Exception:
+            continue
+
+        name = str(raw_name).strip()
+        if not name:
+            continue
+
+        parsed = _parse_cost_pizza_name(name)
         if parsed is None:
             continue
+
+        if len(seen) < 30:
+            seen.append(name)
 
         base_key, size = parsed
 
@@ -340,7 +390,7 @@ def _read_cost_items(
         item_key = (base_key, size)
         if item_key not in all_items:
             all_items[item_key] = {
-                "original": str(raw_name).strip(),
+                "original": name,
                 "size": size,
                 "value": value,
                 "template_key": template_key,
@@ -350,9 +400,15 @@ def _read_cost_items(
             mapped_key = (template_key, size)
             if mapped_key not in mapped_items:
                 mapped_items[mapped_key] = {
-                    "original": str(raw_name).strip(),
+                    "original": name,
                     "value": value,
                 }
+
+    if not mapped_items:
+        raise ValueError(
+            "Не удалось сопоставить ни одной позиции себестоимости пиццы. "
+            "Примеры строк из файла: " + ", ".join(seen[:20])
+        )
 
     return mapped_items, all_items
 
@@ -360,46 +416,83 @@ def _read_cost_items(
 def _read_sales_items(
     sales_file: Any,
 ) -> Tuple[Dict[Tuple[str, int], Dict[str, Any]], Dict[Tuple[str, int], Dict[str, Any]]]:
-    df = pd.read_excel(sales_file)
+    _seek(sales_file)
+
+    df = pd.read_excel(sales_file, header=None)
 
     if df.empty:
         raise ValueError("Файл продаж пиццы пустой.")
 
-    name_col = None
-    size_col = None
-    qty_col = None
+    header_row = None
+    name_idx = None
+    size_idx = None
+    qty_idx = None
 
-    for col in df.columns:
-        normalized = _normalize(col).replace(" ", "")
+    # Динамически ищем шапку, чтобы не падать,
+    # если сверху есть пустая строка или шапка чуть смещена.
+    for row_index, row in df.iterrows():
+        values = [_normalize(cell).replace(" ", "") for cell in row.values]
 
-        if normalized == "dishpizzatype":
-            name_col = col
+        name_idxs = [
+            i
+            for i, value in enumerate(values)
+            if value in {"dishpizzatype", "dishname", "позиция"}
+        ]
 
-        if normalized == "dishpizzasize":
-            size_col = col
+        size_idxs = [
+            i
+            for i, value in enumerate(values)
+            if value in {"dishpizzasize", "size", "размер"}
+        ]
 
-        if normalized == "quantityofdishes":
-            qty_col = col
+        qty_idxs = [
+            i
+            for i, value in enumerate(values)
+            if value in {"quantityofdishes", "quantity", "qty", "колво"}
+        ]
 
-    if name_col is None:
-        name_col = df.columns[0]
+        if name_idxs and qty_idxs:
+            header_row = row_index
+            name_idx = name_idxs[0]
+            qty_idx = qty_idxs[0]
 
-    if size_col is None:
-        size_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+            if size_idxs:
+                size_idx = size_idxs[0]
+            else:
+                size_idx = name_idx + 1 if len(values) > name_idx + 1 else 1
 
-    if qty_col is None:
-        qty_col = df.columns[2] if len(df.columns) > 2 else df.columns[0]
+            break
+
+    if header_row is None:
+        header_row = 0
+        name_idx = 0
+        size_idx = 1 if df.shape[1] > 1 else 0
+        qty_idx = 2 if df.shape[1] > 2 else 0
 
     mapped_items: Dict[Tuple[str, int], Dict[str, Any]] = {}
     all_items: Dict[Tuple[str, int], Dict[str, Any]] = {}
+    seen: List[str] = []
 
-    for raw_name, raw_size, raw_qty in zip(df[name_col], df[size_col], df[qty_col]):
-        if raw_name is None or pd.isna(raw_name):
+    for row in df.iloc[header_row + 1 :].itertuples(index=False, name=None):
+        if len(row) <= max(name_idx, size_idx, qty_idx):
+            continue
+
+        raw_name = row[name_idx]
+        if raw_name is None:
+            continue
+
+        try:
+            if pd.isna(raw_name):
+                continue
+        except Exception:
             continue
 
         name = str(raw_name).strip()
         if not name or name == "-":
             continue
+
+        if len(seen) < 30:
+            seen.append(name)
 
         if "+" in name:
             continue
@@ -408,11 +501,11 @@ def _read_sales_items(
         if "кусок" in lowered or "половинк" in lowered:
             continue
 
-        size = _parse_size(raw_size)
+        size = _parse_size(row[size_idx])
         if size is None:
             continue
 
-        qty = _to_float(raw_qty)
+        qty = _to_float(row[qty_idx])
         if qty is None:
             continue
 
@@ -441,6 +534,12 @@ def _read_sales_items(
                     "original": name,
                     "qty": qty,
                 }
+
+    if not mapped_items:
+        raise ValueError(
+            "Не удалось сопоставить ни одной позиции продаж пиццы. "
+            "Примеры строк из файла: " + ", ".join(seen[:20])
+        )
 
     return mapped_items, all_items
 
@@ -632,6 +731,10 @@ def build_pizza_report(
     if sales_file is None:
         raise ValueError("Нужно загрузить файл продаж пиццы.")
 
+    _seek(template_file)
+    _seek(cost_file)
+    _seek(sales_file)
+
     city_normalized = _normalize(city)
     if city_normalized not in {"спб", "тюмень"}:
         city_normalized = "спб"
@@ -693,6 +796,12 @@ def build_pizza_report(
         raise RuntimeError(
             "Обнаружены формулы в целевых ячейках сс/кол-во: "
             + ", ".join(formula_cells)
+        )
+
+    if not cc_actions or not sales_actions:
+        raise ValueError(
+            "Не найдено ячеек для заполнения в шаблоне пиццы. "
+            "Проверь лист СС и лист продаж."
         )
 
     matched_cost: Set[Tuple[str, int]] = set()
