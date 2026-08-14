@@ -1,8 +1,9 @@
 """
 Форма ввода настроения: две колонки (Катя и Кристина).
 
+Общий блок: вопрос дня (один на страницу, один в день).
 Каждая колонка: дата, часть дня, эмоция, интенсивность 1–5,
-вопрос дня, заметка, кнопки «Сохранить» и «Пауза»,
+заметка «почему я это чувствую», кнопки «Сохранить» и «Пауза»,
 список записей дня.
 """
 
@@ -50,10 +51,10 @@ DAILY_QUESTIONS = [
 
 def _daily_question() -> str:
     """
-    Вопрос дня: одинаковый для обеих девушек в течение дня.
+    Вопрос дня: один на страницу, один в течение дня.
 
-    Фиксируется по дате: детерминированный выбор
-    (seed = номер дня), поэтому весь день вопрос не меняется.
+    Детерминированный выбор по дате (seed = номер дня),
+    поэтому весь день вопрос не меняется.
     """
     today = datetime.now(MOSCOW_TZ).date()
     rng = random.Random(today.toordinal())
@@ -240,18 +241,11 @@ def _render_person_column(person: str) -> None:
     )
     st.caption(INTENSITY_LABELS[intensity])
 
-    # Вопрос дня — общая тема для обеих девушек
-    st.markdown(
-        f'<div class="mood-daily-question">'
-        f'❓ {_daily_question()}</div>',
-        unsafe_allow_html=True,
-    )
-
-    # Заметка
+    # Заметка: почему я это чувствую
     note = st.text_input(
         "Заметка (необязательно)",
         key=f"mood_note_{person}",
-        placeholder="Ответ на вопрос дня…",
+        placeholder="Почему? Что случилось?",
     )
 
     # Кнопки действий
@@ -295,7 +289,14 @@ def _render_person_column(person: str) -> None:
 # ============================================================
 
 def render_entry_form() -> None:
-    """Рендерит две колонки формы."""
+    """Рендерит вопрос дня + две колонки формы."""
+    # Вопрос дня — один на страницу, один в течение дня
+    st.markdown(
+        f'<div class="mood-daily-question">'
+        f'❓ Вопрос дня: {_daily_question()}</div>',
+        unsafe_allow_html=True,
+    )
+
     cols = st.columns(2, gap="large")
     for col, person in zip(cols, PERSONS):
         with col:
