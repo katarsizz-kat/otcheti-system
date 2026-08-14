@@ -727,3 +727,17 @@ footer {visibility: hidden;}
     border-radius: 999px;
     transition: width 0.4s ease;
 }
+/* ============================================================
+   ПИСЬМО НЕДЕЛИ
+   ============================================================ */
+.mood-letter p {
+    margin: 0.6rem 0;
+    line-height: 1.6;
+    font-family: 'Nunito', sans-serif;
+    color: var(--mood-text-primary);
+}
+
+.mood-letter p:first-child {
+    font-weight: 700;
+    font-family: 'Quicksand', sans-serif;
+}
