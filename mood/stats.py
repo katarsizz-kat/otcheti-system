@@ -7,13 +7,15 @@
 3. 🌈 Баланс тепла (доли категорий)
 4. 📅 Ритм недели (дни недели)
 5. 🕰 Время суток (части дня)
-6. 🤝 Вы вдвоём (синхронность, поддержка, ресурсные дни)
-7. 💬 Мягкие инсайты
-8. 🕯 Пятиминутка недели (узор + вопросы для диалога)
-9. 🏆 Достижения
+6. 🎭 Эмоции за период (цветные строки)
+7. 🤝 Вы вдвоём (синхронность, поддержка, ресурсные дни)
+8. 💬 Мягкие инсайты
+9. 🕯 Пятиминутка недели (узор + вопросы для диалога)
+10. 🏆 Достижения
 """
 
 import random
+from datetime import datetime, timedelta, timezone
 
 import streamlit as st
 
@@ -21,6 +23,7 @@ from mood import db
 from mood.config import (
     DAYS_OF_WEEK,
     MOOD_CATEGORIES,
+    MONTHS_SHORT,
     PART_EMOJI,
     PARTS_OF_DAY,
     PERSON_EMOJI,
@@ -31,6 +34,9 @@ from mood.config import (
     get_mood_data,
 )
 from mood.calendar import _month_options, _parse_month
+
+# Московское время (UTC+3) — по правилам проекта
+MOSCOW_TZ = timezone(timedelta(hours=3))
 
 
 # ============================================================
@@ -190,6 +196,122 @@ def _rhythm_html(rhythm: dict, keys: list, labels: list,
         f'<div class="mood-rhythm-row {css_extra}">'
         f'{"".join(cells)}</div>'
     )
+
+
+# ============================================================
+# ЭМОЦИИ ЗА ПЕРИОД
+# ============================================================
+
+def _human_date(d) -> str:
+    """Дата в формате '11 авг'."""
+    return f"{d.day} {MONTHS_SHORT[d.month - 1]}"
+
+
+def _render_emotion_stats() -> None:
+    """🎭 Эмоции за период: цветные строки."""
+    st.markdown("#### 🎭 Эмоции за период")
+
+    today = datetime.now(MOSCOW_TZ).date()
+
+    period_option = st.selectbox(
+        "Период",
+        ["Месяц", "Неделя", "Свой период"],
+        key="mood_emotion_period",
+    )
+
+    if period_option == "Месяц":
+        start = today.replace(day=1)
+        end = today
+    elif period_option == "Неделя":
+        start = today - timedelta(days=today.weekday())
+        end = today
+    else:
+        col_from, col_to = st.columns(2)
+        with col_from:
+            start = st.date_input(
+                "С",
+                value=today - timedelta(days=30),
+                max_value=today,
+                key="mood_period_from",
+            )
+        with col_to:
+            end = st.date_input(
+                "По",
+                value=today,
+                max_value=today,
+                key="mood_period_to",
+            )
+        if start > end:
+            st.warning("Дата «с» позже даты «по» 🙈")
+            return
+
+    st.caption(
+        f"Период: {_human_date(start)} — {_human_date(end)} {end.year}"
+    )
+
+    counts = db.get_emotion_counts(start, end)
+
+    if not counts:
+        st.caption("За этот период записей пока нет ✨")
+        return
+
+    only_total = st.toggle(
+        "👯‍♀️ Только общее",
+        key="mood_emotion_only_total",
+    )
+
+    total_all = sum(row["total"] for row in counts.values())
+    max_total = max(row["total"] for row in counts.values())
+
+    sorted_moods = sorted(
+        counts.items(),
+        key=lambda kv: kv[1]["total"],
+        reverse=True,
+    )
+
+    for mood, row in sorted_moods:
+        data = get_mood_data(mood)
+        pct = round(row["total"] * 100 / total_all) if total_all else 0
+        bar_pct = round(row["total"] * 100 / max_total) if max_total else 0
+
+        # Лидер-метка: кто испытывал чаще
+        k_count = row[PERSONS[0]]
+        kr_count = row[PERSONS[1]]
+        if k_count > kr_count:
+            leader = PERSON_EMOJI[PERSONS[0]]
+        elif kr_count > k_count:
+            leader = PERSON_EMOJI[PERSONS[1]]
+        else:
+            leader = ""
+
+        if only_total:
+            nums = f"всего {row['total']} · {pct}%"
+        else:
+            nums = (
+                f"{PERSON_EMOJI[PERSONS[0]]} {k_count} · "
+                f"{PERSON_EMOJI[PERSONS[1]]} {kr_count} · "
+                f"всего {row['total']} · {pct}%"
+            )
+
+        st.markdown(
+            f"""
+            <div class="mood-emotion-row">
+                <div class="mood-emotion-head">
+                    <span class="mood-emotion-name">
+                        <i style="background:{data['color']}"></i>
+                        {data['emoji']} {mood} {leader}
+                    </span>
+                    <span class="mood-emotion-nums">{nums}</span>
+                </div>
+                <div class="mood-emotion-bar">
+                    <div class="mood-emotion-fill"
+                         style="width:{bar_pct}%;
+                                background:{data['gradient']}"></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 # ============================================================
@@ -457,6 +579,9 @@ def render_stats() -> None:
 
     # Блок коллег
     _render_pair_block(year, month)
+
+    # Эмоции за период (со своим выбором периода)
+    _render_emotion_stats()
 
     # Мягкие инсайты
     _render_insights(year, month)

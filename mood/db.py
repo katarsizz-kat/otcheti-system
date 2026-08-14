@@ -165,20 +165,26 @@ def get_entries_for_date(target_date) -> List[Dict]:
     return response.data or []
 
 
-def get_entries_for_month(year: int, month: int) -> List[Dict]:
-    """Все записи за месяц (оба человека)."""
+def get_entries_for_range(start_date, end_date) -> List[Dict]:
+    """Все записи в диапазоне дат (оба человека)."""
     supabase = get_supabase_client()
-    first_day, last_day = _month_bounds(year, month)
     response = (
         supabase.table(MOOD_TABLE)
         .select("*")
-        .gte("date", first_day.isoformat())
-        .lte("date", last_day.isoformat())
+        .gte("date", _date_str(start_date))
+        .lte("date", _date_str(end_date))
         .order("date")
         .order("created_at")
         .execute()
     )
     return response.data or []
+
+
+def get_entries_for_month(year: int, month: int) -> List[Dict]:
+    """Все записи за месяц (оба человека)."""
+    supabase = get_supabase_client()
+    first_day, last_day = _month_bounds(year, month)
+    return get_entries_for_range(first_day, last_day)
 
 
 def get_person_entries_for_month(
@@ -191,6 +197,39 @@ def get_person_entries_for_month(
         e for e in get_entries_for_month(year, month)
         if e.get("person") == person
     ]
+
+
+# ============================================================
+# СЧЁТЧИКИ ЭМОЦИЙ ЗА ПЕРИОД
+# ============================================================
+
+def get_emotion_counts(start_date, end_date) -> Dict:
+    """
+    Счётчики эмоций за период: по каждой девушке и всего.
+
+    Returns:
+        dict: {
+            "злость": {"Катя": 4, "Кристина": 2, "total": 6},
+            ...
+        }
+        Только эмоции с ненулевыми счётчиками.
+    """
+    counts: Dict[str, Dict] = {}
+
+    for e in get_entries_for_range(start_date, end_date):
+        if not _is_logged(e):
+            continue
+        mood = e.get("mood")
+        person = e.get("person")
+        if not mood or person not in PERSONS:
+            continue
+        row = counts.setdefault(mood, {p: 0 for p in PERSONS})
+        row[person] += 1
+
+    for row in counts.values():
+        row["total"] = sum(row[p] for p in PERSONS)
+
+    return counts
 
 
 # ============================================================
@@ -243,16 +282,11 @@ def get_month_stats(year: int, month: int, person: str) -> Dict:
 
 
 # ============================================================
-# НОВАЯ АНАЛИТИКА: ПАЛИТРА И БАЛАНС
+# ПАЛИТРА И БАЛАНС
 # ============================================================
 
 def get_mood_diversity(year: int, month: int, person: str) -> Dict:
-    """
-    «Эмоциональная палитра»: разнообразие эмоций за месяц.
-
-    Returns:
-        dict: count — число разных эмоций, moods — их список
-    """
+    """«Эмоциональная палитра»: разнообразие эмоций за месяц."""
     entries = get_person_entries_for_month(year, month, person)
     moods = sorted({
         e.get("mood") for e in entries if _is_logged(e) and e.get("mood")
@@ -261,12 +295,7 @@ def get_mood_diversity(year: int, month: int, person: str) -> Dict:
 
 
 def get_category_balance(year: int, month: int, person: str) -> Dict:
-    """
-    «Баланс тепла»: доли категорий эмоций.
-
-    Returns:
-        dict: counts, percents, total
-    """
+    """«Баланс тепла»: доли категорий эмоций."""
     entries = get_person_entries_for_month(year, month, person)
     counts = {cat: 0 for cat in MOOD_CATEGORIES}
 
@@ -286,16 +315,11 @@ def get_category_balance(year: int, month: int, person: str) -> Dict:
 
 
 # ============================================================
-# НОВАЯ АНАЛИТИКА: РИТМЫ
+# РИТМЫ
 # ============================================================
 
 def get_weekday_rhythm(year: int, month: int, person: str) -> Dict:
-    """
-    «Ритм недели»: тёплые/напряжённые по дням недели.
-
-    Returns:
-        dict: {0..6: {"warm": int, "tense": int}}
-    """
+    """«Ритм недели»: тёплые/напряжённые по дням недели."""
     rhythm = {i: {"warm": 0, "tense": 0} for i in range(7)}
 
     for e in get_person_entries_for_month(year, month, person):
@@ -310,12 +334,7 @@ def get_weekday_rhythm(year: int, month: int, person: str) -> Dict:
 
 
 def get_part_rhythm(year: int, month: int, person: str) -> Dict:
-    """
-    «Время суток»: тёплые/напряжённые по частям дня.
-
-    Returns:
-        dict: {"утро"/"день"/"вечер": {"warm": int, "tense": int}}
-    """
+    """«Время суток»: тёплые/напряжённые по частям дня."""
     rhythm = {part: {"warm": 0, "tense": 0} for part in PARTS_OF_DAY}
 
     for e in get_person_entries_for_month(year, month, person):
@@ -330,20 +349,11 @@ def get_part_rhythm(year: int, month: int, person: str) -> Dict:
 
 
 # ============================================================
-# НОВАЯ АНАЛИТИКА: ПАРА
+# ПАРА
 # ============================================================
 
 def get_pair_stats(year: int, month: int) -> Dict:
-    """
-    «Вы вдвоём»: синхронность, поддержка, ресурсные дни.
-
-    Returns:
-        dict:
-        - both_days: дни, когда отмечали обе
-        - matched_days: дни с совпавшими эмоциями
-        - support_days: дни, когда одна в напряжении, другая в тепле
-        - resource_days: дни, когда обе в тепле и без напряжения
-    """
+    """«Вы вдвоём»: синхронность, поддержка, ресурсные дни."""
     entries = get_entries_for_month(year, month)
 
     by_date: Dict[str, Dict[str, Dict]] = {}
@@ -408,12 +418,7 @@ def get_shared_info(year: int, month: int) -> Dict:
 # ============================================================
 
 def get_month_insights(year: int, month: int) -> List[str]:
-    """
-    Сгенерировать 2–7 бережных наблюдений за месяц.
-
-    Правила работают только при достаточном объёме данных,
-    чтобы не делать выводов из пустоты.
-    """
+    """Сгенерировать 2–7 бережных наблюдений за месяц."""
     insights: List[str] = []
     entries = get_entries_for_month(year, month)
     logged = [e for e in entries if _is_logged(e)]
@@ -424,7 +429,7 @@ def get_month_insights(year: int, month: int) -> List[str]:
             "когда накопится материал 🌱"
         ]
 
-    # --- Тренд: первая половина месяца против второй
+    # Тренд: первая половина месяца против второй
     _, last_day = _month_bounds(year, month)
     mid = last_day.day // 2
     warm1 = warm2 = tense1 = tense2 = 0
@@ -443,14 +448,12 @@ def get_month_insights(year: int, month: int) -> List[str]:
     elif tense2 > tense1 and tense2 >= 3:
         insights.append(INSIGHT_TEXTS["trend_down"])
 
-    # --- Паузы как забота
-    pauses = sum(
-        1 for e in entries if e.get("status") == "pause"
-    )
+    # Паузы как забота
+    pauses = sum(1 for e in entries if e.get("status") == "pause")
     if pauses >= 4:
         insights.append(INSIGHT_TEXTS["many_pauses"])
 
-    # --- Сила эмоций
+    # Сила эмоций
     intensities = [
         int(e["intensity"]) for e in logged
         if e.get("intensity") is not None
@@ -458,7 +461,7 @@ def get_month_insights(year: int, month: int) -> List[str]:
     if intensities and sum(intensities) / len(intensities) >= 3.5:
         insights.append(INSIGHT_TEXTS["high_intensity"])
 
-    # --- Палитра
+    # Палитра
     wide_found = False
     for person in PERSONS:
         diversity = get_mood_diversity(year, month, person)
@@ -471,7 +474,7 @@ def get_month_insights(year: int, month: int) -> List[str]:
                 INSIGHT_TEXTS["narrow_palette"].format(person=person)
             )
 
-    # --- Пара
+    # Пара
     pair = get_pair_stats(year, month)
     if len(pair["matched_days"]) >= 5:
         insights.append(INSIGHT_TEXTS["high_sync"])
@@ -489,7 +492,7 @@ def get_month_insights(year: int, month: int) -> List[str]:
             INSIGHT_TEXTS["resource_days"].format(dates=dates)
         )
 
-    # --- Ритмы по людям
+    # Ритмы по людям
     for person in PERSONS:
         rhythm = get_weekday_rhythm(year, month, person)
         hardest = max(rhythm.items(), key=lambda kv: kv[1]["tense"])
@@ -534,7 +537,7 @@ def get_month_insights(year: int, month: int) -> List[str]:
 
 
 # ============================================================
-# ДОСТИЖЕНИЯ И УЗОР
+# ДОСТИЖЕНИЯ И УЗОРЫ
 # ============================================================
 
 def get_achievements(year: int, month: int, person: str) -> List[Dict]:
@@ -611,11 +614,7 @@ def get_month_pattern(year: int, month: int, person: str) -> List[Dict]:
 
 
 def get_week_pattern(person: str) -> List[Dict]:
-    """Узор последних 7 дней (для ритуала недели)."""
-    from datetime import timezone as tz
-
-    from mood.config import PERSONS  # noqa: F401  (для совместимости)
-
+    """Узор последних 7 дней (для пятиминутки)."""
     today = date.today()
     pattern = []
     for i in range(6, -1, -1):
