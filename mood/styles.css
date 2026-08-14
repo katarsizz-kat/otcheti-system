@@ -663,18 +663,20 @@ footer {visibility: hidden;}
 }
 
 /* ============================================================
-ПИСЬМО НЕДЕЛИ
-============================================================ */
+   ПИСЬМО НЕДЕЛИ
+   ============================================================ */
 .mood-letter p {
     margin: 0.6rem 0;
     line-height: 1.6;
     font-family: 'Nunito', sans-serif;
     color: var(--mood-text-primary);
 }
+
 .mood-letter p:first-child {
     font-weight: 700;
     font-family: 'Quicksand', sans-serif;
 }
+
 /* ============================================================
    ВОПРОС ДНЯ
    ============================================================ */
@@ -688,10 +690,11 @@ footer {visibility: hidden;}
     font-size: 0.9rem;
     color: var(--mood-text-secondary);
 }
+
 /* ============================================================
    ЦВЕТ ПИСЬМА (переопределяет фон ritual-card)
    ============================================================ */
 .mood-letter {
-background: linear-gradient(135deg, #eef7ee 0%, #e2f0e4 100%);
-border: 1px solid rgba(124, 184, 116, 0.25);
+    background: linear-gradient(135deg, #eef7ee 0%, #e2f0e4 100%);
+    border: 1px solid rgba(124, 184, 116, 0.25);
 }
