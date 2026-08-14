@@ -7,6 +7,7 @@
 🕯 Пятиминутка недели
 💌 Письмо недели
 """
+import html
 import random
 from datetime import datetime, timedelta, timezone
 
@@ -436,8 +437,54 @@ def _pair_from_entries(entries: list) -> dict:
     }
 
 
+def _entry_note(entry: dict) -> str:
+    """Заметка из записи (поддерживаем разные имена поля)."""
+    for key in ("note", "comment", "text", "notes"):
+        value = str(entry.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _week_feeling(warm: int, tense: int) -> str:
+    """Описание недели словами, в метафоре погоды."""
+    if warm == 0 and tense == 0:
+        return (
+            "неделя была ровной, без сильных бурь "
+            "и ярких вспышек"
+        )
+    if tense == 0:
+        return "неделя была по-настоящему тёплой и светлой"
+    if warm == 0:
+        return (
+            "неделя выдалась непростой — "
+            "много грозовых туч"
+        )
+    if tense > warm:
+        return (
+            "гроз в этом небе было больше, чем солнца, — "
+            "но вы её прошли"
+        )
+    return "солнечных моментов было больше, чем гроз"
+
+
+def _note_comment(mood: str) -> str:
+    """Тёплый комментарий к процитированной заметке."""
+    cat = get_mood_category(mood)
+    if cat == "warm":
+        return "как хорошо, что вы сохранили этот момент ✨"
+    if cat == "tense":
+        return "обнимаем вас — это было непросто 💚"
+    if cat == "ambivalent":
+        return (
+            "вот это поворот — и смех, и слёзы "
+            "в одном моменте 💜"
+        )
+    return "и такие ровные дни — тоже часть пути 🌾"
+
+
 def _render_letter() -> None:
-    """💌 Письмо недели: бережный текст по данным за 7 дней."""
+    """💌 Письмо недели: личное, по заметкам, а не по цифрам."""
     st.markdown("#### 💌 Письмо недели")
     today = datetime.now(MOSCOW_TZ).date()
     start = today - timedelta(days=6)
@@ -449,55 +496,89 @@ def _render_letter() -> None:
             "письму ещё рано 🌱"
         )
         return
-    paragraphs = [
-        f"Катя и Кристина, здравствуйте! Вот ваша неделя: "
-        f"{_human_date(start)} — {_human_date(today)}.",
+
+    blocks = [
+        "<p>Катя и Кристина, здравствуйте! "
+        f"Вот ваша неделя: {_human_date(start)} — "
+        f"{_human_date(today)}. Мы перечитали ваши заметки — "
+        "и вот что хочется сказать 💌</p>",
     ]
+
     for person in PERSONS:
-        p_logged = [e for e in logged if e.get("person") == person]
+        p_logged = [
+            e for e in logged if e.get("person") == person
+        ]
         if not p_logged:
-            paragraphs.append(
-                f"{PERSON_EMOJI[person]} {person}, на этой неделе "
-                "вы были тише — и это тоже нормально 🌫"
+            blocks.append(
+                f"<p>{PERSON_EMOJI[person]} {person}, на этой "
+                "неделе вы были тише — и это тоже нормально 🌫 "
+                "Пауза — тоже часть ритма.</p>"
             )
             continue
-        counts: dict = {}
+
+        # «Небо недели» — словами, а не цифрами
         warm = tense = 0
         for e in p_logged:
-            counts[e["mood"]] = counts.get(e["mood"], 0) + 1
             cat = get_mood_category(e["mood"])
             if cat == "warm":
                 warm += 1
             elif cat == "tense":
                 tense += 1
-        top = max(counts.items(), key=lambda kv: kv[1])
-        paragraphs.append(
-            f"{PERSON_EMOJI[person]} {person}, вы отметили "
-            f"{len(p_logged)} раз. Чаще всего — "
-            f"{get_mood_data(top[0])['emoji']} {top[0]}. "
-            f"Тёплых моментов: {warm}, напряжённых: {tense}. "
-            "И у каждого из них есть право быть 💚"
+        blocks.append(
+            f"<p>{PERSON_EMOJI[person]} {person}, ваше небо "
+            f"на этой неделе: {_week_feeling(warm, tense)}.</p>"
         )
+
+        # Цитаты из заметок — сердце письма
+        notes = [
+            (e, _entry_note(e))
+            for e in p_logged
+            if _entry_note(e)
+        ]
+        if notes:
+            for e, note in notes[-2:]:
+                d = datetime.fromisoformat(e["date"]).date()
+                data = get_mood_data(e["mood"])
+                blocks.append(
+                    '<div class="mood-ritual-question">'
+                    f'💬 «{html.escape(note)}»<br>'
+                    '<span style="font-size:.8rem; '
+                    'color:#8a7a6a;">'
+                    f'{data["emoji"]} {e["mood"]}, '
+                    f'{_human_date(d)} · '
+                    f'{_note_comment(e["mood"])}</span></div>'
+                )
+        else:
+            blocks.append(
+                "<p>На этой неделе вы делились чувствами "
+                "без слов — но мы всё равно рядом 🌿</p>"
+            )
+
+    # Блок «вдвоём» — тёплой фразой, без цифр
     pair = _pair_from_entries(entries)
     if pair["support_days"]:
-        paragraphs.append(
-            f"🤝 Дней поддержки на этой неделе: "
-            f"{len(pair['support_days'])}. Когда одной было тяжело, "
-            "другая была в ресурсе — это ваша суперсила."
+        blocks.append(
+            "<p>🤝 А ещё были дни, когда одной было тяжело, "
+            "а другая была в ресурсе. Вы снова берегли друг "
+            "друга — это ваша суперсила.</p>"
         )
     if pair["resource_days"]:
         dates = ", ".join(
             _human_date(datetime.fromisoformat(d).date())
             for d in pair["resource_days"]
         )
-        paragraphs.append(
-            f"🌟 Общие ресурсные дни: {dates}. "
-            "Вспомните, что сделало их такими, — и повторите!"
+        blocks.append(
+            f"<p>🌟 Ваши общие солнечные дни: {dates}. "
+            "Вспомните, что сделало их такими, — "
+            "и обязательно повторите!</p>"
         )
-    paragraphs.append("Берегите себя — и друг друга. Ваш дневник 🌿")
-    html = "".join(f"<p>{p}</p>" for p in paragraphs)
+    blocks.append(
+        "<p>Берегите себя — и друг друга. Ваш дневник 🌿</p>"
+    )
+
     st.markdown(
-        f'<div class="mood-ritual-card mood-letter">{html}</div>',
+        f'<div class="mood-ritual-card mood-letter">'
+        f'{" ".join(blocks)}</div>',
         unsafe_allow_html=True,
     )
 
