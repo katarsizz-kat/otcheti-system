@@ -1,17 +1,15 @@
 /* ============================================================
-   ДНЕВНИК ЭМОЦИОНАЛЬНОЙ ПОГОДЫ — СТИЛИ
-
-   Тёплый digital-блокнот:
-   - glassmorphism карточки
-   - плавные анимации
-   - микро-интеракции
-   ============================================================ */
-
+ДНЕВНИК ЭМОЦИОНАЛЬНОЙ ПОГОДЫ — СТИЛИ
+Тёплый digital-блокнот:
+glassmorphism карточки
+плавные анимации
+микро-интеракции
+============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
 /* ============================================================
-   CSS-ПЕРЕМЕННЫЕ
-   ============================================================ */
+CSS-ПЕРЕМЕННЫЕ
+============================================================ */
 :root {
     --mood-bg-primary: #fdf6f0;
     --mood-bg-secondary: #fff4e6;
@@ -35,24 +33,21 @@
 }
 
 /* ============================================================
-   БАЗОВЫЕ СТИЛИ
-   ============================================================ */
+БАЗОВЫЕ СТИЛИ
+============================================================ */
 .main .block-container {
     max-width: 1100px;
     padding: 2rem 1.5rem;
 }
-
 .stMarkdown {
     font-family: 'Nunito', 'Segoe UI', sans-serif;
     color: var(--mood-text-primary);
 }
-
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Quicksand', 'Nunito', sans-serif !important;
     color: var(--mood-text-primary) !important;
     font-weight: 700 !important;
 }
-
 h1 {
     font-size: 2rem !important;
     background: linear-gradient(135deg, #e8a87c 0%, #ba68c8 100%);
@@ -62,8 +57,8 @@ h1 {
 }
 
 /* ============================================================
-   GLASSMORPHISM КАРТОЧКИ
-   ============================================================ */
+GLASSMORPHISM КАРТОЧКИ
+============================================================ */
 .mood-card {
     background: var(--mood-bg-card);
     backdrop-filter: blur(12px);
@@ -75,12 +70,10 @@ h1 {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin-bottom: 1.5rem;
 }
-
 .mood-card:hover {
     box-shadow: var(--mood-shadow-hover);
     transform: translateY(-2px);
 }
-
 .mood-card-header {
     display: flex;
     align-items: center;
@@ -91,14 +84,13 @@ h1 {
     font-size: 1.1rem;
     color: var(--mood-text-primary);
 }
-
 .mood-card-header .emoji {
     font-size: 1.5rem;
 }
 
 /* ============================================================
-   ФОРМЫ
-   ============================================================ */
+ФОРМЫ
+============================================================ */
 div[data-testid="stSelectbox"] > label,
 div[data-testid="stDateInput"] > label,
 div[data-testid="stTextInput"] > label,
@@ -110,7 +102,6 @@ div[data-testid="stTextArea"] > label {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-
 div[data-baseweb="select"] > div,
 div[data-testid="stDateInput"] input,
 div[data-testid="stTextInput"] input,
@@ -122,7 +113,6 @@ div[data-testid="stTextArea"] textarea {
     color: var(--mood-text-primary) !important;
     transition: all 0.25s ease !important;
 }
-
 div[data-baseweb="select"] > div:hover,
 div[data-testid="stDateInput"] input:hover,
 div[data-testid="stTextInput"] input:hover,
@@ -136,31 +126,42 @@ div[data-testid="stTextArea"] textarea:focus {
 }
 
 /* ============================================================
-   КНОПКИ ДЕЙСТВИЙ
-   ============================================================ */
+КНОПКИ ДЕЙСТВИЙ
+Одинаковая высота у всех кнопок, текст по центру,
+без «прыгающих» размеров при переносе строки
+============================================================ */
 div[data-testid="stButton"] > button {
     font-family: 'Quicksand', sans-serif !important;
     font-weight: 600 !important;
+    font-size: 0.95rem !important;
     border-radius: 12px !important;
-    padding: 0.6rem 1.2rem !important;
+    padding: 0.4rem 0.6rem !important;
     border: none !important;
     cursor: pointer !important;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: var(--mood-shadow) !important;
+    height: 3.4rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
 }
-
+div[data-testid="stButton"] > button p {
+    margin: 0 !important;
+    line-height: 1.15 !important;
+}
 div[data-testid="stButton"] > button:hover {
     transform: translateY(-2px) !important;
     box-shadow: var(--mood-shadow-hover) !important;
 }
-
 div[data-testid="stButton"] > button:active {
     transform: translateY(0) !important;
 }
 
 /* ============================================================
-   ВКЛАДКИ
-   ============================================================ */
+ВКЛАДКИ
+============================================================ */
 div[data-baseweb="tab-list"] {
     gap: 0.5rem;
     background: var(--mood-bg-secondary);
@@ -169,7 +170,6 @@ div[data-baseweb="tab-list"] {
     box-shadow: inset 2px 2px 5px rgba(120, 80, 50, 0.05),
                 inset -2px -2px 5px rgba(255, 255, 255, 0.8);
 }
-
 button[data-baseweb="tab"] {
     font-family: 'Quicksand', sans-serif !important;
     font-weight: 600 !important;
@@ -180,21 +180,19 @@ button[data-baseweb="tab"] {
     border: none !important;
     transition: all 0.25s ease !important;
 }
-
 button[data-baseweb="tab"][aria-selected="true"] {
     background: var(--mood-tab-active) !important;
     color: white !important;
     box-shadow: 0 4px 12px rgba(232, 168, 124, 0.3) !important;
 }
-
 button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     background: #efe3d5 !important;
     color: var(--mood-text-primary) !important;
 }
 
 /* ============================================================
-   КАЛЕНДАРЬ
-   ============================================================ */
+КАЛЕНДАРЬ
+============================================================ */
 .mood-calendar-container {
     background: var(--mood-bg-card);
     backdrop-filter: blur(12px);
@@ -203,20 +201,17 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     padding: 1.5rem;
     box-shadow: var(--mood-shadow);
 }
-
 .mood-calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
 }
-
 .mood-calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 6px;
 }
-
 .mood-calendar-day-label {
     font-family: 'Quicksand', sans-serif;
     font-weight: 600;
@@ -226,7 +221,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     padding: 0.5rem 0;
     text-transform: uppercase;
 }
-
 .mood-calendar-cell {
     aspect-ratio: 1;
     border-radius: 12px;
@@ -242,59 +236,49 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     position: relative;
     overflow: hidden;
 }
-
 .mood-calendar-cell:hover {
     border-color: var(--mood-accent);
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(120, 80, 50, 0.1);
 }
-
 .mood-calendar-cell.today {
     border-color: var(--mood-accent);
     background: var(--mood-accent-soft);
 }
-
 .mood-calendar-cell.empty {
     background: transparent;
     cursor: default;
 }
-
 .mood-calendar-cell.empty:hover {
     transform: none;
     box-shadow: none;
 }
-
 .mood-calendar-date {
     font-family: 'Quicksand', sans-serif;
     font-weight: 600;
     font-size: 0.8rem;
     color: var(--mood-text-secondary);
 }
-
 .mood-calendar-dots {
     display: flex;
     gap: 3px;
     flex-wrap: wrap;
     justify-content: center;
 }
-
 .mood-calendar-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     transition: transform 0.2s ease;
 }
-
 .mood-calendar-dot:hover {
     transform: scale(1.3);
 }
-
 .mood-calendar-cell-shared {
     flex-direction: column;
     justify-content: space-between;
     padding: 4px;
 }
-
 .mood-calendar-stripe {
     width: 100%;
     height: 8px;
@@ -303,7 +287,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     gap: 2px;
     overflow: hidden;
 }
-
 .mood-calendar-stripe-segment {
     flex: 1;
     height: 100%;
@@ -311,8 +294,8 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   ЛЕГЕНДА КАЛЕНДАРЯ
-   ============================================================ */
+ЛЕГЕНДА КАЛЕНДАРЯ
+============================================================ */
 .legend {
     display: flex;
     flex-wrap: wrap;
@@ -322,7 +305,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     background: rgba(255, 255, 255, 0.5);
     border-radius: 12px;
 }
-
 .legend .chip {
     display: inline-flex;
     align-items: center;
@@ -334,7 +316,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     font-family: 'Nunito', sans-serif;
     color: var(--mood-text-primary);
 }
-
 .legend .chip i {
     width: 10px;
     height: 10px;
@@ -343,15 +324,14 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   СТАТИСТИКА: КАРТОЧКИ
-   ============================================================ */
+СТАТИСТИКА: КАРТОЧКИ
+============================================================ */
 .mood-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 1rem;
     margin: 1rem 0;
 }
-
 .mood-stat-card {
     background: rgba(255, 255, 255, 0.7);
     border-radius: 16px;
@@ -360,24 +340,20 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     border: 1px solid var(--mood-border);
     transition: all 0.25s ease;
 }
-
 .mood-stat-card:hover {
     transform: translateY(-3px);
     box-shadow: var(--mood-shadow);
 }
-
 .mood-stat-emoji {
     font-size: 2rem;
     margin-bottom: 0.5rem;
 }
-
 .mood-stat-value {
     font-family: 'Quicksand', sans-serif;
     font-weight: 700;
     font-size: 1.5rem;
     color: var(--mood-text-primary);
 }
-
 .mood-stat-label {
     font-family: 'Nunito', sans-serif;
     font-size: 0.8rem;
@@ -386,8 +362,8 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   УЗОР МЕСЯЦА (точки)
-   ============================================================ */
+УЗОР МЕСЯЦА (точки)
+============================================================ */
 .mood-pattern-container {
     display: flex;
     flex-wrap: wrap;
@@ -397,7 +373,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     border-radius: 16px;
     margin: 0.5rem 0;
 }
-
 .mood-pattern-dot {
     width: 16px;
     height: 16px;
@@ -405,14 +380,13 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     transition: transform 0.2s ease;
     cursor: default;
 }
-
 .mood-pattern-dot:hover {
     transform: scale(1.4);
 }
 
 /* ============================================================
-   ПАЛИТРА: ИНСАЙТ-БЛОК
-   ============================================================ */
+ПАЛИТРА: ИНСАЙТ-БЛОК
+============================================================ */
 .mood-insight {
     background: rgba(255, 255, 255, 0.7);
     border-left: 4px solid var(--mood-accent);
@@ -426,8 +400,8 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   БАЛАНС ТЕПЛА: ПОЛОСА + ЛЕГЕНДА
-   ============================================================ */
+БАЛАНС ТЕПЛА: ПОЛОСА + ЛЕГЕНДА
+============================================================ */
 .mood-balance-bar {
     display: flex;
     height: 18px;
@@ -437,12 +411,10 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     background: rgba(0, 0, 0, 0.04);
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-
 .mood-balance-segment {
     height: 100%;
     transition: flex-basis 0.3s ease;
 }
-
 .mood-balance-legend {
     display: flex;
     flex-wrap: wrap;
@@ -453,19 +425,17 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   РИТМЫ (НЕДЕЛЯ / ЧАСТИ ДНЯ)
-   ============================================================ */
+РИТМЫ (НЕДЕЛЯ / ЧАСТИ ДНЯ)
+============================================================ */
 .mood-rhythm-row {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 6px;
     margin: 0.5rem 0 1rem 0;
 }
-
 .mood-rhythm-row.parts {
     grid-template-columns: repeat(3, 1fr);
 }
-
 .mood-rhythm-cell {
     background: rgba(255, 255, 255, 0.7);
     border: 1px solid var(--mood-border);
@@ -474,17 +444,14 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     text-align: center;
     transition: all 0.2s ease;
 }
-
 .mood-rhythm-cell.warm {
     background: #e8f5e3;
     border-color: #a8d5a2;
 }
-
 .mood-rhythm-cell.tense {
     background: #e8ebf9;
     border-color: #a5b0e5;
 }
-
 .mood-rhythm-label {
     font-family: 'Quicksand', sans-serif;
     font-weight: 600;
@@ -492,15 +459,14 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     color: var(--mood-text-secondary);
     text-transform: uppercase;
 }
-
 .mood-rhythm-emoji {
     font-size: 1.4rem;
     margin-top: 0.3rem;
 }
 
 /* ============================================================
-   ДОСТИЖЕНИЯ
-   ============================================================ */
+ДОСТИЖЕНИЯ
+============================================================ */
 .mood-achievement {
     display: flex;
     align-items: center;
@@ -512,22 +478,18 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     border: 1px solid var(--mood-border);
     transition: all 0.25s ease;
 }
-
 .mood-achievement:hover {
     transform: translateX(4px);
     box-shadow: var(--mood-shadow);
 }
-
 .mood-achievement-emoji {
     font-size: 2rem;
 }
-
 .mood-achievement-title {
     font-family: 'Quicksand', sans-serif;
     font-weight: 600;
     color: var(--mood-text-primary);
 }
-
 .mood-achievement-desc {
     font-family: 'Nunito', sans-serif;
     font-size: 0.8rem;
@@ -535,8 +497,8 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   ПЯТИМИНУТКА НЕДЕЛИ
-   ============================================================ */
+ПЯТИМИНУТКА НЕДЕЛИ
+============================================================ */
 .mood-ritual-card {
     background: linear-gradient(135deg, #fff4e6 0%, #fdf0e6 100%);
     border: 1px solid var(--mood-border);
@@ -544,24 +506,20 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     padding: 1rem 1.2rem;
     margin-bottom: 1rem;
 }
-
 .mood-week-row {
     display: flex;
     align-items: center;
     gap: 8px;
     margin: 0.6rem 0;
 }
-
 .mood-week-person {
     font-size: 1.2rem;
     min-width: 24px;
 }
-
 .mood-week-row .mood-pattern-dot {
     width: 22px;
     height: 22px;
 }
-
 .mood-ritual-question {
     background: rgba(255, 255, 255, 0.7);
     border-left: 3px solid var(--mood-accent);
@@ -574,8 +532,8 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   ЗАПИСИ ДНЯ
-   ============================================================ */
+ЗАПИСИ ДНЯ
+============================================================ */
 .mood-entry-item {
     display: flex;
     flex-direction: column;
@@ -586,43 +544,31 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     border-left: 4px solid var(--mood-color);
     transition: all 0.2s ease;
 }
-
 .mood-entry-item:hover {
     background: rgba(255, 255, 255, 0.9);
     box-shadow: var(--mood-shadow);
 }
 
 /* ============================================================
-   АНИМАЦИИ
-   ============================================================ */
-@keyframes moodFadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes moodPop {
-    0% { transform: scale(0.8); opacity: 0; }
-    70% { transform: scale(1.05); }
-    100% { transform: scale(1); opacity: 1; }
-}
-
+АНИМАЦИИ
+============================================================ */
+@keyframes moodFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes moodPop { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
 .mood-fade-in {
     animation: moodFadeIn 0.4s ease forwards;
 }
-
 .mood-pop {
     animation: moodPop 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* ============================================================
-   ЭКРАН ВХОДА
-   ============================================================ */
+ЭКРАН ВХОДА
+============================================================ */
 .mood-auth-container {
     max-width: 400px;
     margin: 3rem auto;
     text-align: center;
 }
-
 .mood-auth-card {
     background: var(--mood-bg-card);
     backdrop-filter: blur(16px);
@@ -631,7 +577,6 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
     padding: 2.5rem;
     box-shadow: var(--mood-shadow);
 }
-
 .mood-auth-title {
     font-family: 'Quicksand', sans-serif;
     font-weight: 700;
@@ -644,47 +589,41 @@ button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
 }
 
 /* ============================================================
-   АДАПТИВНОСТЬ
-   ============================================================ */
+АДАПТИВНОСТЬ
+============================================================ */
 @media (max-width: 768px) {
     .main .block-container {
         padding: 1rem;
     }
-
     .mood-calendar-grid {
         gap: 4px;
     }
-
     .mood-calendar-cell {
         border-radius: 8px;
     }
-
     .mood-stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-
     .mood-rhythm-row {
         grid-template-columns: repeat(4, 1fr);
     }
-
     .mood-rhythm-row.parts {
         grid-template-columns: 1fr;
     }
 }
 
 /* ============================================================
-   СКРЫТИЕ БРЕНДИНГА (НЕ трогаем header — там кнопка сайдбара!)
-   ============================================================ */
+СКРЫТИЕ БРЕНДИНГА (НЕ трогаем header — там кнопка сайдбара!)
+============================================================ */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 
 /* ============================================================
-   ЭМОЦИИ ЗА ПЕРИОД: ЦВЕТНЫЕ СТРОКИ
-   ============================================================ */
+ЭМОЦИИ ЗА ПЕРИОД: ЦВЕТНЫЕ СТРОКИ
+============================================================ */
 .mood-emotion-row {
     margin: 0.9rem 0;
 }
-
 .mood-emotion-head {
     display: flex;
     justify-content: space-between;
@@ -693,7 +632,6 @@ footer {visibility: hidden;}
     margin-bottom: 0.3rem;
     font-family: 'Nunito', sans-serif;
 }
-
 .mood-emotion-name {
     display: flex;
     align-items: center;
@@ -701,42 +639,38 @@ footer {visibility: hidden;}
     font-weight: 600;
     color: var(--mood-text-primary);
 }
-
 .mood-emotion-name i {
     width: 10px;
     height: 10px;
     border-radius: 99px;
     display: inline-block;
 }
-
 .mood-emotion-nums {
     font-size: 0.85rem;
     color: var(--mood-text-secondary);
     white-space: nowrap;
 }
-
 .mood-emotion-bar {
     height: 10px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.05);
     overflow: hidden;
 }
-
 .mood-emotion-fill {
     height: 100%;
     border-radius: 999px;
     transition: width 0.4s ease;
 }
+
 /* ============================================================
-   ПИСЬМО НЕДЕЛИ
-   ============================================================ */
+ПИСЬМО НЕДЕЛИ
+============================================================ */
 .mood-letter p {
     margin: 0.6rem 0;
     line-height: 1.6;
     font-family: 'Nunito', sans-serif;
     color: var(--mood-text-primary);
 }
-
 .mood-letter p:first-child {
     font-weight: 700;
     font-family: 'Quicksand', sans-serif;
