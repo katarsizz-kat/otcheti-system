@@ -1,11 +1,14 @@
 """
 Генерация Excel-отчёта «Анализ жалоб».
 Листы:
-- "Сводная"    : сводная по жалобам + 10 расширенных категорий + позитив;
+- "Сводная"    : итоговая сводка, топ проблемных ресторанов, сводная по жалобам
+                 (+ % долей), 10 расширенных категорий, позитив, средний рейтинг;
 - "Жалобы"     : детальные жалобы;
-- "Дубликаты"  : дубли по номеру телефона;
+- "Дубликаты"  : дубли по номеру телефона + разбивка по ресторанам/категориям;
 - "Удалённые"  : удалённые отзывы геосервисов;
-- "По источникам" : сводные по каждому источнику отдельно (8 таблиц).
+- "По источникам" : сводные по каждому источнику отдельно (10 таблиц);
+- "Компенсации"   : сводная по типам решений (без сумм) + необработанные обращения;
+- "Невнесённые"   : тикеты из CRM-выгрузки, которых нет в файле ОС (по телефону).
 """
 import io
 import pandas as pd
@@ -33,6 +36,8 @@ SHEET_DETAIL = _const("EXCEL_SHEET_DETAIL", "Жалобы")
 SHEET_DUPLICATES = _const("EXCEL_SHEET_DUPLICATES", "Дубликаты")
 SHEET_DELETED = _const("EXCEL_SHEET_DELETED", "Удалённые")
 SHEET_BY_SOURCE = "По источникам"
+SHEET_COMPENSATIONS = "Компенсации"
+SHEET_UNENTERED = "Невнесённые"
 
 # ----------------------------------------------------------
 # СТИЛИ
@@ -225,6 +230,16 @@ def build_complaints_excel(prepared=None, stats=None, settings=None, **kwargs) -
         _get(prepared, ["deleted_geo", "deleted_geo_df", "deleted"])
     )
 
+    # НОВОЕ: итоговая сводка, средний рейтинг, % долей, топ ресторанов, разбивка дублей, компенсации
+    report_overview = _get_df(stats, prepared, ["report_overview"], ["report_overview"])
+    avg_rating_summary = _get_df(stats, prepared, ["avg_rating_summary"], ["avg_rating_summary"])
+    complaint_share_summary = _get_df(stats, prepared, ["complaint_share_summary"], ["complaint_share_summary"])
+    top_restaurants = _get_df(stats, prepared, ["top_restaurants"], ["top_restaurants"])
+    duplicates_summary = _get_df(stats, prepared, ["duplicates_summary"], ["duplicates_summary"])
+    resolution_summary = _get_df(stats, prepared, ["resolution_summary"], ["resolution_summary"])
+    unresolved_complaints = _get_df(stats, prepared, ["unresolved_complaints"], ["unresolved_complaints"])
+    unentered_crm_tickets = _get_df(stats, prepared, ["unentered_crm_tickets"], ["unentered_crm_tickets"])
+
     # by_source — это dict, не DataFrame, поэтому `or {}` безопасен
     by_source_stats = _get(stats, ["by_source", "by_source_stats"])
     if by_source_stats is None:
@@ -242,10 +257,14 @@ def build_complaints_excel(prepared=None, stats=None, settings=None, **kwargs) -
         ws.cell(row=row, column=1, value=period_label).font = TITLE_FONT
         row += 2
 
+    row = _write_df_block(ws, row, "Итоговая сводка", report_overview)
+    row = _write_df_block(ws, row, "Топ проблемных ресторанов", top_restaurants)
     row = _write_df_block(ws, row, "Сводная по жалобам", complaints_summary)
+    row = _write_df_block(ws, row, "Доля категорий от общего числа жалоб ресторана, %", complaint_share_summary)
     # ИЗМЕНЕНО: теперь пишем 10 расширенных категорий вместо 5 основных
     row = _write_df_block(ws, row, "Сводная по жалобам (10 расширенных категорий)", extended_categories_summary)
     row = _write_df_block(ws, row, "Сводная по положительным моментам", positives_summary)
+    row = _write_df_block(ws, row, "Средний рейтинг по ресторанам", avg_rating_summary)
 
     # ------------------------------------------------------
     # ЛИСТ 2: ЖАЛОБЫ (ДЕТАЛИ)
@@ -261,7 +280,8 @@ def build_complaints_excel(prepared=None, stats=None, settings=None, **kwargs) -
     # ЛИСТ 3: ДУБЛИКАТЫ
     # ------------------------------------------------------
     ws3 = wb.create_sheet(SHEET_DUPLICATES)
-    _write_df_block(ws3, 1, "Дубликаты по номеру телефона", duplicates)
+    r3 = _write_df_block(ws3, 1, "Дубликаты по номеру телефона", duplicates)
+    _write_df_block(ws3, r3, "Дубли — по ресторанам и категориям", duplicates_summary)
 
     # ------------------------------------------------------
     # ЛИСТ 4: УДАЛЁННЫЕ (ГЕО)
@@ -278,13 +298,38 @@ def build_complaints_excel(prepared=None, stats=None, settings=None, **kwargs) -
         ws5.cell(row=r5, column=1, value=period_label).font = TITLE_FONT
         r5 += 2
 
-    source_order = ["ОС", "Сайт", "Агрегаторы", "Геосервисы"]
+    source_order = ["ОС", "ОС Тюмень", "Сайт", "Агрегаторы", "Геосервисы"]
     for source in source_order:
         source_data = by_source_stats.get(source, {})
         complaint_df = _to_df(source_data.get("complaint_summary"))
         positive_df = _to_df(source_data.get("positive_summary"))
         r5 = _write_df_block(ws5, r5, f"Жалобы — {source}", complaint_df)
         r5 = _write_df_block(ws5, r5, f"Позитив — {source}", positive_df)
+
+    # ------------------------------------------------------
+    # ЛИСТ 6: КОМПЕНСАЦИИ (только количество — без сумм)
+    # ------------------------------------------------------
+    ws6 = wb.create_sheet(SHEET_COMPENSATIONS)
+    r6 = 1
+    if period_label:
+        ws6.cell(row=r6, column=1, value=period_label).font = TITLE_FONT
+        r6 += 2
+    r6 = _write_df_block(ws6, r6, "Сводная по решениям (кол-во обращений)", resolution_summary)
+    _write_df_block(ws6, r6, "Необработанные обращения", unresolved_complaints)
+
+    # ------------------------------------------------------
+    # ЛИСТ 7: НЕВНЕСЁННЫЕ (сверка с CRM-выгрузкой по телефону)
+    # ------------------------------------------------------
+    ws7 = wb.create_sheet(SHEET_UNENTERED)
+    r7 = 1
+    if period_label:
+        ws7.cell(row=r7, column=1, value=period_label).font = TITLE_FONT
+        r7 += 2
+    _write_df_block(
+        ws7, r7,
+        "Тикеты из CRM-выгрузки, не найденные в файле «ОС и компенсации» (по телефону)",
+        unentered_crm_tickets,
+    )
 
     out = io.BytesIO()
     wb.save(out)

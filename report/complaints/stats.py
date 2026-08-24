@@ -246,6 +246,178 @@ def calc_extended_categories_summary(complaints: pd.DataFrame) -> pd.DataFrame:
 
 
 # ==========================================================
+# СРЕДНИЙ РЕЙТИНГ ПО РЕСТОРАНАМ (из отзывов: сайт/агрегаторы/гео)
+# ==========================================================
+def calc_avg_rating_summary(reviews: pd.DataFrame) -> pd.DataFrame:
+    """Средний рейтинг и количество оценок по ресторану. Итоги — взвешенное среднее, не сумма."""
+    rows = []
+    for rest in ALL_RESTAURANTS:
+        sub = reviews[reviews[COL_RESTAURANT] == rest] if reviews is not None and not reviews.empty else pd.DataFrame()
+        ratings = sub["Рейтинг"].dropna() if not sub.empty and "Рейтинг" in sub.columns else pd.Series(dtype=float)
+        rows.append({
+            COL_RESTAURANT: rest,
+            "Средний рейтинг": round(float(ratings.mean()), 2) if len(ratings) else None,
+            "Кол-во оценок": int(len(ratings)),
+        })
+    summary = pd.DataFrame(rows)
+
+    def _weighted_total(label: str, subset: List[str]) -> Dict[str, object]:
+        part = summary[summary[COL_RESTAURANT].isin(subset)]
+        total_count = int(part["Кол-во оценок"].sum())
+        avg = None
+        if total_count:
+            avg = round((part["Средний рейтинг"].fillna(0) * part["Кол-во оценок"]).sum() / total_count, 2)
+        return {COL_RESTAURANT: label, "Средний рейтинг": avg, "Кол-во оценок": total_count}
+
+    spb_part = summary[summary[COL_RESTAURANT].isin(SPB_ORDER)]
+    tmn_part = summary[summary[COL_RESTAURANT].isin(TMN_ORDER)]
+    return pd.concat([
+        spb_part,
+        pd.DataFrame([_weighted_total("Всего СПб:", SPB_ORDER)]),
+        tmn_part,
+        pd.DataFrame([_weighted_total("Всего Тюмень:", TMN_ORDER)]),
+    ], ignore_index=True)
+
+
+# ==========================================================
+# ДОЛЯ КАТЕГОРИЙ ОТ ОБЩЕГО ЧИСЛА ЖАЛОБ РЕСТОРАНА (%)
+# ==========================================================
+def calc_complaint_share_summary(complaint_summary: pd.DataFrame) -> pd.DataFrame:
+    """То же, что «Сводная по жалобам», но категории — в процентах от «Всего:» строки."""
+    if complaint_summary is None or complaint_summary.empty:
+        return complaint_summary
+    out = complaint_summary.copy()
+    for cat in COMPLAINT_CATEGORIES:
+        if cat not in out.columns:
+            continue
+        out[cat] = [
+            round(row[cat] / row[TOTAL_COL] * 100, 1) if row.get(TOTAL_COL) else 0.0
+            for _, row in out.iterrows()
+        ]
+    return out
+
+
+# ==========================================================
+# ТОП ПРОБЛЕМНЫХ РЕСТОРАНОВ
+# ==========================================================
+def calc_top_restaurants(complaint_summary: pd.DataFrame) -> pd.DataFrame:
+    """Рестораны, отсортированные по убыванию общего числа жалоб."""
+    if complaint_summary is None or complaint_summary.empty:
+        return pd.DataFrame(columns=["№", COL_RESTAURANT, TOTAL_COL])
+    only_restaurants = complaint_summary[complaint_summary[COL_RESTAURANT].isin(ALL_RESTAURANTS)]
+    ranked = only_restaurants[[COL_RESTAURANT, TOTAL_COL]].sort_values(
+        TOTAL_COL, ascending=False
+    ).reset_index(drop=True)
+    ranked.insert(0, "№", ranked.index + 1)
+    return ranked
+
+
+# ==========================================================
+# ДУБЛИ: РАЗБИВКА ПО РЕСТОРАНАМ И КАТЕГОРИЯМ
+# ==========================================================
+def calc_duplicates_summary(duplicates: pd.DataFrame) -> pd.DataFrame:
+    """Те же жалобы-дубли, но сгруппированные по ресторану x категории (как основная сводная)."""
+    return calc_complaint_summary(duplicates)
+
+
+# ==========================================================
+# ИТОГОВАЯ СВОДКА (executive summary)
+# ==========================================================
+def calc_report_overview(
+    complaints: pd.DataFrame,
+    reviews: pd.DataFrame,
+    complaint_summary: pd.DataFrame,
+    positive_summary: pd.DataFrame,
+) -> pd.DataFrame:
+    """Пара строк-показателей наверх отчёта: сколько всего, откуда, какая категория чаще всего."""
+    total_complaints = int(len(complaints)) if complaints is not None else 0
+    total_reviews = int(len(reviews)) if reviews is not None else 0
+
+    complaints_from_reviews = 0
+    if complaints is not None and not complaints.empty and COL_SOURCE in complaints.columns:
+        complaints_from_reviews = int(
+            complaints[complaints[COL_SOURCE].isin(["Сайт", "Агрегаторы", "Геосервисы"])].shape[0]
+        )
+    share = round(complaints_from_reviews / total_reviews * 100, 1) if total_reviews else None
+
+    top_category, top_count = None, 0
+    if complaint_summary is not None and not complaint_summary.empty:
+        only_rest = complaint_summary[complaint_summary[COL_RESTAURANT].isin(ALL_RESTAURANTS)]
+        for cat in COMPLAINT_CATEGORIES:
+            if cat not in only_rest.columns:
+                continue
+            total = int(only_rest[cat].sum())
+            if total > top_count:
+                top_count, top_category = total, cat
+
+    total_positive = 0
+    if positive_summary is not None and not positive_summary.empty and TOTAL_COL in positive_summary.columns:
+        only_rest_pos = positive_summary[positive_summary[COL_RESTAURANT].isin(ALL_RESTAURANTS)]
+        total_positive = int(only_rest_pos[TOTAL_COL].sum())
+
+    rows = [
+        {"Показатель": "Всего жалоб (все источники)", "Значение": total_complaints},
+        {"Показатель": "Жалоб из отзывов (сайт/агрегаторы/гео)", "Значение": complaints_from_reviews},
+        {"Показатель": "Доля жалоб от всех отзывов, %", "Значение": share if share is not None else "—"},
+        {"Показатель": "Всего позитивных моментов в отзывах", "Значение": total_positive},
+        {
+            "Показатель": "Самая частая категория жалоб",
+            "Значение": f"{top_category} ({top_count})" if top_category else "—",
+        },
+    ]
+    return pd.DataFrame(rows)
+
+
+# ==========================================================
+# КОМПЕНСАЦИИ (без сумм — только количество обращений)
+# ==========================================================
+RESOLUTION_COL = "Решение"
+STATUS_COL = "Статус возмещения"
+EMPLOYEE_COL = "Сотрудник"
+
+
+def calc_resolution_summary(complaints: pd.DataFrame) -> pd.DataFrame:
+    """Сколько жалоб закрыто каждым типом решения (баллы/купон/возврат и т.п.), по ресторанам.
+    Суммы компенсаций сознательно не считаем — только количество обращений."""
+    if complaints is None or complaints.empty or RESOLUTION_COL not in complaints.columns:
+        return pd.DataFrame(columns=[COL_RESTAURANT, TOTAL_COL])
+
+    with_resolution = complaints[
+        complaints[RESOLUTION_COL].notna() & (complaints[RESOLUTION_COL].astype(str).str.strip() != "")
+    ]
+    if with_resolution.empty:
+        return pd.DataFrame(columns=[COL_RESTAURANT, TOTAL_COL])
+
+    resolution_types = sorted(with_resolution[RESOLUTION_COL].astype(str).str.strip().unique().tolist())
+
+    rows = []
+    for rest in ALL_RESTAURANTS:
+        sub = with_resolution[with_resolution[COL_RESTAURANT] == rest]
+        row = {COL_RESTAURANT: rest}
+        for rtype in resolution_types:
+            row[rtype] = int((sub[RESOLUTION_COL].astype(str).str.strip() == rtype).sum())
+        row[TOTAL_COL] = int(len(sub))
+        rows.append(row)
+
+    summary = pd.DataFrame(rows)
+    return _add_totals(summary, resolution_types)
+
+
+def calc_unresolved_complaints(complaints: pd.DataFrame) -> pd.DataFrame:
+    """Обращения через ОС, которые ещё не обработаны (Статус возмещения = False) — список к дозакрытию."""
+    cols = ["Дата", COL_RESTAURANT, COL_TYPE, COL_TEXT, COL_SOURCE, EMPLOYEE_COL]
+    if complaints is None or complaints.empty or STATUS_COL not in complaints.columns:
+        return pd.DataFrame(columns=cols)
+
+    unresolved = complaints[complaints[STATUS_COL] == False]  # noqa: E712 — явное сравнение с bool, не с truthy
+    if unresolved.empty:
+        return pd.DataFrame(columns=cols)
+
+    out = unresolved[[col for col in cols if col in unresolved.columns]].copy()
+    return out.sort_values("Дата") if "Дата" in out.columns else out
+
+
+# ==========================================================
 # СВОДНЫЕ ПО ИСТОЧНИКАМ
 # ==========================================================
 def calc_stats_by_source(complaints: pd.DataFrame, reviews: pd.DataFrame) -> Dict[str, Dict[str, pd.DataFrame]]:
@@ -253,7 +425,7 @@ def calc_stats_by_source(complaints: pd.DataFrame, reviews: pd.DataFrame) -> Dic
     Считает сводные по каждому источнику отдельно.
     Возвращает dict: {source: {"complaint_summary": df, "positive_summary": df}}
     """
-    sources = ["ОС", "Сайт", "Агрегаторы", "Геосервисы"]
+    sources = ["ОС", "ОС Тюмень", "Сайт", "Агрегаторы", "Геосервисы"]
     result = {}
 
     for source in sources:
@@ -295,6 +467,14 @@ def build_complaints_stats(prepared) -> Dict[str, pd.DataFrame]:
     extended_categories_summary = calc_extended_categories_summary(complaints)
     by_source = calc_stats_by_source(complaints, reviews)
 
+    avg_rating_summary = calc_avg_rating_summary(reviews)
+    complaint_share_summary = calc_complaint_share_summary(complaint_summary)
+    top_restaurants = calc_top_restaurants(complaint_summary)
+    duplicates_summary = calc_duplicates_summary(duplicates)
+    report_overview = calc_report_overview(complaints, reviews, complaint_summary, positive_summary)
+    resolution_summary = calc_resolution_summary(complaints)
+    unresolved_complaints = calc_unresolved_complaints(complaints)
+
     return {
         "complaints": complaints,
         "duplicates": duplicates,
@@ -303,4 +483,11 @@ def build_complaints_stats(prepared) -> Dict[str, pd.DataFrame]:
         "main_categories_summary": main_categories_summary,
         "extended_categories_summary": extended_categories_summary,
         "by_source": by_source,
+        "avg_rating_summary": avg_rating_summary,
+        "complaint_share_summary": complaint_share_summary,
+        "top_restaurants": top_restaurants,
+        "duplicates_summary": duplicates_summary,
+        "report_overview": report_overview,
+        "resolution_summary": resolution_summary,
+        "unresolved_complaints": unresolved_complaints,
     }

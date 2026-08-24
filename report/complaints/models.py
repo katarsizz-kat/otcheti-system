@@ -54,11 +54,14 @@ def sanitize_filename(value: str) -> str:
 # ==========================================================
 @dataclass
 class ComplaintsSourceFiles:
-    """Четыре исходных файла: сайт, агрегаторы, геосервисы, ОС."""
+    """Четыре обязательных файла (сайт, агрегаторы, геосервисы, ОС)
+    + необязательные: ОС Тюмень, CRM-выгрузка (для листа «Невнесённые»)."""
     site: Any = None
     agg: Any = None
     geo: Any = None
     os: Any = None
+    os_tmn: Any = None  # опционально — не влияет на is_complete()
+    crm: Any = None  # опционально — не влияет на is_complete()
 
     def is_complete(self) -> bool:
         return bool(self.site and self.agg and self.geo and self.os)
@@ -132,27 +135,6 @@ class ComplaintsReportRequest:
 
 
 # ==========================================================
-# ПОДГОТОВЛЕННЫЕ ДАННЫЕ
-# ==========================================================
-@dataclass
-class ComplaintsPreparedData:
-    """Нормализованные данные после загрузки."""
-    reviews: pd.DataFrame
-    os_complaints: pd.DataFrame
-    deleted_geo: pd.DataFrame
-    warnings: List[str] = field(default_factory=list)
-
-    def add_warning(self, message: str) -> None:
-        message = str(message or "").strip()
-        if message and message not in self.warnings:
-            self.warnings.append(message)
-
-    def add_warnings(self, messages: List[str]) -> None:
-        for message in messages:
-            self.add_warning(message)
-
-
-# ==========================================================
 # РАСЧЁТНЫЕ ДАННЫЕ ОТЧЁТА
 # ==========================================================
 @dataclass
@@ -163,6 +145,8 @@ class ComplaintsReportData:
     complaint_summary: pd.DataFrame
     positive_summary: pd.DataFrame
     deleted_geo: pd.DataFrame
+    unresolved_complaints: pd.DataFrame = field(default_factory=pd.DataFrame)
+    unentered_crm_tickets: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     # ---- Алиасы для интерфейса (plural-имена) ----
     @property
