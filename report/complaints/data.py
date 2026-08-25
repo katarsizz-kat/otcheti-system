@@ -140,8 +140,13 @@ def _parse_review_date(value: Any) -> Optional[date]:
         return value.date()
     if isinstance(value, date):
         return value
+    s = str(value)
+    # Строки вида "2026-08-01" или "2026-08-01T07:59:11+0300" уже однозначны
+    # (год впереди) — dayfirst тут не нужен и на формате с временем/TZ
+    # заставляет pandas путать месяц и день (01.08 <-> 08.01).
+    dayfirst = not re.match(r"^\d{4}-\d{1,2}-\d{1,2}", s)
     try:
-        return pd.to_datetime(str(value), dayfirst=True).date()
+        return pd.to_datetime(s, dayfirst=dayfirst).date()
     except Exception:
         return None
 
@@ -340,8 +345,30 @@ def _load_site(df, start_date, end_date, warnings: Optional[List[str]] = None):
 
 
 def _load_agg(df, start_date, end_date, warnings: Optional[List[str]] = None):
+    if df is None or df.empty:
+        return _load_reviews(df, "Агрегаторы", start_date, end_date,
+                             "Адрес", _map_address, "Отзыв", "Оценка", None,
+                             warnings=warnings, label="Агрегаторы")
+
+    df = df.copy()
+
+    # Некоторые выгрузки агрегаторов (Яндекс Еда/Delivery Club) не содержат
+    # колонку "Дата" — время создания отзыва там называется иначе.
+    date_col = "Дата" if "Дата" in df.columns else (
+        "Время создания отзыва" if "Время создания отзыва" in df.columns else "Дата"
+    )
+
+    # В этих же выгрузках свободный текст "Отзыв" часто пуст — гость просто
+    # отмечает готовые комментарии чекбоксами в "Предвыбранные комментарии".
+    # Добавляем их к тексту, чтобы ключевые слова категорий жалоб их видели.
+    if "Предвыбранные комментарии" in df.columns:
+        preset = df["Предвыбранные комментарии"].fillna("").astype(str)
+        free_text = df.get("Отзыв", pd.Series([""] * len(df))).fillna("").astype(str)
+        df["Отзыв"] = (free_text + " " + preset).str.strip()
+
     return _load_reviews(df, "Агрегаторы", start_date, end_date,
                          "Адрес", _map_address, "Отзыв", "Оценка", None,
+                         date_col=date_col,
                          warnings=warnings, label="Агрегаторы")
 
 
