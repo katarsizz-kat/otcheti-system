@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 import report.os_report as logic
+from report.complaints.data import split_os_files
 
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
@@ -91,6 +92,14 @@ def render():
         st.error(f"Ошибка чтения файла: {e}")
         return
 
+    # Необязательно: файл(ы) «ОС и компенсации» — для сверки (вкладка «Невнесённые»)
+    st.markdown("##### 📋 ОС и компенсации *(необязательно — для вкладки «Невнесённые»)*")
+    os_files = st.file_uploader(
+        "ОС и компенсации", type=["xlsx", "xls"], key="os_compare_uploader",
+        accept_multiple_files=True, label_visibility="collapsed",
+    )
+    os_main_file, os_tmn_file = split_os_files(os_files)
+
     # Фильтры
     df_filtered = _render_filters(df)
     if df_filtered is None or df_filtered.empty:
@@ -107,11 +116,12 @@ def render():
         st.success(f"✅ Тикетов: **{len(df_filtered)}**")
 
     # Вкладки
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "👨‍💼 Статистика операторов",
         "📊 Жалобы и Рестораны",
         "🤖 Анализ Чат-бота",
         "📥 Экспорт в Excel",
+        "🔍 Невнесённые",
     ])
 
     # Общие вычисления для вкладок (один раз)
@@ -141,6 +151,13 @@ def render():
     df_f, p1_for_ui, p2_for_ui, city_map = logic.compute_complaint_pivots(df_filtered)
     bot_df = logic.analyze_bot_fails(df_filtered)
 
+    has_os_files = bool(os_main_file or os_tmn_file)
+    if has_os_files:
+        os_phones = logic.load_os_phone_set(os_main_file, os_tmn_file)
+        unentered_df = logic.find_unentered_tickets(df_filtered, os_phones)
+    else:
+        unentered_df = pd.DataFrame()
+
     with tab1:
         _render_tab_operators(df_op_full, df_op_stats, h_stats, joint_df, total_days)
     with tab2:
@@ -150,8 +167,10 @@ def render():
     with tab4:
         _render_tab_export(
             df_op_stats, h_stats, day_stats, wd_stats,
-            p1_for_ui, p2_for_ui, bot_df, city_map,
+            p1_for_ui, p2_for_ui, bot_df, city_map, unentered_df,
         )
+    with tab5:
+        _render_tab_unentered(has_os_files, unentered_df)
 
 
 def _render_filters(df):
@@ -280,12 +299,32 @@ def _render_tab_bot(bot_df):
         st.success("✅ Сбоев бота не обнаружено.")
 
 
+def _render_tab_unentered(has_os_files: bool, unentered_df) -> None:
+    st.subheader("🔍 Тикеты, не внесённые в файл «ОС и компенсации»")
+    st.caption(
+        "Сверка по телефону (последние 10 цифр). Учитываются только тикеты "
+        "СПб и Тюмени — файл «ОС и компенсации» покрывает только эти два города."
+    )
+    if not has_os_files:
+        st.info(
+            "👆 Чтобы увидеть невнесённые тикеты, загрузите выше файл(ы) "
+            "«ОС и компенсации» (СПб и/или Тюмень)."
+        )
+        return
+    if unentered_df is None or unentered_df.empty:
+        st.success("✅ Все тикеты СПб/Тюмени за период найдены в файле «ОС и компенсации».")
+        return
+    st.warning(f"Не найдено в файле ОС: **{len(unentered_df)}** тикет(ов).")
+    st.dataframe(unentered_df, use_container_width=True, hide_index=True)
+
+
 def _render_tab_export(df_op_stats, h_stats, day_stats, wd_stats,
-                       p1, p2, bot_df, city_map):
+                       p1, p2, bot_df, city_map, unentered_df=None):
     st.subheader("📊 Генерация Excel-отчёта")
     st.info(
         "6 листов: Операторы · Часы · Дни · Жалобы (деталь) · "
-        "Жалобы (укрупн) · Бот. С формулами =SUM и диаграммами!"
+        "Жалобы (укрупн) · Бот. С формулами =SUM и диаграммами! "
+        "7-й лист «Невнесённые» — если загружен файл «ОС и компенсации»."
     )
     if st.button("📄 Сформировать и скачать Excel", type="primary", key="os_export_btn"):
         with st.spinner("Формируем отчёт..."):
@@ -299,6 +338,7 @@ def _render_tab_export(df_op_stats, h_stats, day_stats, wd_stats,
                     p2=p2 if not p2.empty else None,
                     bot_df=bot_df if not bot_df.empty else None,
                     city_map=city_map,
+                    unentered_df=unentered_df if unentered_df is not None and not unentered_df.empty else None,
                 )
                 st.download_button(
                     label="💾 Скачать отчёт (.xlsx)",

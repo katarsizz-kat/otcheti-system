@@ -18,6 +18,12 @@ from openpyxl.utils import get_column_letter
 # ============================================================
 MSK_OFFSET = timedelta(hours=3)
 
+# Столбцы тикета CRM, которые показываем в листе/таблице «Невнесённые»
+UNENTERED_COLS = [
+    'Номер обращения', 'Дата отзыва', 'Город', 'Ресторан',
+    'Исполнитель', 'Причина обращения', 'Статус', 'Телефон',
+]
+
 TYUMEN_ORDER = [
     'Тюмень №2 – Орджоникидзе',
     'Тюмень №3 – Мельникайте',
@@ -150,6 +156,63 @@ def analyze_bot_fails(df):
                 'Тип ошибки бота': 'Требовал оператора' if is_demand else 'Бот не понял',
             })
     return pd.DataFrame(bot_fails)
+
+
+# ============================================================
+# СВЕРКА С ФАЙЛОМ «ОС И КОМПЕНСАЦИИ» (какие тикеты не внесены)
+# ============================================================
+# Читаем сам файл «ОС и компенсации» через уже готовые и проверенные загрузчики
+# из report/complaints/data.py — чтобы не дублировать (и не рассинхронизировать)
+# логику разбора категорий/ресторанов/форматов даты между двумя отчётами.
+def _phone_last10(value) -> str:
+    """Последние 10 цифр номера — форматы в CRM и в файле ОС могут отличаться
+    (+7, 8, пробелы и т.п.), поэтому сравниваем по хвосту, а не строкой целиком."""
+    digits = re.sub(r"\D", "", str(value or ""))
+    return digits[-10:] if len(digits) >= 10 else ""
+
+
+def load_os_phone_set(os_main_file=None, os_tmn_file=None) -> set:
+    """Собирает множество телефонов (последние 10 цифр) из файла(ов) «ОС и компенсации»."""
+    from report.complaints.data import _read_os, _load_os, _load_os_tmn, _to_dataframe
+
+    phones = set()
+    if os_main_file is not None:
+        main_df = _read_os(os_main_file)
+        main_complaints = _load_os(main_df, None, None)
+        if not main_complaints.empty:
+            phones |= set(main_complaints['Телефон'].map(_phone_last10))
+    if os_tmn_file is not None:
+        tmn_df = _to_dataframe(os_tmn_file)
+        tmn_complaints = _load_os_tmn(tmn_df, None, None)
+        if not tmn_complaints.empty:
+            phones |= set(tmn_complaints['Телефон'].map(_phone_last10))
+    phones.discard("")
+    return phones
+
+
+def filter_spb_tyumen(df: pd.DataFrame) -> pd.DataFrame:
+    """Только тикеты СПб и Тюмени — файл «ОС и компенсации» покрывает лишь эти два
+    города, остальные (например, Москва) сравнивать с ним смысла нет."""
+    if df is None or df.empty or 'Город' not in df.columns:
+        return df.iloc[0:0] if df is not None else pd.DataFrame()
+    city = df['Город'].astype(str).str.lower()
+    mask = city.str.contains('петербург') | city.str.contains('спб') | city.str.contains('тюмен')
+    return df[mask]
+
+
+def find_unentered_tickets(df: pd.DataFrame, os_phones: set) -> pd.DataFrame:
+    """Тикеты СПб/Тюмени из CRM-выгрузки, чей телефон не встречается в файле
+    «ОС и компенсации» — похоже, что их забыли внести."""
+    scoped = filter_spb_tyumen(df)
+    cols = [c for c in UNENTERED_COLS if scoped is None or c in getattr(scoped, "columns", [])]
+    if scoped is None or scoped.empty or 'Телефон' not in scoped.columns:
+        return pd.DataFrame(columns=cols or UNENTERED_COLS)
+
+    phone_key = scoped['Телефон'].map(_phone_last10)
+    mask = (phone_key != "") & (~phone_key.isin(os_phones))
+    result = scoped.loc[mask, cols].copy()
+    result['Телефон'] = phone_key[mask]
+    return result.sort_values('Дата отзыва') if 'Дата отзыва' in result.columns else result
 
 
 def get_hour_interval(hour):
@@ -416,8 +479,8 @@ def _add_total_row(ws, headers, total_row):
 
 
 def generate_excel_report(df_op_stats, h_stats, day_stats, wd_stats,
-                          p1, p2, bot_df, city_map):
-    """6 листов с формулами =SUM и графиками."""
+                          p1, p2, bot_df, city_map, unentered_df=None):
+    """6 листов с формулами =SUM и графиками (7-й — «Невнесённые», опционально)."""
     wb = Workbook()
 
     # ── Лист 1: Операторы ──
@@ -538,6 +601,14 @@ def generate_excel_report(df_op_stats, h_stats, day_stats, wd_stats,
         ws6.column_dimensions['C'].width = 30
         ws6.column_dimensions['D'].width = 60
         ws6.column_dimensions['E'].width = 22
+
+    # ── Лист 7: Невнесённые (сверка с файлом «ОС и компенсации») ──
+    if unentered_df is not None and not unentered_df.empty:
+        ws7 = wb.create_sheet("Невнесённые")
+        _write_df_to_sheet(ws7, 1, unentered_df, list(unentered_df.columns))
+        ws7.column_dimensions['A'].width = 16
+        ws7.column_dimensions['D'].width = 30
+        ws7.column_dimensions['F'].width = 40
 
     buf = io.BytesIO()
     wb.save(buf)

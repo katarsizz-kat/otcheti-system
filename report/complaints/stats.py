@@ -313,14 +313,6 @@ def calc_top_restaurants(complaint_summary: pd.DataFrame) -> pd.DataFrame:
 
 
 # ==========================================================
-# ДУБЛИ: РАЗБИВКА ПО РЕСТОРАНАМ И КАТЕГОРИЯМ
-# ==========================================================
-def calc_duplicates_summary(duplicates: pd.DataFrame) -> pd.DataFrame:
-    """Те же жалобы-дубли, но сгруппированные по ресторану x категории (как основная сводная)."""
-    return calc_complaint_summary(duplicates)
-
-
-# ==========================================================
 # ИТОГОВАЯ СВОДКА (executive summary)
 # ==========================================================
 def calc_report_overview(
@@ -417,29 +409,50 @@ def calc_unresolved_complaints(complaints: pd.DataFrame) -> pd.DataFrame:
     return out.sort_values("Дата") if "Дата" in out.columns else out
 
 
+def calc_no_compensation_complaints(complaints: pd.DataFrame) -> pd.DataFrame:
+    """Обращения с решением «без компенсации» — та же форма, что «Необработанные обращения»,
+    но для проверки: обосновано ли решение не компенсировать."""
+    cols = ["Дата", COL_RESTAURANT, COL_TYPE, COL_TEXT, COL_SOURCE, EMPLOYEE_COL]
+    if complaints is None or complaints.empty or RESOLUTION_COL not in complaints.columns:
+        return pd.DataFrame(columns=cols)
+
+    resolution_norm = complaints[RESOLUTION_COL].astype(str).str.strip().str.lower()
+    subset = complaints[resolution_norm.str.startswith("без комп")]
+    if subset.empty:
+        return pd.DataFrame(columns=cols)
+
+    out = subset[[col for col in cols if col in subset.columns]].copy()
+    return out.sort_values("Дата") if "Дата" in out.columns else out
+
+
 # ==========================================================
 # СВОДНЫЕ ПО ИСТОЧНИКАМ
 # ==========================================================
+OS_SOURCE_LABELS = ["ОС", "ОС Тюмень"]
+
+
 def calc_stats_by_source(complaints: pd.DataFrame, reviews: pd.DataFrame) -> Dict[str, Dict[str, pd.DataFrame]]:
     """
     Считает сводные по каждому источнику отдельно.
-    Возвращает dict: {source: {"complaint_summary": df, "positive_summary": df}}
+    ОС (СПб) и ОС Тюмень объединены в один источник «ОС и компенсации» — это один
+    канал, а не два. Позитив для него не считаем — это не отзывы, там нет рейтинга.
+    Возвращает dict: {source: {"complaint_summary": df, "positive_summary": df|None}}
     """
-    sources = ["ОС", "ОС Тюмень", "Сайт", "Агрегаторы", "Геосервисы"]
     result = {}
 
-    for source in sources:
-        # Жалобы по источнику
+    os_mask = complaints[COL_SOURCE].isin(OS_SOURCE_LABELS) if complaints is not None else None
+    os_complaints = complaints[os_mask] if os_mask is not None else pd.DataFrame()
+    result["ОС и компенсации"] = {
+        "complaint_summary": calc_complaint_summary(os_complaints),
+        "positive_summary": None,
+    }
+
+    for source in ("Сайт", "Агрегаторы", "Геосервисы"):
         source_complaints = complaints[complaints[COL_SOURCE] == source] if complaints is not None else pd.DataFrame()
-        complaint_summary = calc_complaint_summary(source_complaints)
-
-        # Позитив по источнику
         source_reviews = reviews[reviews[COL_SOURCE] == source] if reviews is not None else pd.DataFrame()
-        positive_summary = calc_positive_summary(source_reviews)
-
         result[source] = {
-            "complaint_summary": complaint_summary,
-            "positive_summary": positive_summary,
+            "complaint_summary": calc_complaint_summary(source_complaints),
+            "positive_summary": calc_positive_summary(source_reviews),
         }
 
     return result
@@ -470,10 +483,10 @@ def build_complaints_stats(prepared) -> Dict[str, pd.DataFrame]:
     avg_rating_summary = calc_avg_rating_summary(reviews)
     complaint_share_summary = calc_complaint_share_summary(complaint_summary)
     top_restaurants = calc_top_restaurants(complaint_summary)
-    duplicates_summary = calc_duplicates_summary(duplicates)
     report_overview = calc_report_overview(complaints, reviews, complaint_summary, positive_summary)
     resolution_summary = calc_resolution_summary(complaints)
     unresolved_complaints = calc_unresolved_complaints(complaints)
+    no_compensation_complaints = calc_no_compensation_complaints(complaints)
 
     return {
         "complaints": complaints,
@@ -486,8 +499,8 @@ def build_complaints_stats(prepared) -> Dict[str, pd.DataFrame]:
         "avg_rating_summary": avg_rating_summary,
         "complaint_share_summary": complaint_share_summary,
         "top_restaurants": top_restaurants,
-        "duplicates_summary": duplicates_summary,
         "report_overview": report_overview,
         "resolution_summary": resolution_summary,
         "unresolved_complaints": unresolved_complaints,
+        "no_compensation_complaints": no_compensation_complaints,
     }

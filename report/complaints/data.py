@@ -78,7 +78,6 @@ class ComplaintsPreparedData:
     complaints: pd.DataFrame
     duplicates: pd.DataFrame
     deleted_geo: pd.DataFrame
-    unentered_crm_tickets: pd.DataFrame = field(default_factory=pd.DataFrame)
     warnings: List[str] = field(default_factory=list)
 
     def add_warning(self, message: str) -> None:
@@ -132,13 +131,6 @@ def normalize_phone(value: Any) -> str:
     if len(digits) == 11 and digits[0] in "78":
         digits = digits[1:]
     return digits if len(digits) == 10 else ""
-
-
-def _phone_last10(value: Any) -> str:
-    """Последние 10 цифр номера — для сверки телефонов между разными выгрузками
-    (форматы могут отличаться: с +7, с 8, с пробелами и т.п.)."""
-    digits = re.sub(r"\D", "", str(value or ""))
-    return digits[-10:] if len(digits) >= 10 else ""
 
 
 def _parse_review_date(value: Any) -> Optional[date]:
@@ -236,6 +228,11 @@ def _has_value(v: Any) -> bool:
     return str(v).strip() != ""
 
 
+def _clean_str(value: Any) -> Optional[str]:
+    """Строка без NaN: `value or ""` не годится — NaN истинно, `str(NaN)` даёт текст "nan"."""
+    return str(value).strip() if _has_value(value) else None
+
+
 def _warn_unmapped(raw: pd.Series, mapped: pd.Series, warnings: Optional[List[str]], label: str) -> None:
     """Предупреждает, если строки с заполненным рестораном не удалось замаппить (и они выпадут из отчёта)."""
     if warnings is None:
@@ -265,17 +262,38 @@ def _parse_bool(value: Any) -> Optional[bool]:
 # ----------------------------------------------------------
 # ЗАГРУЗКА ИСТОЧНИКОВ ОТЗЫВОВ
 # ----------------------------------------------------------
+def _warn_missing_columns(
+    df: pd.DataFrame,
+    expected: Dict[str, Optional[str]],
+    label: str,
+    warnings: Optional[List[str]],
+) -> None:
+    """Предупреждает, если ожидаемых столбцов нет в файле СОВСЕМ (не просто пустые/
+    нераспознанные значения) — иначе источник молча даёт 0 без единой подсказки."""
+    if warnings is None or df is None:
+        return
+    missing = [name for name, col in expected.items() if col and col not in df.columns]
+    if not missing:
+        return
+    cols_preview = ", ".join(f'"{c}"' for c in list(df.columns)[:12])
+    more = "…" if len(df.columns) > 12 else ""
+    warnings.append(
+        f"«{label}»: не найдены ожидаемые столбцы: {', '.join(missing)}. "
+        f"Столбцы в файле: {cols_preview}{more}."
+    )
+
+
 def _load_reviews(df: Optional[pd.DataFrame], source: str,
                   start_date: Optional[date], end_date: Optional[date],
                   rest_col: str, rest_mapper, text_col: str,
                   rating_col: str, phone_col: Optional[str],
+                  date_col: str = "Дата",
                   warnings: Optional[List[str]] = None, label: Optional[str] = None) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame(columns=["Дата", "Источник", "Ресторан", "Номер ресторана", "Рейтинг", "Текст", "Телефон"])
 
     out = pd.DataFrame()
-    out["Дата"] = df.get("Дата" if "Дата" in df.columns else df.columns[0]).map(_parse_review_date) \
-        if source != "site" else df.get("Date", pd.Series([None] * len(df))).map(_parse_review_date)
+    out["Дата"] = df.get(date_col, pd.Series([None] * len(df))).map(_parse_review_date)
     out["Источник"] = source
     raw_rest = df.get(rest_col, pd.Series([None] * len(df)))
     out["Ресторан"] = raw_rest.map(rest_mapper)
@@ -285,6 +303,11 @@ def _load_reviews(df: Optional[pd.DataFrame], source: str,
     out["Телефон"] = df.get(phone_col, pd.Series([None] * len(df))).map(normalize_phone) if phone_col else ""
 
     _warn_unmapped(raw_rest, out["Ресторан"], warnings, label or source)
+    _warn_missing_columns(
+        df,
+        {"ресторан/адрес": rest_col, "текст отзыва": text_col, "оценка": rating_col, "дата": date_col},
+        label or source, warnings,
+    )
 
     out = out[out["Ресторан"].notna()]
     out = out[out["Дата"].map(lambda d: _in_range(d, start_date, end_date))]
@@ -305,6 +328,11 @@ def _load_site(df, start_date, end_date, warnings: Optional[List[str]] = None):
     out["Телефон"] = df.get("Телефон", pd.Series([None] * len(df))).map(normalize_phone)
 
     _warn_unmapped(raw_rest, out["Ресторан"], warnings, "Сайт/приложение")
+    _warn_missing_columns(
+        df,
+        {"ресторан": "Ресторан", "комментарий": "Комментарий", "рейтинг": "Рейтинг", "дата": "Date"},
+        "Сайт/приложение", warnings,
+    )
 
     out = out[out["Ресторан"].notna()]
     out = out[out["Дата"].map(lambda d: _in_range(d, start_date, end_date))]
@@ -339,6 +367,7 @@ def _load_geo(df, start_date, end_date, warnings: Optional[List[str]] = None):
     reviews = _load_reviews(active, "Геосервисы", start_date, end_date,
                             "Адрес филиала", _map_address, "Текст отзыва", "Оценка",
                             "Книга отзывов - Номер телефона автора",
+                            date_col="Дата написания отзыва",
                             warnings=warnings, label="Геосервисы")
     return reviews, deleted_out
 
@@ -380,11 +409,11 @@ def _load_os(df, start_date, end_date, warnings: Optional[List[str]] = None, lab
             "Ресторан": name,
             "Номер ресторана": num_int,
             "Вид жалобы": category,
-            "Текст": str(r.get("Комментарий") or ""),
+            "Текст": _clean_str(r.get("Комментарий")) or "",
             "Источник": "ОС",
-            "Решение": str(r.get("Решение") or "").strip() or None,
+            "Решение": _clean_str(r.get("Решение")),
             "Статус возмещения": _parse_bool(r.get("Статус возмещения")),
-            "Сотрудник": str(r.get("ФИО сотрудника") or "").strip() or None,
+            "Сотрудник": _clean_str(r.get("ФИО сотрудника")),
         })
 
     if unmapped and warnings is not None:
@@ -456,11 +485,11 @@ def _load_os_tmn(df, start_date, end_date, warnings: Optional[List[str]] = None,
             "Ресторан": name,
             "Номер ресторана": NAME_TO_NUMBER.get(name),
             "Вид жалобы": category,
-            "Текст": str(r.get("Комментарий") or ""),
+            "Текст": _clean_str(r.get("Комментарий")) or "",
             "Источник": label,
-            "Решение": str(r.get("Решение") or "").strip() or None,
+            "Решение": _clean_str(r.get("Решение")),
             "Статус возмещения": _parse_bool(r.get("Статус возмещения")),
-            "Сотрудник": str(r.get("ФИО сотрудника") or "").strip() or None,
+            "Сотрудник": _clean_str(r.get("ФИО сотрудника")),
         })
 
     if unmapped and warnings is not None:
@@ -473,50 +502,50 @@ def _load_os_tmn(df, start_date, end_date, warnings: Optional[List[str]] = None,
     return pd.DataFrame(rows, columns=cols)
 
 
-CRM_COLS = ["Дата", "Номер обращения", "Ресторан", "Причина обращения", "Статус", "Исполнитель", "Телефон"]
+# ----------------------------------------------------------
+# АВТООПРЕДЕЛЕНИЕ ФОРМАТА ФАЙЛА ОС (СПб vs Тюмень) — для общего загрузчика
+# ----------------------------------------------------------
+def classify_os_upload(file: Any) -> str:
+    """Определяет формат загруженного файла «ОС»: "main" (СПб, лист "Обращения"),
+    "tyumen" (есть столбец "Номер заказа") или "unknown", если не удалось понять.
+    Файл должен поддерживать seek(0) (как st.file_uploader)."""
+    try:
+        file.seek(0)
+        pd.read_excel(file, sheet_name=OS_SHEET_NAME)
+        return "main"
+    except Exception:
+        pass
+
+    try:
+        file.seek(0)
+        df = pd.read_excel(file)
+        if "Номер заказа" in df.columns:
+            return "tyumen"
+    except Exception:
+        pass
+    finally:
+        try:
+            file.seek(0)
+        except Exception:
+            pass
+
+    return "unknown"
 
 
-def _load_crm_tickets(df: Optional[pd.DataFrame], start_date: Optional[date], end_date: Optional[date]) -> pd.DataFrame:
-    """Необязательная CRM-выгрузка всех обращений чата поддержки (та же, что читает
-    страница «ОС»/Отдел Обратной Связи). Нужна только для листа «Невнесённые» —
-    сверки, какие тикеты не попали в файл «ОС и компенсации»."""
-    if df is None or df.empty:
-        return pd.DataFrame(columns=CRM_COLS)
-
-    rows = []
-    for _, r in df.iterrows():
-        d = _parse_review_date(r.get("Дата отзыва"))
-        if not _in_range(d, start_date, end_date):
-            continue
-        rows.append({
-            "Дата": d,
-            "Номер обращения": r.get("Номер обращения"),
-            "Ресторан": r.get("Ресторан"),
-            "Причина обращения": r.get("Причина обращения"),
-            "Статус": r.get("Статус"),
-            "Исполнитель": r.get("Исполнитель"),
-            "Телефон": _phone_last10(r.get("Телефон")),
-        })
-
-    if not rows:
-        return pd.DataFrame(columns=CRM_COLS)
-    return pd.DataFrame(rows, columns=CRM_COLS)
-
-
-def _find_unentered_crm_tickets(crm_tickets: pd.DataFrame, os_complaints: pd.DataFrame) -> pd.DataFrame:
-    """Тикеты из CRM-выгрузки, чей телефон (последние 10 цифр) не встречается
-    среди строк файла «ОС и компенсации» — то есть похоже, что их не внесли."""
-    if crm_tickets is None or crm_tickets.empty:
-        return pd.DataFrame(columns=CRM_COLS)
-
-    os_phones = set()
-    if os_complaints is not None and not os_complaints.empty and "Телефон" in os_complaints.columns:
-        os_phones = set(os_complaints["Телефон"].map(_phone_last10))
-        os_phones.discard("")
-
-    has_phone = crm_tickets["Телефон"] != ""
-    not_found = ~crm_tickets["Телефон"].isin(os_phones)
-    return crm_tickets[has_phone & not_found].reset_index(drop=True)
+def split_os_files(files):
+    """Разносит список загруженных файлов «ОС» по форматам: СПб (лист "Обращения")
+    и Тюмень (столбец "Номер заказа") — используется UI-страницами Complaints и ОС,
+    чтобы не дублировать логику маршрутизации файлов по загрузчикам."""
+    file_main, file_tmn = None, None
+    for f in files or []:
+        kind = classify_os_upload(f)
+        if kind == "tyumen" and file_tmn is None:
+            file_tmn = f
+        elif file_main is None:
+            file_main = f
+        elif file_tmn is None:
+            file_tmn = f
+    return file_main, file_tmn
 
 
 # ----------------------------------------------------------
@@ -561,7 +590,6 @@ def prepare_complaints_data(
     geo_file: Any = None,
     os_file: Any = None,
     os_tmn_file: Any = None,
-    crm_file: Any = None,
     date_start: Optional[date] = None,
     date_end: Optional[date] = None,
     # алиасы для совместимости со старыми вызовами
@@ -580,7 +608,6 @@ def prepare_complaints_data(
     geo_df = _to_dataframe(geo_file)
     os_df = _read_os(os_file)
     os_tmn_df = _to_dataframe(os_tmn_file)
-    crm_df = _to_dataframe(crm_file)
 
     reviews_site = _load_site(site_df, start_date, end_date, warnings)
     reviews_agg = _load_agg(agg_df, start_date, end_date, warnings)
@@ -623,18 +650,10 @@ def prepare_complaints_data(
     if not duplicates.empty:
         warnings.append(f"Дублей по номеру телефона: {len(duplicates)}.")
 
-    # Сверка с CRM-выгрузкой: какие тикеты чата поддержки не попали в файл ОС
-    # (сравнение только по телефону, без учёта источника/тега — см. обсуждение).
-    crm_tickets = _load_crm_tickets(crm_df, start_date, end_date)
-    unentered_crm_tickets = _find_unentered_crm_tickets(crm_tickets, os_complaints)
-    if not unentered_crm_tickets.empty:
-        warnings.append(f"Не внесено в ОС тикетов из CRM-выгрузки: {len(unentered_crm_tickets)}.")
-
     return ComplaintsPreparedData(
         reviews=reviews,
         complaints=complaints,
         duplicates=duplicates,
         deleted_geo=deleted_geo,
-        unentered_crm_tickets=unentered_crm_tickets,
         warnings=warnings,
     )

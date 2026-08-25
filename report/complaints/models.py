@@ -55,13 +55,13 @@ def sanitize_filename(value: str) -> str:
 @dataclass
 class ComplaintsSourceFiles:
     """Четыре обязательных файла (сайт, агрегаторы, геосервисы, ОС)
-    + необязательные: ОС Тюмень, CRM-выгрузка (для листа «Невнесённые»)."""
+    + необязательный ОС Тюмень (в UI загружаются одним загрузчиком —
+    см. ui.pages.complaints.classify_os_upload)."""
     site: Any = None
     agg: Any = None
     geo: Any = None
     os: Any = None
     os_tmn: Any = None  # опционально — не влияет на is_complete()
-    crm: Any = None  # опционально — не влияет на is_complete()
 
     def is_complete(self) -> bool:
         return bool(self.site and self.agg and self.geo and self.os)
@@ -146,7 +146,7 @@ class ComplaintsReportData:
     positive_summary: pd.DataFrame
     deleted_geo: pd.DataFrame
     unresolved_complaints: pd.DataFrame = field(default_factory=pd.DataFrame)
-    unentered_crm_tickets: pd.DataFrame = field(default_factory=pd.DataFrame)
+    no_compensation_complaints: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     # ---- Алиасы для интерфейса (plural-имена) ----
     @property

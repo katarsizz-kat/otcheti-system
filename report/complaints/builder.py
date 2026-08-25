@@ -64,7 +64,6 @@ def build_complaints_report(
             geo_file=request.files.geo,
             os_file=request.files.os,
             os_tmn_file=request.files.os_tmn,
-            crm_file=request.files.crm,
             date_start=settings.date_start,
             date_end=settings.date_end,
         )
@@ -77,9 +76,9 @@ def build_complaints_report(
         complaint_summary = _get(stats, ["complaint_summary", "complaints_summary"], _empty_df())
         positive_summary = _get(stats, ["positive_summary", "positives_summary"], _empty_df())
         unresolved_complaints = _get(stats, ["unresolved_complaints"], _empty_df())
+        no_compensation_complaints = _get(stats, ["no_compensation_complaints"], _empty_df())
 
         deleted_geo = getattr(prepared, "deleted_geo", _empty_df())
-        unentered_crm_tickets = getattr(prepared, "unentered_crm_tickets", _empty_df())
 
         # 3) Excel (BytesIO) — передаём period_label через kwargs
         excel_bytes = build_complaints_excel(
@@ -96,7 +95,7 @@ def build_complaints_report(
             positive_summary=positive_summary,
             deleted_geo=deleted_geo,
             unresolved_complaints=unresolved_complaints,
-            unentered_crm_tickets=unentered_crm_tickets,
+            no_compensation_complaints=no_compensation_complaints,
         )
 
         return ComplaintsReportResult.ok(
@@ -124,7 +123,6 @@ def build_complaints_report_from_files(
     geo_file,
     os_file,
     os_tmn_file=None,
-    crm_file=None,
     date_start=None,
     date_end=None,
 ) -> ComplaintsReportResult:
@@ -136,7 +134,6 @@ def build_complaints_report_from_files(
         geo=geo_file,
         os=os_file,
         os_tmn=os_tmn_file,
-        crm=crm_file,
     )
     settings = ComplaintsSettings(
         date_start=date_start,

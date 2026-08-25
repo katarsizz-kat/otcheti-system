@@ -15,6 +15,7 @@ from styles import apply_theme
 from config.greetings import get_current_greeting
 from config.holidays import get_today_holiday
 from report.complaints.builder import build_complaints_report
+from report.complaints.data import split_os_files
 from report.complaints.models import (
     ComplaintsReportRequest,
     ComplaintsSourceFiles,
@@ -112,23 +113,13 @@ def render_uploaders():
             "Геосервисы", type=["xlsx", "xls"], key="cmp_geo", label_visibility="collapsed"
         )
     with col4:
-        st.markdown("#### 📋 ОС и компенсации")
-        file_os = st.file_uploader(
-            "ОС", type=["xlsx", "xls"], key="cmp_os", label_visibility="collapsed"
+        st.markdown("#### 📋 ОС и компенсации *(СПб + Тюмень, Тюмень необязательна)*")
+        os_files = st.file_uploader(
+            "ОС", type=["xlsx", "xls"], key="cmp_os", label_visibility="collapsed",
+            accept_multiple_files=True,
         )
-
-    col5, col6 = st.columns(2)
-    with col5:
-        st.markdown("#### 📋 ОС Тюмень *(необязательно)*")
-        file_os_tmn = st.file_uploader(
-            "ОС Тюмень", type=["xlsx", "xls"], key="cmp_os_tmn", label_visibility="collapsed"
-        )
-    with col6:
-        st.markdown("#### 🎧 CRM-выгрузка (для листа «Невнесённые») *(необязательно)*")
-        file_crm = st.file_uploader(
-            "CRM", type=["xlsx", "xls"], key="cmp_crm", label_visibility="collapsed"
-        )
-    return file_site, file_agg, file_geo, file_os, file_os_tmn, file_crm
+    file_os, file_os_tmn = split_os_files(os_files)
+    return file_site, file_agg, file_geo, file_os, file_os_tmn
 
 # ==========================================================
 # НАСТРОЙКИ ПЕРИОДА
@@ -188,10 +179,10 @@ def render_result(result) -> None:
         st.markdown(f"**⏳ Необработанные обращения (ОС):** {len(unresolved)}")
         st.dataframe(unresolved, use_container_width=True)
 
-    unentered = getattr(data, "unentered_crm_tickets", None)
-    if unentered is not None and not unentered.empty:
-        st.markdown(f"**🚫 Невнесённые тикеты (есть в CRM, нет в ОС):** {len(unentered)}")
-        st.dataframe(unentered, use_container_width=True)
+    no_comp = getattr(data, "no_compensation_complaints", None)
+    if no_comp is not None and not no_comp.empty:
+        st.markdown(f"**🚫 Решение «без компенсации»:** {len(no_comp)}")
+        st.dataframe(no_comp, use_container_width=True)
 
 # ==========================================================
 # ГЛАВНАЯ ФУНКЦИЯ СТРАНИЦЫ
@@ -200,7 +191,7 @@ def render_page() -> None:
     st.set_page_config(page_title="📢 Анализ жалоб", page_icon="📢", layout="wide")
     render_header()
 
-    file_site, file_agg, file_geo, file_os, file_os_tmn, file_crm = render_uploaders()
+    file_site, file_agg, file_geo, file_os, file_os_tmn = render_uploaders()
     all_dates, date_start, date_end = render_period_settings()
 
     generate = st.button("🚀 Сформировать отчёт", use_container_width=True, type="primary")
@@ -208,7 +199,7 @@ def render_page() -> None:
         return
 
     if not (file_site and file_agg and file_geo and file_os):
-        st.error("⚠️ Пожалуйста, загрузите все четыре обязательных Excel-файла (ОС Тюмени — опционально).")
+        st.error("⚠️ Пожалуйста, загрузите файлы: сайт, агрегаторы, геосервисы и ОС (СПб).")
         st.stop()
 
     if not all_dates and date_start and date_end and date_start > date_end:
@@ -223,7 +214,6 @@ def render_page() -> None:
                 geo=file_geo,
                 os=file_os,
                 os_tmn=file_os_tmn,
-                crm=file_crm,
             )
             settings = ComplaintsSettings(
                 use_period=not all_dates,
