@@ -38,6 +38,7 @@ COL_SOURCE = "Источник"
 COL_RESTAURANT = "Ресторан"
 COL_TEXT = "Текст"
 COL_TYPE = "Вид жалобы"
+PHONE_COL = "Телефон"
 TOTAL_COL = "Всего:"
 
 # 5 основных категорий жалоб для первой страницы
@@ -397,7 +398,7 @@ def calc_resolution_summary(complaints: pd.DataFrame) -> pd.DataFrame:
 
 def calc_unresolved_complaints(complaints: pd.DataFrame) -> pd.DataFrame:
     """Обращения через ОС, которые ещё не обработаны (Статус возмещения = False) — список к дозакрытию."""
-    cols = ["Дата", COL_RESTAURANT, COL_TYPE, COL_TEXT, COL_SOURCE, EMPLOYEE_COL]
+    cols = ["Дата", PHONE_COL, COL_RESTAURANT, COL_TYPE, COL_TEXT, COL_SOURCE, EMPLOYEE_COL]
     if complaints is None or complaints.empty or STATUS_COL not in complaints.columns:
         return pd.DataFrame(columns=cols)
 
@@ -412,7 +413,7 @@ def calc_unresolved_complaints(complaints: pd.DataFrame) -> pd.DataFrame:
 def calc_no_compensation_complaints(complaints: pd.DataFrame) -> pd.DataFrame:
     """Обращения с решением «без компенсации» — та же форма, что «Необработанные обращения»,
     но для проверки: обосновано ли решение не компенсировать."""
-    cols = ["Дата", COL_RESTAURANT, COL_TYPE, COL_TEXT, COL_SOURCE, EMPLOYEE_COL]
+    cols = ["Дата", PHONE_COL, COL_RESTAURANT, COL_TYPE, COL_TEXT, COL_SOURCE, EMPLOYEE_COL]
     if complaints is None or complaints.empty or RESOLUTION_COL not in complaints.columns:
         return pd.DataFrame(columns=cols)
 

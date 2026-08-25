@@ -58,6 +58,7 @@ COMPLAINT_MAX_RATING = _const("COMPLAINT_MAX_RATING", 3)
 OS_COMPLAINT_NORMALIZE = _const("OS_COMPLAINT_NORMALIZE", {})
 RESTAURANT_NUMBER_MAP = _const("RESTAURANT_NUMBER_MAP", {})
 TMN_OS_RESTAURANT_NUMBER_MAP = _const("TMN_OS_RESTAURANT_NUMBER_MAP", {})
+CLOSED_RESTAURANT_NUMBERS = _const("CLOSED_RESTAURANT_NUMBERS", set())
 NAME_TO_NUMBER = {name: num for num, name in RESTAURANT_NUMBER_MAP.items()}
 
 # Единая схема столбцов жалобы (используется для ОС, ОС Тюмени и жалоб из отзывов).
@@ -424,7 +425,9 @@ def _load_os(df, start_date, end_date, warnings: Optional[List[str]] = None, lab
         num = pd.to_numeric(num_raw, errors="coerce")
         num_int = int(num) if not pd.isna(num) else None
         name = RESTAURANT_NUMBER_MAP.get(num_int) if num_int is not None else None
-        if name is None and _has_value(num_raw):
+        # Закрытые рестораны намеренно отсутствуют в справочнике — это не
+        # ошибка маппинга, предупреждать о них не нужно.
+        if name is None and _has_value(num_raw) and num_int not in CLOSED_RESTAURANT_NUMBERS:
             unmapped += 1
 
         cat_raw = str(complaint_raw).strip()
