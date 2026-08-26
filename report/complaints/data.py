@@ -430,8 +430,8 @@ def _load_os(df, start_date, end_date, warnings: Optional[List[str]] = None, lab
         if name is None and _has_value(num_raw) and num_int not in CLOSED_RESTAURANT_NUMBERS:
             unmapped += 1
 
-        cat_raw = str(complaint_raw).strip()
-        category = OS_COMPLAINT_NORMALIZE.get(cat_raw.lower(), cat_raw)
+        cat_raw = _clean_str(complaint_raw) or ""
+        category = OS_COMPLAINT_NORMALIZE.get(cat_raw.lower(), cat_raw) if cat_raw else ""
 
         rows.append({
             "Дата": d,
@@ -508,8 +508,8 @@ def _load_os_tmn(df, start_date, end_date, warnings: Optional[List[str]] = None,
         if name is None and _has_value(rest_raw):
             unmapped += 1
 
-        cat_raw = str(complaint_raw).strip()
-        category = OS_COMPLAINT_NORMALIZE.get(cat_raw.lower(), cat_raw)
+        cat_raw = _clean_str(complaint_raw) or ""
+        category = OS_COMPLAINT_NORMALIZE.get(cat_raw.lower(), cat_raw) if cat_raw else ""
 
         order_raw = r.get(order_col) if order_col else None
 
