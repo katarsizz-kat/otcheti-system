@@ -63,6 +63,16 @@ AGG_ORDER = [
     'Копия тикета', 'СПАМ',
 ]
 
+# Укрупнённые категории, которые в принципе могут оказаться в файле «ОС и
+# компенсации» — это реальные жалобы на ресторан/доставку/сервис. Вопросы про
+# бонусы, аккаунт, сайт/приложение, служебные пометки и общее "другое" туда
+# никогда не заносятся, так что сравнивать их с этим файлом бессмысленно —
+# только шум в листе «Невнесённые».
+UNENTERED_RELEVANT_AGG_CATEGORIES = {
+    'Опоздания', 'Перепутанная/недовезённая позиция', 'Жалоба на блюдо',
+    'Жалоба на сервис', 'Возврат ДС', 'Критические инциденты',
+}
+
 INTERVAL_ORDER = [
     '00:00-01:00', '01:00-02:00', '02:00-08:00',
     '08:00-09:00', '09:00-10:00', '10:00-11:00', '11:00-12:00',
@@ -311,14 +321,27 @@ def filter_spb_tyumen(df: pd.DataFrame) -> pd.DataFrame:
 
 def find_unentered_tickets(df: pd.DataFrame, os_phones: set) -> pd.DataFrame:
     """Тикеты СПб/Тюмени из CRM-выгрузки, чей телефон не встречается в файле
-    «ОС и компенсации» — похоже, что их забыли внести."""
+    «ОС и компенсации» — похоже, что их забыли внести.
+
+    Только тикеты с категорией, которая в принципе может там оказаться
+    (см. UNENTERED_RELEVANT_AGG_CATEGORIES) — вопросы про бонусы, аккаунт,
+    сайт/приложение и общее "другое" туда не заносятся в принципе, поэтому
+    отсутствие их телефона в файле ОС ничего не значит и только шумит в листе.
+    """
     scoped = filter_spb_tyumen(df)
     cols = [c for c in UNENTERED_COLS if scoped is None or c in getattr(scoped, "columns", [])]
     if scoped is None or scoped.empty or 'Телефон' not in scoped.columns:
         return pd.DataFrame(columns=cols or UNENTERED_COLS)
 
     phone_key = scoped['Телефон'].map(_phone_last10)
-    mask = (phone_key != "") & (~phone_key.isin(os_phones))
+    category = scoped.apply(
+        lambda r: categorize_complaint_detailed(
+            r.get('Первичное сообщение', ''), r.get('Причина обращения', ''),
+        ), axis=1,
+    )
+    is_relevant = category.map(get_aggregated_category).isin(UNENTERED_RELEVANT_AGG_CATEGORIES)
+
+    mask = (phone_key != "") & (~phone_key.isin(os_phones)) & is_relevant
     result = scoped.loc[mask, cols].copy()
     result['Телефон'] = phone_key[mask]
     return result.sort_values('Дата отзыва') if 'Дата отзыва' in result.columns else result
