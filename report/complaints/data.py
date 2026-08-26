@@ -55,11 +55,16 @@ def _const(name: str, default: Any) -> Any:
 
 OS_SHEET_NAME = _const("OS_SHEET_NAME", "Обращения")
 COMPLAINT_MAX_RATING = _const("COMPLAINT_MAX_RATING", 3)
+DEFAULT_COMPLAINT_CATEGORY = _const("DEFAULT_COMPLAINT_CATEGORY", "Другое")
 OS_COMPLAINT_NORMALIZE = _const("OS_COMPLAINT_NORMALIZE", {})
 RESTAURANT_NUMBER_MAP = _const("RESTAURANT_NUMBER_MAP", {})
 TMN_OS_RESTAURANT_NUMBER_MAP = _const("TMN_OS_RESTAURANT_NUMBER_MAP", {})
 CLOSED_RESTAURANT_NUMBERS = _const("CLOSED_RESTAURANT_NUMBERS", set())
 NAME_TO_NUMBER = {name: num for num, name in RESTAURANT_NUMBER_MAP.items()}
+# Категории, которые реально считаются в сводной (5 по ключевым словам).
+# Всё, что не входит сюда после нормализации, уходит в DEFAULT_COMPLAINT_CATEGORY,
+# чтобы ни одна жалоба не пропадала из отчёта молча.
+KNOWN_COMPLAINT_CATEGORIES = set(COMPLAINT_KEYWORDS.keys())
 
 # Единая схема столбцов жалобы (используется для ОС, ОС Тюмени и жалоб из отзывов).
 # Решение/Статус возмещения/Сотрудник — только для строк из ОС-файлов;
@@ -432,6 +437,11 @@ def _load_os(df, start_date, end_date, warnings: Optional[List[str]] = None, lab
 
         cat_raw = _clean_str(complaint_raw) or ""
         category = OS_COMPLAINT_NORMALIZE.get(cat_raw.lower(), cat_raw) if cat_raw else ""
+        # Незнакомый текст жалобы (опечатка, новая формулировка) или вовсе
+        # пустой — не выбрасываем строку, а относим к "Другое", чтобы она
+        # осталась видна в отчёте.
+        if category not in KNOWN_COMPLAINT_CATEGORIES:
+            category = DEFAULT_COMPLAINT_CATEGORY
 
         rows.append({
             "Дата": d,
@@ -510,6 +520,11 @@ def _load_os_tmn(df, start_date, end_date, warnings: Optional[List[str]] = None,
 
         cat_raw = _clean_str(complaint_raw) or ""
         category = OS_COMPLAINT_NORMALIZE.get(cat_raw.lower(), cat_raw) if cat_raw else ""
+        # Незнакомый текст жалобы (опечатка, новая формулировка) или вовсе
+        # пустой — не выбрасываем строку, а относим к "Другое", чтобы она
+        # осталась видна в отчёте.
+        if category not in KNOWN_COMPLAINT_CATEGORIES:
+            category = DEFAULT_COMPLAINT_CATEGORY
 
         order_raw = r.get(order_col) if order_col else None
 
@@ -649,15 +664,16 @@ def prepare_complaints_data(
 
     reviews = pd.concat([reviews_site, reviews_agg, reviews_geo], ignore_index=True)
 
-    # Жалобы из отзывов: рейтинг <= max И совпадение с категорией
+    # Жалобы из отзывов: рейтинг <= max — это уже жалоба сама по себе.
+    # Категория по ключевым словам уточняет её вид; если ни одна не
+    # подошла (или текста нет вовсе) — жалоба всё равно идёт в отчёт,
+    # просто с категорией "Другое", а не пропадает молча.
     review_complaint_rows = []
     for _, r in reviews.iterrows():
         rating = r.get("Рейтинг")
         if rating is None or pd.isna(rating) or rating > COMPLAINT_MAX_RATING:
             continue
-        category = _match_category(r.get("Текст"))
-        if category is None:
-            continue
+        category = _match_category(r.get("Текст")) or DEFAULT_COMPLAINT_CATEGORY
         review_complaint_rows.append({
             "Дата": r.get("Дата"),
             "Телефон": r.get("Телефон") or "",
