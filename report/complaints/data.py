@@ -664,16 +664,23 @@ def prepare_complaints_data(
 
     reviews = pd.concat([reviews_site, reviews_agg, reviews_geo], ignore_index=True)
 
-    # Жалобы из отзывов: рейтинг <= max — это уже жалоба сама по себе.
-    # Категория по ключевым словам уточняет её вид; если ни одна не
-    # подошла (или текста нет вовсе) — жалоба всё равно идёт в отчёт,
-    # просто с категорией "Другое", а не пропадает молча.
+    # Жалобы из отзывов: два независимых признака жалобы.
+    #  1) текст совпал с одной из категорий по ключевым словам — жалоба
+    #     при ЛЮБОМ рейтинге (гость может пожаловаться на что-то и
+    #     оставить 5 звёзд);
+    #  2) рейтинг <= max — низкая оценка сама по себе уже сигнал жалобы,
+    #     даже если текст ни с чем не совпал (или его вовсе нет) —
+    #     тогда категория "Другое", чтобы не пропадать молча.
+    # Рейтинг > max без совпадения по ключевым словам — не жалоба.
     review_complaint_rows = []
     for _, r in reviews.iterrows():
         rating = r.get("Рейтинг")
-        if rating is None or pd.isna(rating) or rating > COMPLAINT_MAX_RATING:
-            continue
-        category = _match_category(r.get("Текст")) or DEFAULT_COMPLAINT_CATEGORY
+        is_low_rating = rating is not None and not pd.isna(rating) and rating <= COMPLAINT_MAX_RATING
+        category = _match_category(r.get("Текст"))
+        if category is None:
+            if not is_low_rating:
+                continue
+            category = DEFAULT_COMPLAINT_CATEGORY
         review_complaint_rows.append({
             "Дата": r.get("Дата"),
             "Телефон": r.get("Телефон") or "",
