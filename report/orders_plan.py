@@ -171,10 +171,14 @@ def sort_restaurants(names: Iterable[str]) -> List[str]:
 # ЦЕЛЕВОЙ ПЕРИОД
 # ==========================================================
 
-def _shift_months(d: date, months: int) -> date:
+def shift_months(d: date, months: int) -> date:
+    """Возвращает 1-е число месяца, отстоящего от d на `months` (может быть отрицательным)."""
     total = (d.year * 12 + (d.month - 1)) + months
     year, month = divmod(total, 12)
     return date(year, month + 1, 1)
+
+
+_shift_months = shift_months
 
 
 def _to_month_date(value: Any) -> date:
@@ -432,6 +436,326 @@ def plan_to_dataframe(plan: dict) -> pd.DataFrame:
         )
         df = df.sort_values(["restaurant", "target_period"]).reset_index(drop=True)
     return df
+
+
+PLAN_COLUMN_LABELS = {
+    "restaurant": "Ресторан",
+    "target_period": "Месяц",
+    "method": "Метод",
+    "base_period": "База (месяц факта)",
+    "base_orders": "База (факт), шт.",
+    "seasonal_coef": "Коэфф. сезонности",
+    "seasonal_years_used": "Лет учтено",
+    "forecast_seasonal": "Прогноз по сезонности",
+    "forecast_trend": "Тренд (проверка)",
+    "deviation_pct": "Отклонение от тренда, %",
+    "plan": "ПЛАН, шт.",
+    "needs_review": "Проверить?",
+    "warning": "Комментарий",
+}
+
+
+def export_plan_excel(plan: dict) -> bytes:
+    """Сохраняет результат build_plan() в один xlsx-лист для скачивания на сайте."""
+    from io import BytesIO
+
+    df = plan_to_dataframe(plan)
+    df = df.drop(columns=["restaurant"]).assign(restaurant=df["restaurant"].astype(str))
+    df = df[list(PLAN_COLUMN_LABELS.keys())].rename(columns=PLAN_COLUMN_LABELS)
+
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="План", index=False)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+MONTHS_RU_SHORT = [m[:3] for m in MONTHS_RU]
+
+
+def _short_month_label(d: date) -> str:
+    return f"{MONTHS_RU_SHORT[d.month - 1]}.{d.year % 100:02d}"
+
+
+def _sheet_title(d: date) -> str:
+    title = f"План_{MONTHS_RU[d.month - 1].capitalize()}_{d.year}"
+    return title[:31]
+
+
+def export_plan_workbook(
+    history: pd.DataFrame,
+    target_period: TargetPeriod,
+    restaurants: Optional[Iterable[str]] = None,
+    deviation_threshold: float = DEVIATION_WARNING_THRESHOLD,
+) -> bytes:
+    """
+    Формирует xlsx-книгу с расчётом ПЛАНА, где коэффициент сезонности,
+    прогноз, тренд, отклонение и сам план — реальные формулы Excel,
+    ссылающиеся на исходные цифры (как в примере ручного расчёта),
+    а не готовые числа. Правишь факт в листе "Данные" — план пересчитывается.
+
+    Лист "Данные" — история заказов по ресторанам (месяц/ресторан/значение).
+    По одному листу "План_<Месяц>_<Год>" на каждый целевой месяц:
+      - Факт(мес-1, год) / Факт(целевой мес, год) — за каждый доступный год,
+        и частный коэффициент по нему;
+      - Коэфф. сезонности = среднее по всем частным коэффициентам;
+      - База = последний факт перед целевым месяцем (LOOKUP по строке);
+      - Прогноз по сезонности = База × Коэфф.;
+      - Тренд = INTERCEPT+SLOPE×t по всей истории ресторана (проверка);
+      - Отклонение = Прогноз/Тренд − 1;
+      - ПЛАН = Прогноз, либо Тренд, если сезонный коэффициент посчитать
+        не из чего (формула IF/IFERROR — тот же fallback, что и в build_plan()).
+    """
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font
+    from openpyxl.utils import get_column_letter
+
+    target_months = resolve_target_months(target_period)
+    all_names = restaurants if restaurants is not None else history["restaurant"].unique()
+    names = sort_restaurants(all_names)
+
+    hist = history[history["restaurant"].isin(names)]
+    if hist.empty:
+        raise ValueError("Нет данных по выбранным ресторанам.")
+
+    first_period = hist["period"].min()
+    last_period = hist["period"].max()
+    n_months = (last_period.year - first_period.year) * 12 + (last_period.month - first_period.month) + 1
+    periods = [shift_months(first_period, i) for i in range(n_months)]
+    period_col = {p: i + 2 for i, p in enumerate(periods)}  # col B.. в листе "Данные"
+
+    pivot = hist.pivot_table(index="restaurant", columns="period", values="orders", aggfunc="last")
+
+    wb = Workbook()
+    bold = Font(bold=True)
+    header_fill_align = Alignment(vertical="center", wrap_text=True)
+
+    # ================= ЛИСТ "Данные" =================
+    ws = wb.active
+    ws.title = "Данные"
+
+    total_col = len(periods) + 2
+    ws.cell(row=1, column=1, value=(
+        f"Динамика заказов по ресторанам, {_short_month_label(first_period)} — "
+        f"{_short_month_label(last_period)} ({len(periods)} мес.)"
+    )).font = bold
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_col)
+
+    ws.cell(row=2, column=1, value="№ мес. (t) →").font = bold
+    for p, col in period_col.items():
+        t = periods.index(p) + 1
+        ws.cell(row=2, column=col, value=t)
+
+    ws.cell(row=3, column=1, value="Ресторан").font = bold
+    for p, col in period_col.items():
+        c = ws.cell(row=3, column=col, value=_short_month_label(p))
+        c.font = bold
+        c.alignment = header_fill_align
+    ws.cell(row=3, column=total_col, value="Итого").font = bold
+
+    restaurant_row = {}
+    row = 4
+    for name in names:
+        restaurant_row[name] = row
+        ws.cell(row=row, column=1, value=name)
+        for p, col in period_col.items():
+            val = pivot.loc[name, p] if name in pivot.index and p in pivot.columns else None
+            if pd.notna(val):
+                ws.cell(row=row, column=col, value=float(val))
+        first_l, last_l = get_column_letter(2), get_column_letter(total_col - 1)
+        ws.cell(row=row, column=total_col, value=f"=SUM({first_l}{row}:{last_l}{row})")
+        row += 1
+
+    total_row = row
+    ws.cell(row=total_row, column=1, value="ИТОГО").font = bold
+    for col in range(2, total_col + 1):
+        letter = get_column_letter(col)
+        ws.cell(
+            row=total_row, column=col,
+            value=f"=SUM({letter}{restaurant_row[names[0]]}:{letter}{total_row - 1})",
+        ).font = bold
+
+    ws.freeze_panes = "B4"
+    ws.column_dimensions["A"].width = 32
+    for col in range(2, total_col + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 10
+
+    # ================= ЛИСТЫ "План_<Месяц>_<Год>" =================
+    for target in target_months:
+        _write_plan_sheet(
+            wb, target, names, restaurant_row, periods, period_col,
+            first_period, deviation_threshold, bold,
+        )
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def _write_plan_sheet(wb, target, names, restaurant_row, periods, period_col,
+                       first_period, deviation_threshold, bold):
+    from openpyxl.utils import get_column_letter
+
+    ws = wb.create_sheet(_sheet_title(target))
+
+    target_t = 1 + (target.year - first_period.year) * 12 + (target.month - first_period.month)
+    last_grid_period = periods[-1] if periods else None
+    pre_target_periods = [p for p in periods if p < target]
+    pre_end_col = period_col[pre_target_periods[-1]] if pre_target_periods else None
+
+    # Сколько годичных пар (Факт мес-1 год-k / Факт целевой мес год-k) реально есть в сетке.
+    k_pairs = []
+    k = 1
+    while True:
+        same = shift_months(target, -12 * k)
+        prev = shift_months(same, -1)
+        if same not in period_col or prev not in period_col:
+            break
+        k_pairs.append((k, prev, same))
+        k += 1
+
+    ws.cell(row=1, column=1, value=f"План по количеству заказов на {_short_month_label(target)} (t={target_t})").font = bold
+    ws.cell(row=2, column=1, value=(
+        "Коэфф. сезонности = среднее по годам (Факт целевого месяца / Факт предыдущего месяца, год назад); "
+        "Прогноз = последний факт перед месяцем × коэфф.; Тренд — линейная регрессия по всей истории (проверка); "
+        "ПЛАН = прогноз по сезонности, либо тренд, если сезонных данных нет."
+    ))
+
+    col = 1
+    header_row = 4
+    ws.cell(row=header_row, column=col, value="Ресторан").font = bold
+    col += 1
+
+    ratio_cols = []
+    for k, prev_p, same_p in k_pairs:
+        prev_col, same_col, ratio_col = col, col + 1, col + 2
+        ws.cell(row=header_row, column=prev_col, value=f"Факт {_short_month_label(prev_p)}").font = bold
+        ws.cell(row=header_row, column=same_col, value=f"Факт {_short_month_label(same_p)}").font = bold
+        ws.cell(row=header_row, column=ratio_col, value=f"Коэфф. {same_p.year}").font = bold
+        ratio_cols.append((prev_col, same_col, ratio_col, prev_p, same_p))
+        col += 3
+
+    coef_col = col
+    ws.cell(row=header_row, column=coef_col, value="Коэфф. сезонности").font = bold
+    col += 1
+    base_col = col
+    ws.cell(row=header_row, column=base_col, value="База (посл. факт)").font = bold
+    col += 1
+    forecast_col = col
+    ws.cell(row=header_row, column=forecast_col, value="Прогноз по сезонности").font = bold
+    col += 1
+    trend_col = col
+    ws.cell(row=header_row, column=trend_col, value="Тренд (проверка)").font = bold
+    col += 1
+    deviation_col = col
+    ws.cell(row=header_row, column=deviation_col, value="Отклонение от тренда").font = bold
+    col += 1
+    plan_col = col
+    ws.cell(row=header_row, column=plan_col, value="ПЛАН").font = bold
+    col += 1
+    review_col = col
+    ws.cell(row=header_row, column=review_col, value="Проверить?").font = bold
+    last_col = col
+
+    row = header_row + 1
+    for name in names:
+        src_row = restaurant_row[name]
+        ws.cell(row=row, column=1, value=name)
+
+        for prev_col, same_col, ratio_col, prev_p, same_p in ratio_cols:
+            prev_letter = get_column_letter(period_col[prev_p])
+            same_letter = get_column_letter(period_col[same_p])
+            ws.cell(row=row, column=prev_col, value=f"=Данные!{prev_letter}{src_row}")
+            ws.cell(row=row, column=same_col, value=f"=Данные!{same_letter}{src_row}")
+            ws.cell(
+                row=row, column=ratio_col,
+                value=f'=IFERROR({get_column_letter(same_col)}{row}/{get_column_letter(prev_col)}{row},"")',
+            )
+
+        coef_letter = get_column_letter(coef_col)
+        if ratio_cols:
+            ratio_letters = ",".join(f"{get_column_letter(rc[2])}{row}" for rc in ratio_cols)
+            ws.cell(row=row, column=coef_col, value=f'=IFERROR(AVERAGE({ratio_letters}),"")')
+        else:
+            ws.cell(row=row, column=coef_col, value='=""')
+
+        if pre_end_col is not None:
+            data_first_letter = get_column_letter(2)
+            data_last_letter = get_column_letter(pre_end_col)
+            row_range = f"Данные!${data_first_letter}{src_row}:${data_last_letter}{src_row}"
+            ws.cell(
+                row=row, column=base_col,
+                value=f'=IFERROR(LOOKUP(2,1/({row_range}<>""),{row_range}),"")',
+            )
+            t_first, t_last = get_column_letter(2), get_column_letter(pre_end_col)
+            t_range = f"Данные!${t_first}$2:${t_last}$2"
+            ws.cell(
+                row=row, column=trend_col,
+                value=(
+                    f'=IFERROR(INTERCEPT({row_range},{t_range})'
+                    f'+SLOPE({row_range},{t_range})*{target_t},"")'
+                ),
+            )
+        else:
+            ws.cell(row=row, column=base_col, value='=""')
+            ws.cell(row=row, column=trend_col, value='=""')
+
+        base_letter = get_column_letter(base_col)
+        trend_letter = get_column_letter(trend_col)
+        ws.cell(
+            row=row, column=forecast_col,
+            value=(
+                f'=IF(OR({coef_letter}{row}="",{base_letter}{row}=""),"",'
+                f'{base_letter}{row}*{coef_letter}{row})'
+            ),
+        )
+        forecast_letter = get_column_letter(forecast_col)
+        ws.cell(
+            row=row, column=deviation_col,
+            value=f'=IFERROR({forecast_letter}{row}/{trend_letter}{row}-1,"")',
+        )
+        deviation_letter = get_column_letter(deviation_col)
+        ws.cell(
+            row=row, column=plan_col,
+            value=f'=IF({forecast_letter}{row}="",{trend_letter}{row},{forecast_letter}{row})',
+        ).number_format = "0"
+        ws.cell(row=row, column=deviation_col).number_format = "0.0%"
+        ws.cell(row=row, column=coef_col).number_format = "0.000"
+        for prev_col, same_col, ratio_col, *_ in ratio_cols:
+            ws.cell(row=row, column=ratio_col).number_format = "0.000"
+
+        plan_letter = get_column_letter(plan_col)
+        ws.cell(
+            row=row, column=review_col,
+            value=(
+                f'=IF({deviation_letter}{row}="","",'
+                f'ABS({deviation_letter}{row})>{deviation_threshold})'
+            ),
+        )
+        row += 1
+
+    total_row = row
+    ws.cell(row=total_row, column=1, value="ИТОГО").font = bold
+    for c in (base_col, forecast_col, trend_col, plan_col):
+        letter = get_column_letter(c)
+        ws.cell(
+            row=total_row, column=c,
+            value=f'=SUM({letter}{header_row + 1}:{letter}{total_row - 1})',
+        ).font = bold
+    fc_letter, tr_letter, dev_letter = get_column_letter(forecast_col), get_column_letter(trend_col), get_column_letter(deviation_col)
+    ws.cell(
+        row=total_row, column=deviation_col,
+        value=f'=IFERROR({fc_letter}{total_row}/{tr_letter}{total_row}-1,"")',
+    ).number_format = "0.0%"
+    ws.cell(row=total_row, column=plan_col).number_format = "0"
+
+    ws.freeze_panes = get_column_letter(2) + str(header_row + 1)
+    ws.column_dimensions["A"].width = 32
+    for c in range(2, last_col + 1):
+        ws.column_dimensions[get_column_letter(c)].width = 13
 
 
 if __name__ == "__main__":
