@@ -18,9 +18,9 @@ import pandas as pd
 from . import constants as c
 
 COMPARISON_COLS = [
-    "Источник", "Телефон", "Дата обращения", "Кол-во сообщений", "Сотрудник",
-    "Ресторан (по источнику)", "Текст жалобы", "Статус",
-    "№ записи в главной", "Дата в главной", "Ресторан (по главной)",
+    "Источник", "№ обращения (issues_report)", "Телефон", "Дата обращения",
+    "Кол-во сообщений", "Сотрудник", "Ресторан (по источнику)", "Текст жалобы",
+    "Статус", "№ записи в главной", "Дата в главной", "Ресторан (по главной)",
     "Тип жалобы (по главной)", "Ответственный (по главной)",
 ]
 
@@ -109,6 +109,7 @@ def match_source_to_main(
 
         rows.append({
             "Источник": source_label,
+            "№ обращения (issues_report)": None,
             "Телефон": phone,
             "Дата обращения": cdate,
             "Кол-во сообщений": r.get(count_col) if count_col else 1,
@@ -127,6 +128,7 @@ def match_source_to_main(
         text = str(r.get(text_col) or "")[:500]
         rows.append({
             "Источник": source_label,
+            "№ обращения (issues_report)": None,
             "Телефон": "",
             "Дата обращения": r.get(date_col),
             "Кол-во сообщений": 1,
@@ -165,10 +167,13 @@ def match_issues_to_main(
         index = main_index_spb if city == "Санкт-Петербург" else main_index_tmn
 
         text = str(r.get("Первичное сообщение") or "")[:500]
+        ticket_number = r.get("Номер обращения")
 
         if not phone:
             rows.append({
-                "Источник": "issues_report", "Телефон": "", "Дата обращения": cdate,
+                "Источник": "issues_report",
+                "№ обращения (issues_report)": ticket_number,
+                "Телефон": "", "Дата обращения": cdate,
                 "Кол-во сообщений": 1, "Сотрудник": None,
                 "Ресторан (по источнику)": r.get("Ресторан"), "Текст жалобы": text,
                 "Статус": c.STATUS_NO_PHONE,
@@ -183,6 +188,7 @@ def match_issues_to_main(
 
         rows.append({
             "Источник": "issues_report",
+            "№ обращения (issues_report)": ticket_number,
             "Телефон": phone,
             "Дата обращения": cdate,
             "Кол-во сообщений": 1,

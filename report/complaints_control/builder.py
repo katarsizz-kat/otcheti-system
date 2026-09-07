@@ -34,6 +34,18 @@ def _in_range(d: Optional[date], start: Optional[date], end: Optional[date]) -> 
     return True
 
 
+def _filter_messages_by_period(
+    messages: pd.DataFrame, start: Optional[date], end: Optional[date]
+) -> pd.DataFrame:
+    """Фильтрует сырые сообщения чата по периоду ДО группировки по (телефон,
+    день)."""
+    if messages is None or messages.empty or (start is None and end is None):
+        return messages
+    return messages[messages["Дата"].map(
+        lambda d: _in_range(d.date() if pd.notna(d) else None, start, end)
+    )]
+
+
 def _classify_grouped_chat(grouped: pd.DataFrame) -> (pd.DataFrame, Counter):
     """Классифицирует каждую сгруппированную (телефон, день) запись чата.
     Возвращает (только жалобы, счётчик причин по всем записям)."""
@@ -109,7 +121,8 @@ def build_complaints_control_report(request: ControlReportRequest) -> ControlRep
 
         # -------------------- ЧАТ ТЮМЕНЬ --------------------
         chat_tmn_messages = data.load_chat_messages(request.files.chat_tmn, "Гости ОС Тюмень", warnings)
-        grouped_tmn, no_phone_tmn_all = data.group_messages_by_phone_day(chat_tmn_messages)
+        chat_tmn_messages = _filter_messages_by_period(chat_tmn_messages, start_date, end_date)
+        grouped_tmn, no_phone_tmn = data.group_messages_by_phone_day(chat_tmn_messages)
         complaints_tmn, counts_tmn = _classify_grouped_chat(grouped_tmn)
         label_counts["Гости ОС Тюмень (чат)"] = dict(counts_tmn)
         if request.files.chat_tmn and complaints_tmn.empty and not chat_tmn_messages.empty:
@@ -117,9 +130,6 @@ def build_complaints_control_report(request: ControlReportRequest) -> ControlRep
                 "«Гости ОС Тюмень»: за период не найдено ни одной жалобы среди сообщений — "
                 "проверьте, что чат-экспорт актуален."
             )
-        no_phone_tmn = no_phone_tmn_all[no_phone_tmn_all["Дата"].map(
-            lambda d: _in_range(d.date() if pd.notna(d) else None, start_date, end_date)
-        )] if not no_phone_tmn_all.empty else no_phone_tmn_all
         comparison_chat_tmn = matching.match_source_to_main(
             complaints_tmn, no_phone_tmn, main_index_tmn, "Гости ОС Тюмень",
             tolerance_days, author_col="Авторы", count_col="Кол-во сообщений",
@@ -130,7 +140,8 @@ def build_complaints_control_report(request: ControlReportRequest) -> ControlRep
 
         # -------------------- ЧАТ СПБ --------------------
         chat_spb_messages = data.load_chat_messages(request.files.chat_spb, "Обратная связь Гости", warnings)
-        grouped_spb, no_phone_spb_all = data.group_messages_by_phone_day(chat_spb_messages)
+        chat_spb_messages = _filter_messages_by_period(chat_spb_messages, start_date, end_date)
+        grouped_spb, no_phone_spb = data.group_messages_by_phone_day(chat_spb_messages)
         complaints_spb, counts_spb = _classify_grouped_chat(grouped_spb)
         label_counts["Обратная связь Гости (чат, СПб)"] = dict(counts_spb)
         if request.files.chat_spb and complaints_spb.empty and not chat_spb_messages.empty:
@@ -138,9 +149,6 @@ def build_complaints_control_report(request: ControlReportRequest) -> ControlRep
                 "«Обратная связь Гости»: за период не найдено ни одной жалобы среди сообщений — "
                 "проверьте, что чат-экспорт актуален."
             )
-        no_phone_spb = no_phone_spb_all[no_phone_spb_all["Дата"].map(
-            lambda d: _in_range(d.date() if pd.notna(d) else None, start_date, end_date)
-        )] if not no_phone_spb_all.empty else no_phone_spb_all
         comparison_chat_spb = matching.match_source_to_main(
             complaints_spb, no_phone_spb, main_index_spb, "Обратная связь Гости",
             tolerance_days, author_col="Авторы", count_col="Кол-во сообщений",
