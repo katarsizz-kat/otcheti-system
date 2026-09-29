@@ -166,6 +166,14 @@ def render_page():
             s3.metric("Всего пицц", total_target(kp))
         kp["step"] = s4.number_input("Кратность количества", 1, 10, int(kp.get("step", 1)),
                                      help="Например, 3 — количество каждой пиццы делится на 3.")
+        cur_disc = float(kp["tiers"][0].get("discount", 0)) if kp["tiers"] else 10.0
+        disc = st.number_input("Скидка, %", 0.0, 90.0, cur_disc, step=1.0, key=f"disc_all_{ver}",
+                               help="Ставится во все варианты. В каждом варианте её можно поменять отдельно.")
+        if disc != cur_disc:
+            for t in kp["tiers"]:
+                t["discount"] = disc
+            reset_editors()
+            st.rerun()
         n_tiers = st.radio("Сколько вариантов в КП", [1, 2, 3], index=len(kp["tiers"]) - 1,
                            horizontal=True)
     if n_tiers != len(kp["tiers"]):

@@ -82,7 +82,7 @@ body { font-family: "Roboto Condensed", "Liberation Sans", Arial, sans-serif;
 .box .l { color: #c9e265; font-weight: 700; font-size: 11pt; vertical-align: middle; }
 .box .r { text-align: right; vertical-align: middle; }
 .box .old { color: #b9c7bd; text-decoration: line-through; font-size: 8pt; }
-.box .new { color: #c9e265; font-family: "Papa Sans", "Roboto Condensed", sans-serif; font-size: 22pt;
+.box .new { color: #c9e265; font-family: "Papa Sans", "Roboto Condensed", sans-serif; font-size: 11pt;
             line-height: 1.05; letter-spacing: 0.3pt; }
 table.it { width: 100%; border-collapse: collapse; font-size: 8.4pt; }
 table.it th { background: #0d3d26; color: #fff; font-size: 7pt; font-weight: 700; text-transform: uppercase;
@@ -107,7 +107,7 @@ body.c1 table.it td { padding-top: 1.05mm; padding-bottom: 1.05mm; }
 body.c1 .box { padding: 2.2mm 4mm; margin-bottom: 2.5mm; } body.c1 .cards { margin-top: 4mm; }
 body.c1 .foot { margin-top: 4mm; padding: 3.5mm 9mm; } body.c1 .head { padding: 4.5mm 12mm 4mm; }
 body.c2 table.it { font-size: 7.6pt; } body.c2 table.it td { padding-top: 0.6mm; padding-bottom: 0.6mm; }
-body.c2 .ttl { font-size: 14pt; margin-bottom: 2mm; } body.c2 .box .new { font-size: 18pt; }
+body.c2 .ttl { font-size: 14pt; margin-bottom: 2mm; } body.c2 .box .new { font-size: 9pt; }
 body.c2 .head img { height: 14mm; }
 </style></head><body class="{{ density }}"><div class="page">
 <div class="head"><table><tr>
