@@ -109,10 +109,11 @@ body.c1 .foot { margin-top: 4mm; padding: 3.5mm 9mm; } body.c1 .head { padding: 
 body.c2 table.it { font-size: 7.6pt; } body.c2 table.it td { padding-top: 0.6mm; padding-bottom: 0.6mm; }
 body.c2 .ttl { font-size: 14pt; margin-bottom: 2mm; } body.c2 .box .new { font-size: 9pt; }
 body.c2 .head img { height: 14mm; }
+{{ grow_css|safe }}
 </style></head><body class="{{ density }}"><div class="page">
 <div class="head"><table><tr>
   <td><img src="{{ logo }}" alt="Папа Джонс"></td>
-  <td class="t"><h1>{{ title }}</h1>{% if client %}<div class="for">Для {{ client }}</div>{% endif %}</td>
+  <td class="t"><h1>{{ title }}</h1>{% if client %}<div class="for">{{ client }}</div>{% endif %}</td>
 </tr></table></div>
 {% if addresses %}<div class="bar"><span class="lbl">АДРЕСА ДОСТАВКИ:</span>
 {% for a in addresses %}<span class="a">{{ a.addr }}{% if a.qty %} — <b>{{ a.qty }} {{ plural(a.qty) }}</b>{% endif %}</span>{% endfor %}</div>{% endif %}
@@ -152,19 +153,63 @@ body.c2 .head img { height: 14mm; }
 </div></body></html>
 """
 
+def _grow_for(rows: int) -> float:
+    """Во сколько раз увеличить отступы, когда позиций мало, чтобы КП занимало весь лист.
+
+    Высота КП без увеличения ≈ 445 + 25,6 px на строку (лист A4 — 794 px) и растёт почти
+    пропорционально k; целимся в ~720 px, чтобы остался запас.
+    """
+    return max(1.0, min(1.6, 720 / (445 + 25.6 * rows)))
+
+
+def _grow_css(k: float) -> str:
+    """Крупнее отступы (в k раз) и шрифты (медленнее), когда позиций мало."""
+    if k <= 1:
+        return ""
+    f = 1 + (k - 1) * 0.5  # шрифты растут вдвое медленнее отступов
+    return f"""
+.head {{ padding: {6 * k:.1f}mm 12mm {5 * k:.1f}mm; }} .head img {{ height: {18 * f:.1f}mm; }}
+.head h1 {{ font-size: {21 * f:.1f}pt; }} .head .for {{ font-size: {10 * f:.1f}pt; }}
+.bar {{ padding: {2.6 * k:.1f}mm 12mm; font-size: {8.5 * f:.1f}pt; }}
+.cards {{ margin-top: {6 * k:.1f}mm; }}
+.card {{ padding: {4.5 * k:.1f}mm {4 * f:.1f}mm {4 * k:.1f}mm; }}
+.ttl {{ font-size: {17 * f:.1f}pt; margin-bottom: {3 * k:.1f}mm; }} .badge {{ font-size: {7.5 * f:.1f}pt; }}
+.box {{ padding: {3 * k:.1f}mm {4 * f:.1f}mm; margin-bottom: {3.5 * k:.1f}mm; }}
+.box .l {{ font-size: {11 * f:.1f}pt; }} .box .new {{ font-size: {11 * f:.1f}pt; }}
+.box .old {{ font-size: {8 * f:.1f}pt; }}
+table.it {{ font-size: {8.4 * f:.1f}pt; }} table.it th {{ font-size: {7 * f:.1f}pt; padding: {1.6 * k:.1f}mm 1.4mm; }}
+table.it td {{ padding-top: {1.5 * k:.1f}mm; padding-bottom: {1.5 * k:.1f}mm; }}
+table.it tr.sum td {{ padding-top: {2 * k:.1f}mm; }} .chili {{ height: {3 * f:.1f}mm; }}
+.sub {{ margin-top: {3 * k:.1f}mm; }} .grand {{ font-size: {8 * f:.1f}pt; }}
+.foot {{ margin-top: {5 * k:.1f}mm; padding: {5 * k:.1f}mm 9mm; font-size: {9 * f:.1f}pt; }}
+"""
+
+
 _env = Environment(autoescape=True)
 _tpl = _env.from_string(TEMPLATE)
 
 
-def build_html(kp: dict) -> str:
-    """kp — словарь состояния КП (см. page)."""
+def _live(rows: list[dict], key: str) -> list[dict]:
+    return [r for r in rows if r.get(key) and int(r.get("qty") or 0) > 0]
+
+
+def _rows(kp: dict) -> int:
+    """Строк в самой длинной карточке (закуски считаются с запасом на шапку и итоги)."""
+    counts = [len(_live(t["pizzas"], "name"))
+              + ((len(ex) + 5) if (ex := _live(t.get("extras", []), "label")) else 0)
+              for t in kp["tiers"]]
+    return max(counts or [0])
+
+
+def build_html(kp: dict, grow: float | None = None) -> str:
+    """kp — словарь состояния КП (см. page); grow — принудительный коэффициент увеличения."""
     size = kp["size"]
     thin = kp.get("dough") == "Тонкое"
     size_short = size.replace(" ", " ")
     tiers = []
     for t in kp["tiers"]:
-        pizzas = [r for r in t["pizzas"] if r.get("name") and int(r.get("qty") or 0) > 0]
-        extras = [r for r in t.get("extras", []) if r.get("label") and int(r.get("qty") or 0) > 0]
+        pizzas = _live(t["pizzas"], "name")
+        extras = _live(t.get("extras", []), "label")
         tt = dict(t, pizzas=pizzas, extras=extras)
         tt["tot"] = tier_totals(tt)
         word = extras_label(extras)
@@ -173,7 +218,7 @@ def build_html(kp: dict) -> str:
         tt["box_label"] = f"Пицца {size_short}" + (" + " + word if extras else "")
         tiers.append(tt)
     addresses = [a for a in kp.get("addresses", []) if a.get("addr")]
-    rows = max([len(t["pizzas"]) + (len(t["extras"]) + 5 if t["extras"] else 0) for t in tiers] or [0])
+    rows = _rows(kp)
     density = "" if rows <= 10 else ("c1" if rows <= 15 else "c1 c2")
     return _tpl.render(
         logo=_img("logo_white.svg"), fonts_css=_fonts_css(), chili=_img("chili.png"),
@@ -182,9 +227,16 @@ def build_html(kp: dict) -> str:
         tiers=tiers, footer=kp.get("footer", ""), spicy=SPICY,
         pizza_head=f"Пицца ({size}{', тонкое' if thin else ''})",
         size_short=size_short, density=density, rub=rub, plural=plural_pizza,
+        grow_css=_grow_css(_grow_for(rows) if grow is None else grow) if not density else "",
     )
 
 
 def build_pdf(kp: dict) -> bytes:
     from weasyprint import HTML
-    return HTML(string=build_html(kp)).write_pdf()
+    doc = HTML(string=build_html(kp)).render()
+    grow = _grow_for(_rows(kp))
+    # если из-за длинных названий КП не влезло на один лист — уменьшаем увеличение
+    while len(doc.pages) > 1 and grow > 1:
+        grow = max(1.0, grow - 0.1)
+        doc = HTML(string=build_html(kp, grow)).render()
+    return doc.write_pdf()
