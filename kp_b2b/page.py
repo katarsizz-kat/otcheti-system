@@ -147,11 +147,11 @@ def render_page():
         kp["client"] = st.text_input("Для кого (появится в шапке)", kp.get("client", ""),
                                      placeholder='ООО "Ромашка"')
         st.caption("Адреса доставки и количество пицц на каждый")
-        addr_df = pd.DataFrame(st.session_state["base_addr"] or [{"addr": "", "qty": 0}])[["addr", "qty"]]
+        addr_df = pd.DataFrame(st.session_state["base_addr"] or [{"addr": "", "qty": 0}])[["qty", "addr"]]
         addr_df = st.data_editor(
             addr_df, key=f"addr_{ver}", num_rows="dynamic", width="stretch", hide_index=True,
-            column_config={"addr": st.column_config.TextColumn("Адрес", width="large"),
-                           "qty": st.column_config.NumberColumn("Пицц", min_value=0, step=1)})
+            column_config={"addr": st.column_config.TextColumn("Адрес", width="medium"),
+                           "qty": st.column_config.NumberColumn("Пицц", min_value=0, step=1, width="small")})
         kp["addresses"] = [{"addr": (r.addr or "").strip() if isinstance(r.addr, str) else "",
                             "qty": int(r.qty) if pd.notna(r.qty) else 0}
                            for r in addr_df.itertuples()]
@@ -215,23 +215,23 @@ def render_page():
             with left:
                 st.markdown("**Пиццы**")
                 bp = base[i]["pizzas"] if i < len(base) else []
-                df = pd.DataFrame(bp or [{"name": None, "qty": None}])[["name", "qty"]]
+                df = pd.DataFrame(bp or [{"name": None, "qty": None}])[["qty", "name"]]
                 df = st.data_editor(
                     df, key=f"pz_{i}_{ver}", num_rows="dynamic", width="stretch", hide_index=True,
                     column_config={
-                        "name": st.column_config.SelectboxColumn("Пицца", options=pz_options, width="large"),
-                        "qty": st.column_config.NumberColumn("Кол-во", min_value=0, step=1)})
+                        "name": st.column_config.SelectboxColumn("Пицца", options=pz_options, width="medium"),
+                        "qty": st.column_config.NumberColumn("Кол-во", min_value=0, step=1, width="small")})
                 t["pizzas"] = [{"name": r.name, "qty": int(r.qty)} for r in df.itertuples()
                                if isinstance(r.name, str) and pd.notna(r.qty) and r.qty > 0]
             with right:
                 st.markdown("**Закуски и напитки**")
                 be = base[i]["extras"] if i < len(base) else []
-                edf = pd.DataFrame(be or [{"label": None, "qty": None}])[["label", "qty"]]
+                edf = pd.DataFrame(be or [{"label": None, "qty": None}])[["qty", "label"]]
                 edf = st.data_editor(
                     edf, key=f"ex_{i}_{ver}", num_rows="dynamic", width="stretch", hide_index=True,
                     column_config={
-                        "label": st.column_config.SelectboxColumn("Позиция", options=ex_options, width="large"),
-                        "qty": st.column_config.NumberColumn("Кол-во", min_value=0, step=1)})
+                        "label": st.column_config.SelectboxColumn("Позиция", options=ex_options, width="medium"),
+                        "qty": st.column_config.NumberColumn("Кол-во", min_value=0, step=1, width="small")})
                 t["extras"] = [{"label": r.label, "qty": int(r.qty)} for r in edf.itertuples()
                                if isinstance(r.label, str) and pd.notna(r.qty) and r.qty > 0]
 
