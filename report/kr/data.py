@@ -20,7 +20,8 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from datetime import date
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -239,6 +240,60 @@ def parse_price(value: Any) -> Optional[float]:
 # ==========================================================
 # ФИЛЬТРАЦИЯ ПО ДАТАМ
 # ==========================================================
+def _parse_dates(values: pd.Series) -> pd.Series:
+    """
+    Приводит колонку с датами к naive datetime по московскому времени.
+    Даты без часового пояса считаются уже московскими.
+    Нераспознанные значения становятся NaT.
+    """
+    try:
+        dt = pd.to_datetime(values, errors="coerce")
+    except (ValueError, TypeError):
+        dt = None
+
+    if dt is None or not pd.api.types.is_datetime64_any_dtype(dt):
+        # Смешанные часовые пояса — приводим через UTC
+        dt = pd.to_datetime(values, errors="coerce", utc=True)
+
+    if getattr(dt.dt, "tz", None) is not None:
+        try:
+            dt = dt.dt.tz_convert("Europe/Moscow")
+        except Exception:
+            pass
+
+    if getattr(dt.dt, "tz", None) is not None:
+        try:
+            dt = dt.dt.tz_localize(None)
+        except Exception:
+            pass
+
+    return dt
+
+
+def get_source_date_range(
+    df: pd.DataFrame,
+    source_key: str,
+) -> Optional[Tuple[date, date]]:
+    """
+    Возвращает (минимальная дата, максимальная дата) отзывов источника.
+    None — если колонки с датой нет или ни одна дата не распознана.
+    """
+    if df is None or df.empty:
+        return None
+
+    date_column = SOURCE_DATE_COLUMNS.get(source_key)
+
+    if not date_column or date_column not in df.columns:
+        return None
+
+    dt = _parse_dates(df[date_column]).dropna()
+
+    if dt.empty:
+        return None
+
+    return dt.min().date(), dt.max().date()
+
+
 def filter_dataframe_by_period(
     df: pd.DataFrame,
     source_key: str,
@@ -276,19 +331,7 @@ def filter_dataframe_by_period(
         )
         return df
 
-    dt = pd.to_datetime(df[date_column], errors="coerce", utc=True)
-
-    if getattr(dt.dt, "tz", None) is not None:
-        try:
-            dt = dt.dt.tz_convert("Europe/Moscow")
-        except Exception:
-            pass
-
-    if getattr(dt.dt, "tz", None) is not None:
-        try:
-            dt = dt.dt.tz_localize(None)
-        except Exception:
-            pass
+    dt = _parse_dates(df[date_column])
 
     valid_date_mask = dt.notna()
     no_date_mask = ~valid_date_mask
@@ -570,6 +613,21 @@ def load_kr_data(
         )
 
     # ======================================================
+    # ФАКТИЧЕСКИЙ ПЕРИОД ДАННЫХ ПО ИСТОЧНИКАМ
+    # ======================================================
+    date_ranges: Dict[str, Tuple[date, date]] = {}
+
+    for source_key, raw_df in (
+        (SOURCE_SITE, site_raw),
+        (SOURCE_AGG, agg_raw),
+        (SOURCE_GEO, geo_raw),
+    ):
+        date_range = get_source_date_range(raw_df, source_key)
+
+        if date_range is not None:
+            date_ranges[source_key] = date_range
+
+    # ======================================================
     # ПОДГОТОВКА ДАННЫХ
     # ======================================================
     include_sum = bool(settings.is_month)
@@ -584,6 +642,7 @@ def load_kr_data(
         agg=agg_df,
         geo=geo_df,
         warnings=warnings,
+        date_ranges=date_ranges,
     )
 
     return prepared

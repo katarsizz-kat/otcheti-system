@@ -191,6 +191,7 @@ def build_kr_report(request: KRReportRequest) -> KRReportResult:
             preview=getattr(report_data, "stats_all", None),
             warnings=getattr(prepared, "warnings", []),
             data=report_data,
+            date_ranges=getattr(prepared, "date_ranges", {}),
         )
 
         # Дополнительное предупреждение, если данных нет

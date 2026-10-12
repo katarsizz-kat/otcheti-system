@@ -82,6 +82,19 @@ SOURCE_LABELS = getattr(
     },
 )
 ACCEPTED_FILE_TYPES = getattr(c, "ACCEPTED_FILE_TYPES", ["xlsx", "xls"])
+MONTHS_GENITIVE = getattr(
+    c,
+    "MONTHS_GENITIVE",
+    [
+        "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    ],
+)
+SOURCE_SHORT_LABELS = {
+    SOURCE_SITE: "Сайт",
+    SOURCE_AGG: "Агрегаторы",
+    SOURCE_GEO: "Гео",
+}
 
 # ==========================================================
 # ИМПОРТ МОДЕЛЕЙ
@@ -246,6 +259,48 @@ def _seek_file(file_obj: Any) -> None:
         pass
 
 
+def _format_date_range(date_range: Any) -> str:
+    """
+    Форматирует (start, end) по-человечески:
+    «1-11 октября», «30 сентября – 11 октября»,
+    «28 декабря 2025 – 3 января 2026», «5 октября».
+    """
+    try:
+        start, end = date_range
+        if start.year != end.year:
+            return (
+                f"{start.day} {MONTHS_GENITIVE[start.month - 1]} {start.year} – "
+                f"{end.day} {MONTHS_GENITIVE[end.month - 1]} {end.year}"
+            )
+        if start.month != end.month:
+            return (
+                f"{start.day} {MONTHS_GENITIVE[start.month - 1]} – "
+                f"{end.day} {MONTHS_GENITIVE[end.month - 1]}"
+            )
+        if start.day == end.day:
+            return f"{end.day} {MONTHS_GENITIVE[end.month - 1]}"
+        return f"{start.day}-{end.day} {MONTHS_GENITIVE[end.month - 1]}"
+    except Exception:
+        return str(date_range)
+
+
+def _render_data_period(result: Any) -> None:
+    """
+    Показывает, за какие даты были отзывы в каждой выгрузке.
+    """
+    date_ranges = _get_attr(result, "date_ranges", {}) or {}
+
+    lines = []
+    for source_key in (SOURCE_SITE, SOURCE_AGG, SOURCE_GEO):
+        label = SOURCE_SHORT_LABELS.get(source_key, source_key)
+        if source_key in date_ranges:
+            lines.append(f"**{label}:** {_format_date_range(date_ranges[source_key])}")
+        else:
+            lines.append(f"**{label}:** даты не распознаны")
+
+    st.info("📅 **Даты отзывов в выгрузках**  \n" + "  \n".join(lines))
+
+
 # ==========================================================
 # ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА
 # ==========================================================
@@ -283,6 +338,8 @@ def _render_result(result: Any) -> None:
         st.success(f"✅ Отчёт успешно сформирован: {period_label}")
     else:
         st.success("✅ Отчёт успешно сформирован!")
+
+    _render_data_period(result)
 
     if generated_at:
         try:

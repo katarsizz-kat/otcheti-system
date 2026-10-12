@@ -22,7 +22,7 @@ import io
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -448,6 +448,9 @@ class KRPreparedData:
     geo: pd.DataFrame
     warnings: List[str] = field(default_factory=list)
 
+    # Фактический период отзывов по источникам: {source: (min_date, max_date)}
+    date_ranges: Dict[str, Tuple[date, date]] = field(default_factory=dict)
+
     def add_warning(self, message: str) -> None:
         message = str(message or "").strip()
 
@@ -502,6 +505,9 @@ class KRReportResult:
     error: Optional[str] = None
     data: Optional[KRReportData] = None
 
+    # Фактический период отзывов по источникам: {source: (min_date, max_date)}
+    date_ranges: Dict[str, Tuple[date, date]] = field(default_factory=dict)
+
     generated_at: datetime = field(default_factory=lambda: datetime.now(MSK))
 
     def add_warning(self, message: str) -> None:
@@ -528,6 +534,7 @@ class KRReportResult:
         preview: Optional[pd.DataFrame] = None,
         warnings: Optional[List[str]] = None,
         data: Optional[KRReportData] = None,
+        date_ranges: Optional[Dict[str, Tuple[date, date]]] = None,
     ) -> "KRReportResult":
         return cls(
             success=True,
@@ -539,6 +546,7 @@ class KRReportResult:
             warnings=list(warnings or []),
             error=None,
             data=data,
+            date_ranges=dict(date_ranges or {}),
         )
 
     @classmethod
