@@ -142,7 +142,7 @@ def _render_header_container(icon: str):
         'align-items:center;padding:16px 24px;margin-bottom:24px;'
         'border-bottom:1px solid var(--card-border);">'
         '<div style="display:flex;align-items:center;gap:12px;">'
-        '<span style="font-size:20px;font-weight:700;'
+        '<span class="app-title" style="font-size:20px;font-weight:700;'
         'color:var(--text-primary);letter-spacing:0.5px;">'
         'Система формирования отчётов</span>'
         '</div>'

@@ -91,11 +91,16 @@ DINO_THEMED_PHRASES = {
     "marketing": [
         "Ррр! Сегодня мой день — ведь я главный маркетолог юрского периода! 📣",
     ],
+    "chef": [
+        "Дино в поварском колпаке! Сегодня готовлю пиццу «Юрская» — с двойным сыром! 🧑‍🍳",
+        "Ррр! Повара — настоящие герои. Особенно те, кто кормит динозавров! 🍳",
+    ],
 }
 
 # Ключевые слова в названии -> тематический пул (порядок важен)
 _THEME_KEYWORDS = [
     (("пицц",), "pizza"),
+    (("повар",), "chef"),
     (("новым годом", "новый год", "соельник", "канун"), "new_year"),
     (("валентин", "женский", "8 марта", "любви", "семьи", "поцелуя"), "love"),
     (("весны", "труда", "подснежник", "тюльпан", "лето"), "spring"),
@@ -154,16 +159,18 @@ def _floating_holiday(d: datetime):
 # ФРАЗА ДИНО
 # =============================================================================
 
-def _pick_dino_phrase(title: str, seed: str) -> str:
-    """Подбирает игривую фразу Дино по названию праздника (детерминированно)."""
+def get_holiday_theme(title: str):
+    """Тема праздника по ключевым словам в названии ("pizza", "new_year"…) или None."""
     t = (title or "").lower()
-    pool = None
     for keywords, name in _THEME_KEYWORDS:
         if any(k in t for k in keywords):
-            pool = DINO_THEMED_PHRASES.get(name)
-            break
-    if not pool:
-        pool = DINO_BASE_PHRASES
+            return name
+    return None
+
+
+def _pick_dino_phrase(title: str, seed: str) -> str:
+    """Подбирает игривую фразу Дино по названию праздника (детерминированно)."""
+    pool = DINO_THEMED_PHRASES.get(get_holiday_theme(title)) or DINO_BASE_PHRASES
     return random.Random(seed + title).choice(pool)
 
 # =============================================================================
@@ -248,6 +255,7 @@ __all__ = [
     "MASLENITSA_DATES",
     "DINO_BASE_PHRASES",
     "DINO_THEMED_PHRASES",
+    "get_holiday_theme",
     "get_today_holiday",
     "get_upcoming_holidays",
 ]
