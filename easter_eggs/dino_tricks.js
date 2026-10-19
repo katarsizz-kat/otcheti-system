@@ -1,14 +1,15 @@
-// Пасхалки главной страницы. Выполняется внутри iframe components.html
-// и работает с родительским документом (iframe same-origin).
+// Пасхалки главной страницы. dino.py встраивает этот код <script>-ом прямо
+// в документ приложения: обработчики из iframe components.html умирают,
+// когда Streamlit пересоздаёт iframe (например, при смене страницы).
 // Плейсхолдеры __ROAR_URL__ и __WALK_ENABLED__ подставляет dino.py.
 (function () {
-  const P = window.parent;
-  const D = P.document;
+  const P = window;
+  const D = document;
   const ROAR_URL = P.location.origin + "/__ROAR_URL__";
   const WALK_ENABLED = __WALK_ENABLED__;
   const WALK_CHANCE = 0.2;
 
-  // Скрипт пересоздаётся при каждом рендере iframe — ставим слушатели один раз.
+  // Документ приложения живёт, пока открыта вкладка — ставим слушатели один раз.
   if (P.__dinoTricksInstalled) return;
   P.__dinoTricksInstalled = true;
 

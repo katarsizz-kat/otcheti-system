@@ -15,6 +15,7 @@ v3: кнопка-пасхалка незаметна и изредка пока�
 import os
 import html
 import random
+import json
 import base64
 import streamlit as st
 import streamlit.components.v1 as components
@@ -75,13 +76,27 @@ def _load_tricks_js() -> str:
 
 
 def render_dino_tricks():
-    """Невидимый iframe с JS-пасхалками для всей страницы."""
+    """Встраивает JS-пасхалки в документ приложения.
+
+    components.html — лишь носитель: код из iframe переносится <script>-ом
+    в родительский документ, иначе обработчики пропадут вместе с iframe.
+    """
     js = (
         _load_tricks_js()
         .replace("__ROAR_URL__", ROAR_URL)
         .replace("__WALK_ENABLED__", "true" if is_effects_enabled() else "false")
     )
-    components.html(f"<script>{js}</script>", height=0)
+    loader = (
+        "<script>"
+        "const D = window.parent.document;"
+        "if (!window.parent.__dinoTricksInstalled) {"
+        "  const s = D.createElement('script');"
+        f"  s.textContent = {json.dumps(js)};"
+        "  D.head.appendChild(s);"
+        "}"
+        "</script>"
+    )
+    components.html(loader, height=0)
 
 
 @st.cache_data
