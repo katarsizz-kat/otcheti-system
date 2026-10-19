@@ -8,12 +8,15 @@ v2.1: принудительная темизация ВСЕХ внутренн�
 st.dialog нативно закрывается по Esc и клику вне окна.
 """
 
+import os
 import html
 import random
 import base64
 import streamlit as st
 
 from config.mascots import get_random_phrase
+
+ROAR_PATH = os.path.join("assets", "dino_roar.mp3")
 
 
 @st.cache_data
@@ -81,7 +84,7 @@ def dino_dialog(phrase: str, gif_src: str):
     )
 
     # Гифка
-    st.image(gif_src, use_container_width=True)
+    st.image(gif_src, width="stretch")
 
     # Фраза (экранирована)
     st.markdown(
@@ -94,15 +97,15 @@ def dino_dialog(phrase: str, gif_src: str):
         unsafe_allow_html=True,
     )
 
-    # Звук
-    st.markdown(
-        """
-        <audio autoplay>
-            <source src="assets/dino_roar.mp3" type="audio/mpeg">
-        </audio>
-        """,
-        unsafe_allow_html=True,
-    )
+    # Звук. Голый <audio src="assets/..."> не работает: Streamlit не раздаёт
+    # папку assets по HTTP. st.audio сам отдаёт файл; плеер прячем CSS-ом.
+    if os.path.exists(ROAR_PATH):
+        st.markdown(
+            '<style>div[data-testid="stDialog"] [data-testid="stAudio"]'
+            '{display:none !important;}</style>',
+            unsafe_allow_html=True,
+        )
+        st.audio(ROAR_PATH, format="audio/mpeg", autoplay=True)
 
     # Кнопка закрытия
     if st.button("✖", key="dino_close_btn", help="Закрыть"):
