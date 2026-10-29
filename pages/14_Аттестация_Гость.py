@@ -1,12 +1,6 @@
 # pages/14_Аттестация_Гость.py
 # Аттестация «Основы взаимодействия с Гостем»: 46 вопросов разных форматов.
 # После каждого ответа — сигнал «верно» или правильный ответ, в конце — сколько верно из скольки.
-import base64
-import io
-import math
-import struct
-import wave
-
 import streamlit as st
 from config.guest_attestation import TITLE, BLOCKS, TYPE_LABELS, QUESTIONS
 
@@ -69,33 +63,6 @@ def reset_attestation():
     for key in list(st.session_state.keys()):
         if key.startswith("ga_"):
             del st.session_state[key]
-
-
-# --- Звуковой сигнал: короткий «дзинь» за верный ответ и низкий тон за ошибку ---
-@st.cache_data
-def make_tone(notes: tuple) -> str:
-    rate = 22050
-    frames = bytearray()
-    for freq, duration in notes:
-        count = int(rate * duration)
-        for i in range(count):
-            fade = min(1.0, (count - i) / (rate * 0.05))
-            frames += struct.pack("<h", int(9000 * fade * math.sin(2 * math.pi * freq * i / rate)))
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(rate)
-        w.writeframes(bytes(frames))
-    return base64.b64encode(buf.getvalue()).decode()
-
-
-def play_sound(correct: bool, qid: int):
-    notes = ((880, 0.12), (1320, 0.25)) if correct else ((220, 0.35),)
-    st.markdown(
-        f'<audio id="ga-snd-{qid}" autoplay src="data:audio/wav;base64,{make_tone(notes)}"></audio>',
-        unsafe_allow_html=True,
-    )
 
 
 # --- Рендер вариантов ответа: возвращает (ответ, ответ заполнен полностью) ---
@@ -266,7 +233,6 @@ elif st.session_state.ga_started and not st.session_state.ga_finished:
                 <div class="ga-source">📖 Где в курсе: {q['source']}</div>
             </div>
             """, unsafe_allow_html=True)
-        play_sound(results[q["id"]], q["id"])
 
         col_a, col_b, col_c = st.columns([1, 2, 1])
         with col_b:
