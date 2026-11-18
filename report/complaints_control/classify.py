@@ -7,11 +7,14 @@
 2. Промокод/купон за опоздание или долгое ожидание -> жалоба «Опоздания»
    (уточнение 17.11.2026). Обычные бонусы за задержку под это правило не
    попадают, но сама задержка остаётся жалобой «Опоздания».
-3. Задержка/«где заказ» без изменения текущего заказа -> «Опоздания».
-4. Признание ресторана (компенсация) -> жалоба.
-5. Технические сбои, пропавшие заказы, ранний «доставлен», недоступные
+3. Недовоз заказа целиком («заказ не доставлен») -> не жалоба, «Требует
+   внимания» (уточнение 19.11.2026); «не доставлен вовремя» — опоздание.
+4. Задержка/«где заказ» без изменения текущего заказа -> «Опоздания».
+5. Признание ресторана (компенсация), в т.ч. просьба дать что-то «в качестве
+   лояльности» (уточнение 19.11.2026) -> жалоба.
+6. Технические сбои, пропавшие заказы, ранний «доставлен», недоступные
    телефоны -> «Требует внимания» (не жалоба для внесения).
-6. Изменения текущего заказа, возвраты без жалобы, лояльность/ДР, похвала,
+7. Изменения текущего заказа, возвраты без жалобы, лояльность/ДР, похвала,
    нейтральные -> не жалобы.
 
 Бессодержательные реплики бота вырезаются до классификации.
@@ -86,6 +89,23 @@ def is_delay_promo_request(t: str, is_birthday: bool) -> bool:
     return bool(re.search(c.DELAY_PROMO_REASON_RE, t))
 
 
+def is_not_delivered(t: str) -> bool:
+    """Недовоз заказа целиком — не жалоба (уточнение 19.11.2026).
+    «Не доставлен вовремя/в срок» — опоздание, а не недовоз."""
+    if re.search(r'не\s+доставлен\w*\s+(?:вовремя|в\s+срок)', t):
+        return False
+    return _match_any_substring(t, c.NOT_DELIVERED_MARKERS)
+
+
+def is_loyalty_compensation_request(t: str) -> bool:
+    """Просьба дать что-то «в качестве лояльности/компенсации» — жалоба
+    (уточнение 19.11.2026): ресторан признаёт проблему и просит компенсацию гостю."""
+    return bool(
+        re.search(c.LOYALTY_COMP_PHRASE_RE, t)
+        and re.search(c.LOYALTY_COMP_WORD_RE, t)
+    )
+
+
 def classify_message(
     text: Any,
     rating: Optional[float] = None,
@@ -109,12 +129,16 @@ def classify_message(
     )
 
     delay_promo = is_delay_promo_request(t, is_birthday)
+    not_delivered = is_not_delivered(t)
     has_delay = _match_any_substring(t, c.DELAY_COMPLAINT_MARKERS)
     logistics_change = _match_any_substring(t, c.LOGISTICS_CHANGE_MARKERS)
 
     has_compensation = False
     if allow_compensation and not is_birthday:
-        has_compensation = _match_any_regex(t, c.COMPENSATION_REGEXES)
+        has_compensation = (
+            _match_any_regex(t, c.COMPENSATION_REGEXES)
+            or is_loyalty_compensation_request(t)
+        )
 
     attention = _match_any_substring(t, c.ATTENTION_MARKERS)
     loyalty = _match_any_substring(t, c.LOYALTY_MARKERS)
@@ -144,6 +168,9 @@ def classify_message(
 
     if delay_promo:
         return result(True, "delay_promo", c.CAT_DELAY)
+
+    if not_delivered:
+        return result(False, "not_delivered")
 
     if has_delay and not logistics_change:
         return result(True, "delay", c.CAT_DELAY)

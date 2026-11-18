@@ -102,6 +102,7 @@ def build_classification_preview(label_counts: Dict[str, Dict[str, int]]) -> pd.
             "Признано жалобой": complaints,
             "Опоздания (промокод за задержку)": counts.get("delay_promo", 0),
             "Требует внимания (техсбои)": counts.get("attention", 0),
+            "Недовоз целиком (не жалоба)": counts.get("not_delivered", 0),
             "Изменения заказа": counts.get("logistics", 0),
             "Лояльность/промокоды": counts.get("loyalty", 0),
             "Дни рождения": counts.get("birthday", 0),

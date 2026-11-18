@@ -100,7 +100,7 @@ def _process_chat(
         counts[result.reason_label] += 1
         city, rest, rest_label = matching.extract_restaurant(text, orders, source_label)
 
-        if result.reason_label == "attention":
+        if result.reason_label in ("attention", "not_delivered"):
             attention_rows.append({
                 "Дата": cdate, "Источник": source_label, "Автор": authors,
                 "Ресторан": rest_label, "Текст": _summary(text, 500),

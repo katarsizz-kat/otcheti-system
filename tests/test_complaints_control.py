@@ -65,6 +65,36 @@ def test_classify_delay_promo_rule() -> None:
     assert r.is_complaint and r.category == c.CAT_DELAY
 
 
+def test_classify_user_corrections_19_11() -> None:
+    # Уточнение 19.11.2026: дать что-то «в качестве лояльности» — жалоба.
+    r = classify_message("отправьте промокод в качестве лояльности +79006666666")
+    assert r.is_complaint and r.reason_label == "compensation"
+    r = classify_message("прошу начислить бонусы в качестве лояльности гостю")
+    assert r.is_complaint
+    r = classify_message("дайте что-то в качестве лояльности, гость расстроен")
+    assert r.is_complaint
+    # Вопросы гостей про бонусную программу — по-прежнему не жалобы.
+    r = classify_message("как списать бонусы при заказе")
+    assert not r.is_complaint and r.reason_label == "loyalty"
+    r = classify_message("не пришёл промокод на день рождения")
+    assert not r.is_complaint
+
+    # Уточнение 19.11.2026: недовоз заказа целиком — не жалоба.
+    for text in (
+        "+79007777777 заказ не доставлен",
+        "не привезли заказ, гость ждёт",
+        "курьер не довез заказ",
+    ):
+        r = classify_message(text)
+        assert not r.is_complaint and r.reason_label == "not_delivered", text
+    # «Не доставлен вовремя» — опоздание, а не недовоз.
+    r = classify_message("заказ не доставлен вовремя, опоздание на час")
+    assert r.is_complaint and r.category == c.CAT_DELAY
+    # Жалоба на позицию остаётся жалобой даже рядом с недовозом.
+    r = classify_message("заказ не доставлен, а в привезённой пицце забыли соус")
+    assert r.is_complaint and r.category == c.CAT_MISSING
+
+
 def test_classify_categories_and_attention() -> None:
     assert classify_message("забыли томатный соус").category == c.CAT_MISSING
     assert classify_message("привезли вместо цыпленка рэнч пепперони").category == c.CAT_MISSING
@@ -264,6 +294,8 @@ def _chat_csv() -> io.BytesIO:
         ("2026-10-06 14:00:00", "Иванов", "заказ не попал в систему"),
         ("2026-10-07 10:00:00", "Петров", "+79001234567 холодная пицца невкусно"),
         ("2026-10-08 11:00:00", "Кузнецов", "+79991234567 пицца невкусно, есть не стали"),
+        ("2026-10-09 12:00:00", "Иванов", "+79007777777 заказ не доставлен"),
+        ("2026-10-09 13:00:00", "Петров", "отправьте промокод в качестве лояльности +79006666666"),
     ]
     df = pd.DataFrame(rows, columns=["Дата", "Автор", "Текст сообщения"])
     out = io.BytesIO()
@@ -288,11 +320,12 @@ def test_builder_end_to_end() -> None:
     assert result.success, result.error
     data = result.data
 
-    # 2 точных (заказ; телефон+ресторан+дата+категория), 3 невнесённых,
-    # 1 вероятное (телефон+дата в допуске, категория другая), 1 техсбой.
-    assert len(data.not_entered) == 3, data.comparison[["Суть обращения", "Статус"]]
+    # 2 точных (заказ; телефон+ресторан+дата+категория), 4 невнесённых
+    # (включая компенсацию «в качестве лояльности»), 1 вероятное,
+    # 2 «требует внимания» (техсбой + недовоз целиком).
+    assert len(data.not_entered) == 4, data.comparison[["Суть обращения", "Статус"]]
     assert len(data.probable) == 1
-    assert len(data.attention) == 1
+    assert len(data.attention) == 2
     assert (data.comparison["Статус"] == c.STATUS_EXACT).sum() == 2
 
     # Столбец «Телефон Гостя» — явный номер или явная пометка.
@@ -317,13 +350,14 @@ def test_builder_end_to_end() -> None:
     ].iloc[0]
     rebuilt = build_complaints_control_report(_request({complaint_key: "exact"}))
     assert rebuilt.success, rebuilt.error
-    assert len(rebuilt.data.not_entered) == 2
+    assert len(rebuilt.data.not_entered) == 3
     assert key is not None
 
 
 def main() -> None:
     tests = [
         test_classify_delay_promo_rule,
+        test_classify_user_corrections_19_11,
         test_classify_categories_and_attention,
         test_parse_key_cell,
         test_find_orders_in_text,
