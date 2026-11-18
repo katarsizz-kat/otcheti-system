@@ -249,7 +249,9 @@ def calculate_report_data(
     # ------------------------------------------------------
     # 1. Статистика по каждому источнику
     # ------------------------------------------------------
-    if settings.is_month:
+    # «NEW неделя»: порог сайта применяется как в месяце
+    # (5★ ≤ порога уходят в колонку J), оценки — недельные.
+    if settings.is_month or settings.is_new_week:
         stats_site = calc_stats_site(prepared.site, threshold)
     else:
         stats_site = calc_stats_standard(prepared.site)
@@ -260,8 +262,8 @@ def calculate_report_data(
     # ------------------------------------------------------
     # 2. Общий итог по оценкам
     # ------------------------------------------------------
-    # Для месяца из оценок сайта исключаем низкие отзывы
-    if settings.is_month and COL_SUM in prepared.site.columns:
+    # Для месяца и «NEW недели» из оценок сайта исключаем низкие отзывы
+    if (settings.is_month or settings.is_new_week) and COL_SUM in prepared.site.columns:
         site_for_ratings = prepared.site[
             ~((prepared.site[COL_RATING] == 5) & (prepared.site[COL_SUM] <= threshold))
         ][[COL_RESTAURANT, COL_RATING, COL_TEXT]]
@@ -279,8 +281,8 @@ def calculate_report_data(
 
     stats_all = calc_stats_standard(df_all_ratings)
 
-    # Для месяца добавляем колонку "Отзывы ≤ порог" в общий итог
-    if settings.is_month:
+    # Для месяца и «NEW недели» добавляем колонку "Отзывы ≤ порог" в общий итог
+    if settings.is_month or settings.is_new_week:
         low_map = dict(zip(stats_site[COL_RESTAURANT], stats_site[LOW_REVIEW_COLUMN]))
         stats_all[LOW_REVIEW_COLUMN] = (
             stats_all[COL_RESTAURANT].map(low_map).fillna(0).astype(int)

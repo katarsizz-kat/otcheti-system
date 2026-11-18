@@ -47,6 +47,7 @@ except Exception:
 # ==========================================================
 MODE_MONTH = getattr(c, "MODE_MONTH", "month")
 MODE_WEEK = getattr(c, "MODE_WEEK", "week")
+MODE_NEW_WEEK = getattr(c, "MODE_NEW_WEEK", "new_week")
 
 SOURCE_SITE = getattr(c, "SOURCE_SITE", "site")
 SOURCE_AGG = getattr(c, "SOURCE_AGG", "agg")
@@ -561,7 +562,7 @@ def load_kr_data(
         missing = ", ".join(files.missing_labels())
         raise ValueError(f"Не загружены файлы: {missing}.")
 
-    if settings.mode not in (MODE_MONTH, MODE_WEEK):
+    if settings.mode not in (MODE_MONTH, MODE_WEEK, MODE_NEW_WEEK):
         raise ValueError(f"Некорректный режим отчёта: {settings.mode}.")
 
     if settings.is_month and settings.month is None:
@@ -630,7 +631,7 @@ def load_kr_data(
     # ======================================================
     # ПОДГОТОВКА ДАННЫХ
     # ======================================================
-    include_sum = bool(settings.is_month)
+    include_sum = bool(settings.is_month or settings.is_new_week)
     include_deleted = bool(settings.is_week)
 
     site_df = prepare_site_df(site_raw, include_sum=include_sum)

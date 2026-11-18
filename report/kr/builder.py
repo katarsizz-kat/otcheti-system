@@ -39,6 +39,7 @@ except Exception:
 
 MODE_MONTH = getattr(c, "MODE_MONTH", "month")
 MODE_WEEK = getattr(c, "MODE_WEEK", "week")
+MODE_NEW_WEEK = getattr(c, "MODE_NEW_WEEK", "new_week")
 
 
 # ==========================================================
@@ -95,6 +96,18 @@ except Exception:
             from report.kr.excel import build_kr_excel
         except Exception:
             from report.kr.excel import build_excel as build_kr_excel
+
+
+# ==========================================================
+# EXCEL: НАКОПИТЕЛЬНЫЙ ФАЙЛ («NEW НЕДЕЛЯ»)
+# ==========================================================
+try:
+    from .excel_cumulative import build_kr_cumulative_excel
+except Exception:
+    try:
+        from report.kr.excel_cumulative import build_kr_cumulative_excel
+    except Exception:
+        build_kr_cumulative_excel = None
 
 
 __all__ = [
@@ -177,7 +190,18 @@ def build_kr_report(request: KRReportRequest) -> KRReportResult:
             raise RuntimeError("Не удалось рассчитать данные отчёта.")
 
         # Генерация Excel
-        excel_file = build_kr_excel(report_data, settings)
+        if settings.is_new_week:
+            if build_kr_cumulative_excel is None:
+                raise RuntimeError(
+                    "Не удалось импортировать модуль `report/kr/excel_cumulative.py`."
+                )
+            excel_file = build_kr_cumulative_excel(
+                report_data,
+                settings,
+                request.files.previous,
+            )
+        else:
+            excel_file = build_kr_excel(report_data, settings)
 
         if excel_file is None:
             raise RuntimeError("Не удалось сформировать Excel-файл.")

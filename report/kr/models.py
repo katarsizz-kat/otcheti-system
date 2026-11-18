@@ -36,6 +36,7 @@ except Exception:
 
 MODE_MONTH = c.MODE_MONTH
 MODE_WEEK = c.MODE_WEEK
+MODE_NEW_WEEK = c.MODE_NEW_WEEK
 
 SOURCE_SITE = c.SOURCE_SITE
 SOURCE_AGG = c.SOURCE_AGG
@@ -59,6 +60,12 @@ WEEK_FILE_NAME_TEMPLATE = getattr(
     c,
     "WEEK_FILE_NAME_TEMPLATE",
     "КР_неделя_{period}.xlsx"
+)
+
+NEW_WEEK_FILE_NAME_TEMPLATE = getattr(
+    c,
+    "NEW_WEEK_FILE_NAME_TEMPLATE",
+    "Клиентский рейтинг {period}.xlsx"
 )
 
 # Московское время: UTC+3
@@ -109,6 +116,38 @@ def format_week_period_label(start_date: date, end_date: date) -> str:
         f"{start_date.day} {MONTHS_GENITIVE[start_date.month - 1]} {start_date.year} – "
         f"{end_date.day} {MONTHS_GENITIVE[end_date.month - 1]} {end_date.year}"
     )
+
+
+def format_new_week_period_label(start_date: date, end_date: date) -> str:
+    """
+    Подпись периода для режима «NEW неделя» — как в накопительном
+    файле «Клиентский рейтинг», без года в пределах одного года:
+    - 1-16 ноября
+    - 30 сентября – 5 октября
+    - 28 декабря 2025 – 3 января 2026
+    """
+    if start_date.month == end_date.month and start_date.year == end_date.year:
+        return (
+            f"{start_date.day}-{end_date.day} "
+            f"{MONTHS_GENITIVE[end_date.month - 1]}"
+        )
+
+    if start_date.year == end_date.year:
+        return (
+            f"{start_date.day} {MONTHS_GENITIVE[start_date.month - 1]} – "
+            f"{end_date.day} {MONTHS_GENITIVE[end_date.month - 1]}"
+        )
+
+    return format_week_period_label(start_date, end_date)
+
+
+def sanitize_filename_keep_spaces(value: str) -> str:
+    """
+    Убирает только запрещённые в имени файла символы, пробелы сохраняет
+    (имя «Клиентский рейтинг 1-16 ноября.xlsx» должно остаться с пробелами).
+    """
+    value = re.sub(r'[\\/:*?"<>|]+', "", str(value or ""))
+    return value.strip() or "отчет"
 
 
 def get_default_week_period() -> tuple[date, date]:
@@ -175,12 +214,16 @@ class KRSourceFiles:
     - агрегаторы;
     - геосервисы.
 
+    Для режима «NEW неделя» дополнительно передаётся previous —
+    накопительный отчёт прошлой недели, в который добавляется новый лист.
+
     Тип намеренно Any, чтобы модель не зависела от Streamlit.
     """
 
     site: Any = None
     agg: Any = None
     geo: Any = None
+    previous: Any = None
 
     def is_complete(self) -> bool:
         return bool(self.site and self.agg and self.geo)
@@ -313,6 +356,20 @@ class KRWeekSettings:
         return format_week_period_label(self.start_date, self.end_date)
 
     @property
+    def new_week_period_label(self) -> str:
+        """
+        Подпись периода для режима «NEW неделя» (без года).
+        Пример: 1-16 ноября
+        """
+        if self.custom_label:
+            return self.custom_label
+
+        if self.is_all_dates or not self.start_date or not self.end_date:
+            return PERIOD_ALL_DATES_LABEL
+
+        return format_new_week_period_label(self.start_date, self.end_date)
+
+    @property
     def file_name(self) -> str:
         """
         Имя файла для скачивания.
@@ -340,7 +397,7 @@ class KRReportSettings:
     week: Optional[KRWeekSettings] = None
 
     def __post_init__(self) -> None:
-        if self.mode not in (MODE_MONTH, MODE_WEEK):
+        if self.mode not in (MODE_MONTH, MODE_WEEK, MODE_NEW_WEEK):
             raise ValueError(f"Некорректный режим отчёта: {self.mode}")
 
         if self.is_month and self.month is None:
@@ -355,10 +412,19 @@ class KRReportSettings:
 
     @property
     def is_week(self) -> bool:
-        return self.mode == MODE_WEEK
+        # «NEW неделя» наследует недельное поведение:
+        # фильтр по датам и учёт удалённых отзывов геосервисов.
+        return self.mode in (MODE_WEEK, MODE_NEW_WEEK)
+
+    @property
+    def is_new_week(self) -> bool:
+        return self.mode == MODE_NEW_WEEK
 
     @property
     def period_label(self) -> str:
+        if self.is_new_week and self.week:
+            return self.week.new_week_period_label
+
         if self.is_month and self.month:
             return self.month.period_label
 
@@ -369,6 +435,11 @@ class KRReportSettings:
 
     @property
     def file_name(self) -> str:
+        if self.is_new_week and self.week:
+            return NEW_WEEK_FILE_NAME_TEMPLATE.format(
+                period=sanitize_filename_keep_spaces(self.week.new_week_period_label)
+            )
+
         if self.is_month and self.month:
             return self.month.file_name
 
@@ -422,8 +493,13 @@ class KRReportRequest:
 
         # Настройки уже валидируются внутри dataclass'ов,
         # но оставляем явную проверку для будущих расширений.
-        if self.settings.mode not in (MODE_MONTH, MODE_WEEK):
+        if self.settings.mode not in (MODE_MONTH, MODE_WEEK, MODE_NEW_WEEK):
             raise ValueError(f"Некорректный режим отчёта: {self.settings.mode}")
+
+        if self.settings.is_new_week and not self.files.previous:
+            raise ValueError(
+                "Не загружен отчёт прошлой недели для режима «NEW неделя»."
+            )
 
 
 # ==========================================================

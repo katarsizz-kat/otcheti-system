@@ -2,8 +2,8 @@
 UI-слой объединённой страницы КР.
 
 Ответственность файла:
-- интерфейс выбора режима: месяц / неделя;
-- загрузка трёх файлов;
+- интерфейс выбора режима: месяц / неделя / NEW неделя;
+- загрузка файлов (три выгрузки; в «NEW неделя» плюс отчёт прошлой недели);
 - настройки месяца и недели;
 - запуск формирования отчёта через report-слой;
 - отображение результата: предупреждения, ошибка, скачивание Excel, превью.
@@ -40,16 +40,19 @@ except Exception:
 
 MODE_MONTH = getattr(c, "MODE_MONTH", "month")
 MODE_WEEK = getattr(c, "MODE_WEEK", "week")
+MODE_NEW_WEEK = getattr(c, "MODE_NEW_WEEK", "new_week")
 MODE_LABELS = getattr(
     c,
     "MODE_LABELS",
     {
         MODE_MONTH: "📅 Месяц",
         MODE_WEEK: "📆 Неделя",
+        MODE_NEW_WEEK: "🆕 NEW неделя",
     },
 )
 MONTH_MODE_LABEL = MODE_LABELS.get(MODE_MONTH, "📅 Месяц")
 WEEK_MODE_LABEL = MODE_LABELS.get(MODE_WEEK, "📆 Неделя")
+NEW_WEEK_MODE_LABEL = MODE_LABELS.get(MODE_NEW_WEEK, "🆕 NEW неделя")
 
 PAGE_TITLE = getattr(c, "PAGE_TITLE", "📊 КР отзывы")
 PAGE_SUBTITLE = getattr(
@@ -434,11 +437,17 @@ def render_page() -> None:
     # ------------------------------------------------------
     mode_label = st.radio(
         "Режим отчёта",
-        [MONTH_MODE_LABEL, WEEK_MODE_LABEL],
+        [MONTH_MODE_LABEL, WEEK_MODE_LABEL, NEW_WEEK_MODE_LABEL],
         horizontal=True,
     )
-    is_month = mode_label == MONTH_MODE_LABEL
-    mode = MODE_MONTH if is_month else MODE_WEEK
+    if mode_label == MONTH_MODE_LABEL:
+        mode = MODE_MONTH
+    elif mode_label == WEEK_MODE_LABEL:
+        mode = MODE_WEEK
+    else:
+        mode = MODE_NEW_WEEK
+    is_month = mode == MODE_MONTH
+    is_new_week = mode == MODE_NEW_WEEK
 
     # Если пользователь переключил режим, старый результат очищаем
     if st.session_state.get("kr_report_mode") != mode:
@@ -475,6 +484,20 @@ def render_page() -> None:
             "Загрузите Excel",
             type=ACCEPTED_FILE_TYPES,
             key="kr_uploader_geo",
+            label_visibility="collapsed",
+        )
+
+    file_previous = None
+    if is_new_week:
+        st.markdown("#### 📄 Отчёт прошлой недели")
+        st.caption(
+            "Накопительный файл «Клиентский рейтинг»: в него будет добавлен "
+            "новый недельный лист, а «Сводная по жалобам» получит новую дату."
+        )
+        file_previous = st.file_uploader(
+            "Загрузите Excel",
+            type=ACCEPTED_FILE_TYPES,
+            key="kr_uploader_previous",
             label_visibility="collapsed",
         )
 
@@ -520,10 +543,17 @@ def render_page() -> None:
         end_date = None
         custom_label = ""
     else:
-        st.caption(
-            "Недельный режим: удалённые отзывы из геосервисов учитываются. "
-            "Порог суммы не применяется."
-        )
+        if is_new_week:
+            st.caption(
+                "Режим «NEW неделя»: удалённые отзывы из геосервисов учитываются. "
+                "Отзывы сайта 5★ с суммой ≤ 749 руб исключаются из оценок "
+                "и считаются в колонке «Отзывы менее 749 руб»."
+            )
+        else:
+            st.caption(
+                "Недельный режим: удалённые отзывы из геосервисов учитываются. "
+                "Порог суммы не применяется."
+            )
         period_enabled = st.checkbox(
             "Ограничить период датами",
             value=False,
@@ -583,6 +613,9 @@ def render_page() -> None:
         if not (file_site and file_agg and file_geo):
             st.error("⚠️ Пожалуйста, загрузите все три Excel-файла.")
             st.stop()
+        if is_new_week and not file_previous:
+            st.error("⚠️ Загрузите отчёт прошлой недели (четвёртый файл).")
+            st.stop()
 
         if is_month:
             settings = KRReportSettings(
@@ -606,7 +639,7 @@ def render_page() -> None:
                     st.stop()
 
             settings = KRReportSettings(
-                mode=MODE_WEEK,
+                mode=mode,
                 week=KRWeekSettings(
                     use_period=period_enabled,
                     start_date=start_date if period_enabled else None,
@@ -619,11 +652,13 @@ def render_page() -> None:
         _seek_file(file_site)
         _seek_file(file_agg)
         _seek_file(file_geo)
+        _seek_file(file_previous)
 
         files = KRSourceFiles(
             site=file_site,
             agg=file_agg,
             geo=file_geo,
+            previous=file_previous,
         )
         request = KRReportRequest(
             files=files,

@@ -11,10 +11,12 @@ PAGE_SUBTITLE = "Отчёт по отзывам из трёх источнико
 # ==========================================================
 MODE_MONTH = "month"
 MODE_WEEK = "week"
+MODE_NEW_WEEK = "new_week"
 
 MODE_LABELS = {
     MODE_MONTH: "📅 Месяц",
     MODE_WEEK: "📆 Неделя",
+    MODE_NEW_WEEK: "🆕 NEW неделя",
 }
 
 # ==========================================================
@@ -285,6 +287,7 @@ DELETED_STATUSES = {
 # ==========================================================
 EXCEL_SHEET_RATINGS = "Оценки"
 EXCEL_SHEET_ANALYSIS = "Анализ отзывов"
+EXCEL_SHEET_SUMMARY = "Сводная по жалобам"
 
 # ==========================================================
 # НАЗВАНИЯ БЛОКОВ В EXCEL
@@ -384,3 +387,4 @@ POSITIVE_KEYWORDS = {
 # ==========================================================
 MONTH_FILE_NAME_TEMPLATE = "КР_{month}_{year}.xlsx"
 WEEK_FILE_NAME_TEMPLATE = "КР_неделя_{period}.xlsx"
+NEW_WEEK_FILE_NAME_TEMPLATE = "Клиентский рейтинг {period}.xlsx"
