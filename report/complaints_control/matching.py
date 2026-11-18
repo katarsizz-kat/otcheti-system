@@ -1,218 +1,183 @@
 """
-Сопоставление источников с главной таблицей — ТЗ §5.
+Сопоставление жалоб из чатов с главной таблицей — действующие правила
+(ред. 18.11.2026):
 
-find_match: телефон + допуск по дате (по умолчанию 3 дня). Если телефон
-совпал, но ближайшая по дате запись всё равно за пределами допуска —
-возвращается лучшая по разнице дат запись, помеченная статусом «проверить
-дату» через отдельный флаг (в отчёте это видно по большому расхождению
-дат в колонках "Дата обращения" / "Дата в главной").
+- ключи: номер заказа, телефон, дата, ресторан, суть (категория учебника);
+- одного телефона/даты недостаточно для объединения разных жалоб;
+- точное совпадение: номер заказа, либо совокупность телефон+ресторан+дата+
+  категория (запись без номера заказа может считаться точной по совокупности);
+- вероятное совпадение: частичные ключи (телефон+дата в пределах допуска,
+  строка таблицы без даты и т.п.) — требует сверки и НЕ считается невнесённым;
+- «запись не найдена» при неполных ключах — не доказанное невнесение;
+- сверяется вся таблица, включая старые строки и строки без даты.
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from . import constants as c
 
 COMPARISON_COLS = [
-    "Источник", "№ обращения (issues_report)", "Телефон", "Дата обращения",
-    "Кол-во сообщений", "Сотрудник", "Ресторан (по источнику)", "Текст жалобы",
-    "Статус", "№ записи в главной", "Дата в главной", "Ресторан (по главной)",
-    "Тип жалобы (по главной)", "Ответственный (по главной)",
+    "Ключ", "Источник", "Дата", "Сотрудник", "Тикеты", "Ресторан",
+    "Категория жалобы", "Суть обращения", "Телефон Гостя", "Заказ",
+    "Статус", "Результат сверки", "№ записи в главной", "Дата в главной",
+    "Ресторан (по главной)", "Категория (по главной)", "Основание",
 ]
 
-_RESTAURANT_NUM_RE = re.compile(r"№\s*(\d+)")
-_TYUMEN_RE = re.compile(r"тюмен[ьи]?\D{0,3}(\d+)", re.IGNORECASE)
+_TYUMEN_REST_RE = re.compile(r"тюмен\w*\s*[№#]?\s*(\d+)", re.IGNORECASE)
+_SPB_REST_RE = re.compile(
+    r"(?:санкт-петербург\w*|петербург\w*|спб)\s*[№#]?\s*(\d+)", re.IGNORECASE
+)
+_NUM_REST_RE = re.compile(r"№\s*(\d+)")
 
 
-def extract_restaurant_from_text(text: Any) -> Optional[str]:
-    """Best-effort: ресторан по источнику часто упоминается в свободном
-    тексте как "№4" или "tyumen-2-..." (ТЗ §6, колонка "Ресторан (по
-    источнику)"). Если не найдено — оставляем пустым, это не критично
-    для статуса сопоставления."""
-    if not text:
-        return None
-    s = str(text)
-    m = _RESTAURANT_NUM_RE.search(s)
+def extract_restaurant(text: Any, orders: List[dict], source_label: str) -> Tuple[str, Optional[int], str]:
+    """(город, номер ресторана, подпись) из заказа/текста/источника.
+    Best-effort: если номер не найден — подпись пустая, это не критично."""
+    city = ""
+    rest: Optional[int] = None
+    for o in orders or []:
+        if o.get("city"):
+            city = o["city"]
+        if o.get("rest") is not None and rest is None:
+            rest = o["rest"]
+    s = str(text or "")
+    m = _TYUMEN_REST_RE.search(s)
     if m:
-        return f"№{m.group(1)}"
-    m = _TYUMEN_RE.search(s)
-    if m:
-        return f"Тюмень {m.group(1)}"
-    return None
+        city, rest = "Тюмень", int(m.group(1))
+    else:
+        m = _SPB_REST_RE.search(s)
+        if m:
+            city, rest = "Санкт-Петербург", int(m.group(1))
+        elif rest is None:
+            m = _NUM_REST_RE.search(s)
+            if m:
+                rest = int(m.group(1))
+    if not city:
+        city = "Тюмень" if "Тюмень" in source_label else "Санкт-Петербург"
+    label = f"{city} №{rest}" if rest is not None else ""
+    return city, rest, label
 
 
-def build_main_index(main_df: pd.DataFrame) -> Dict[str, List[Dict[str, Any]]]:
-    """{телефон: [строки главной таблицы]} — строится один раз на город/период."""
-    index: Dict[str, List[Dict[str, Any]]] = {}
+def build_main_index(main_df: pd.DataFrame) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """Индексы по телефону и по номеру заказа — по всей таблице, без
+    фильтрации периодом (правило: сверять всю доступную таблицу)."""
+    index: Dict[str, Dict[str, List[Dict[str, Any]]]] = {"by_phone": {}, "by_order": {}}
     if main_df is None or main_df.empty:
         return index
     for i, row in main_df.reset_index(drop=True).iterrows():
-        phone = row.get("Телефон") or ""
-        if not phone:
-            continue
         record = row.to_dict()
         record["__row_num"] = i + 1
-        index.setdefault(phone, []).append(record)
+        phone = record.get("Телефон") or ""
+        order = record.get("Заказ") or ""
+        if phone:
+            index["by_phone"].setdefault(phone, []).append(record)
+        if order:
+            index["by_order"].setdefault(str(order), []).append(record)
     return index
 
 
-def find_match(
-    phone: str,
-    complaint_date: Optional[date],
-    main_index: Dict[str, List[Dict[str, Any]]],
-    tolerance_days: int = c.DEFAULT_TOLERANCE_DAYS,
-) -> Optional[Dict[str, Any]]:
-    candidates = main_index.get(phone, [])
-    if not candidates:
+def _date_diff(a: Optional[date], b: Optional[date]) -> Optional[int]:
+    if a is None or b is None:
         return None
-    if complaint_date is None:
-        return candidates[0]
+    return abs((a - b).days)
 
-    best, best_diff = None, None
+
+def _rest_ok(rest: Optional[int], cand: Dict[str, Any]) -> bool:
+    cand_rest = cand.get("Номер ресторана")
+    if rest is None or cand_rest is None or pd.isna(cand_rest):
+        return True
+    return int(cand_rest) == int(rest)
+
+
+def _cat_ok(category: str, cand: Dict[str, Any]) -> bool:
+    cand_cat = cand.get("Категория") or ""
+    if not category or not cand_cat:
+        return True
+    return category == cand_cat
+
+
+def match_complaint(
+    phone: str,
+    order_id: str,
+    rest: Optional[int],
+    cdate: Optional[date],
+    category: str,
+    index: Dict[str, Dict[str, List[Dict[str, Any]]]],
+    tolerance_days: int = c.DEFAULT_TOLERANCE_DAYS,
+) -> Tuple[str, Optional[Dict[str, Any]], str]:
+    """Возвращает (статус, запись таблицы|None, основание)."""
+    # 1. Номер заказа — сильный ключ: точное совпадение.
+    if order_id:
+        candidates = index["by_order"].get(str(order_id), [])
+        if candidates:
+            best = min(
+                candidates,
+                key=lambda r: (_date_diff(cdate, r.get("Дата")) is None,
+                               _date_diff(cdate, r.get("Дата")) or 0),
+            )
+            return c.STATUS_EXACT, best, f"номер заказа {order_id}"
+
+    # 2. Телефон + совокупность ключей.
+    candidates = index["by_phone"].get(phone, []) if phone else []
+    best_exact = None
+    best_probable = None
+    best_prob_diff = None
     for cand in candidates:
         cand_date = cand.get("Дата")
-        if cand_date is None:
+        diff = _date_diff(cdate, cand_date)
+        rest_ok = _rest_ok(rest, cand)
+        cat_ok = _cat_ok(category, cand)
+        if diff == 0 and rest_ok and cat_ok:
+            if best_exact is None:
+                best_exact = cand
             continue
-        diff = abs((cand_date - complaint_date).days)
-        if diff <= tolerance_days and (best is None or diff < best_diff):
-            best, best_diff = cand, diff
-    return best or candidates[0]
+        probable = (
+            (diff is not None and diff <= tolerance_days)
+            or (cand_date is None and rest_ok and cat_ok)
+            or (diff == 0 and (rest_ok or cat_ok))
+        )
+        if probable:
+            score = diff if diff is not None else tolerance_days + 1
+            if best_probable is None or score < best_prob_diff:
+                best_probable, best_prob_diff = cand, score
+
+    if best_exact is not None:
+        return c.STATUS_EXACT, best_exact, "телефон + ресторан + дата + категория"
+    if best_probable is not None:
+        return c.STATUS_PROBABLE, best_probable, "частичные ключи (телефон/дата/ресторан/категория)"
+
+    # 3. Записи нет. Неполные ключи — не доказанное невнесение.
+    if not phone and not order_id:
+        return c.STATUS_NO_KEYS, None, "нет телефона и номера заказа"
+    return c.STATUS_NOT_ENTERED, None, "совпадений по ключам нет"
 
 
-def match_source_to_main(
-    complaints: pd.DataFrame,
-    no_phone: pd.DataFrame,
-    main_index: Dict[str, List[Dict[str, Any]]],
-    source_label: str,
-    tolerance_days: int = c.DEFAULT_TOLERANCE_DAYS,
-    phone_col: str = "Телефон",
-    date_col: str = "Дата",
-    author_col: Optional[str] = None,
-    count_col: Optional[str] = None,
-    text_col: str = "Текст",
-) -> pd.DataFrame:
-    """Строит таблицу сравнения (13 колонок, ТЗ §6) для одного источника."""
-    rows: List[Dict[str, Any]] = []
-
-    for _, r in complaints.iterrows():
-        phone = r.get(phone_col) or ""
-        cdate = r.get(date_col)
-        cdate = cdate.date() if hasattr(cdate, "date") and not isinstance(cdate, date) else cdate
-        match = find_match(phone, cdate, main_index, tolerance_days)
-        text = str(r.get(text_col) or "")[:500]
-
-        status = c.STATUS_FOUND if match else c.STATUS_NOT_ENTERED
-
-        rows.append({
-            "Источник": source_label,
-            "№ обращения (issues_report)": None,
-            "Телефон": phone,
-            "Дата обращения": cdate,
-            "Кол-во сообщений": r.get(count_col) if count_col else 1,
-            "Сотрудник": r.get(author_col) if author_col else None,
-            "Ресторан (по источнику)": extract_restaurant_from_text(text),
-            "Текст жалобы": text,
-            "Статус": status,
-            "№ записи в главной": match.get("__row_num") if match else None,
-            "Дата в главной": match.get("Дата") if match else None,
-            "Ресторан (по главной)": match.get("Ресторан") if match else None,
-            "Тип жалобы (по главной)": match.get("Вид жалобы") if match else None,
-            "Ответственный (по главной)": match.get("Сотрудник") if match else None,
-        })
-
-    for _, r in no_phone.iterrows():
-        text = str(r.get(text_col) or "")[:500]
-        rows.append({
-            "Источник": source_label,
-            "№ обращения (issues_report)": None,
-            "Телефон": "",
-            "Дата обращения": r.get(date_col),
-            "Кол-во сообщений": 1,
-            "Сотрудник": r.get(author_col) if author_col else None,
-            "Ресторан (по источнику)": extract_restaurant_from_text(text),
-            "Текст жалобы": text,
-            "Статус": c.STATUS_NO_PHONE,
-            "№ записи в главной": None,
-            "Дата в главной": None,
-            "Ресторан (по главной)": None,
-            "Тип жалобы (по главной)": None,
-            "Ответственный (по главной)": None,
-        })
-
-    return pd.DataFrame(rows, columns=COMPARISON_COLS) if rows else pd.DataFrame(columns=COMPARISON_COLS)
+def result_label(status: str, basis: str) -> str:
+    if status == c.STATUS_EXACT:
+        return f"{c.RESULT_EXACT}: {basis}"
+    if status == c.STATUS_PROBABLE:
+        return c.RESULT_PROBABLE
+    if status == c.STATUS_NO_KEYS:
+        return c.RESULT_NO_KEYS
+    return c.RESULT_NOT_FOUND
 
 
-def match_issues_to_main(
-    issues_df: pd.DataFrame,
-    main_index_spb: Dict[str, List[Dict[str, Any]]],
-    main_index_tmn: Dict[str, List[Dict[str, Any]]],
-    tolerance_days: int = c.DEFAULT_TOLERANCE_DAYS,
-) -> pd.DataFrame:
-    """issues_report покрывает обе главные таблицы сразу — по каждой строке
-    выбирается индекс своего города (ТЗ §2.5, §5). Ресторан и дата берутся
-    из готовых столбцов файла, а не из текста (в отличие от чатов)."""
-    rows: List[Dict[str, Any]] = []
-    if issues_df is None or issues_df.empty:
-        return pd.DataFrame(columns=COMPARISON_COLS)
-
-    for _, r in issues_df.iterrows():
-        phone = r.get("Телефон") or ""
-        raw_date = r.get("Дата отзыва")
-        cdate = raw_date.date() if hasattr(raw_date, "date") else None
-        city = str(r.get("Город") or "").strip()
-        index = main_index_spb if city == "Санкт-Петербург" else main_index_tmn
-
-        text = str(r.get("Первичное сообщение") or "")[:500]
-        ticket_number = r.get("Номер обращения")
-
-        if not phone:
-            rows.append({
-                "Источник": "issues_report",
-                "№ обращения (issues_report)": ticket_number,
-                "Телефон": "", "Дата обращения": cdate,
-                "Кол-во сообщений": 1, "Сотрудник": None,
-                "Ресторан (по источнику)": r.get("Ресторан"), "Текст жалобы": text,
-                "Статус": c.STATUS_NO_PHONE,
-                "№ записи в главной": None, "Дата в главной": None,
-                "Ресторан (по главной)": None, "Тип жалобы (по главной)": None,
-                "Ответственный (по главной)": None,
-            })
-            continue
-
-        match = find_match(phone, cdate, index, tolerance_days)
-        status = c.STATUS_FOUND if match else c.STATUS_NOT_ENTERED
-
-        rows.append({
-            "Источник": "issues_report",
-            "№ обращения (issues_report)": ticket_number,
-            "Телефон": phone,
-            "Дата обращения": cdate,
-            "Кол-во сообщений": 1,
-            "Сотрудник": None,  # «Исполнитель» — очередь/отдел, не сотрудник (ТЗ §2.5, п.5)
-            "Ресторан (по источнику)": r.get("Ресторан"),
-            "Текст жалобы": text,
-            "Статус": status,
-            "№ записи в главной": match.get("__row_num") if match else None,
-            "Дата в главной": match.get("Дата") if match else None,
-            "Ресторан (по главной)": match.get("Ресторан") if match else None,
-            "Тип жалобы (по главной)": match.get("Вид жалобы") if match else None,
-            "Ответственный (по главной)": match.get("Сотрудник") if match else None,
-        })
-
-    return pd.DataFrame(rows, columns=COMPARISON_COLS) if rows else pd.DataFrame(columns=COMPARISON_COLS)
+def complaint_key(source: str, phone: str, order_id: str, cdate: Optional[date], text: str) -> str:
+    """Устойчивый ключ жалобы для очереди ручной разметки."""
+    digest = hashlib.sha1(str(text or "").encode("utf-8")).hexdigest()[:10]
+    day = cdate.isoformat() if cdate else ""
+    return f"{source}|{order_id or phone}|{day}|{digest}"
 
 
-def find_unconfirmed_main_rows(main_df: pd.DataFrame, confirmed_phones: set) -> pd.DataFrame:
-    """НЕ ПОДТВЕРЖДЕНО ИСТОЧНИКОМ (§5, обратная проверка): запись есть в
-    главной таблице, но её телефон не встретился ни в одном из проверяемых
-    источников за период."""
-    if main_df is None or main_df.empty:
-        return main_df.iloc[0:0] if main_df is not None else pd.DataFrame()
-    mask = main_df["Телефон"].map(lambda p: bool(p) and p not in confirmed_phones)
-    result = main_df[mask].copy()
-    result["Статус"] = c.STATUS_NOT_CONFIRMED
-    return result
+def format_guest_phone(phone: str) -> str:
+    """Столбец «Телефон Гостя»: номер из сообщения Битрикс либо явная
+    пометка об отсутствии (правило 17.11.2026)."""
+    if not phone:
+        return c.NO_PHONE_LABEL
+    return f"+{phone}"

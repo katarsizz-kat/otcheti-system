@@ -1,13 +1,18 @@
 """
-Оркестратор отчёта «Контроль жалоб».
+Оркестратор отчёта «Проверка внесения жалоб» (действующие правила,
+ред. 18.11.2026).
+
+Источники: только чаты ресторанов Битрикс24 (CSV) и главные таблицы
+СПб/Тюмени (файлы или прямая выгрузка Google Sheets). CRM не используется.
+
 extract (data.py) -> classify (classify.py) -> match (matching.py)
--> stats (stats.py) -> excel (excel.py) -> ControlReportResult.
+-> разметка спорных случаев (request.overrides) -> stats -> excel.
 """
 from __future__ import annotations
 
 from collections import Counter
 from datetime import date
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -15,13 +20,28 @@ from . import constants as c
 from . import data
 from . import matching
 from . import stats as st
-from .classify import classify_message, classify_issue_row
+from .classify import classify_message
 from .excel import build_complaints_control_excel
 from .models import (
     ControlReportRequest,
     ControlReportResult,
     ControlReportData,
 )
+
+ATTENTION_COLS = ["Дата", "Источник", "Автор", "Ресторан", "Текст", "Кол-во сообщений"]
+
+_OVERRIDE_STATUS = {
+    "exact": c.STATUS_EXACT,
+    "probable": c.STATUS_PROBABLE,
+    "not_entered": c.STATUS_NOT_ENTERED,
+}
+
+REVIEW_DEFAULT = "Оставить как есть"
+REVIEW_CHOICES = {
+    "Подтверждено внесение": "exact",
+    "Не внесено": "not_entered",
+    "Вероятное совпадение": "probable",
+}
 
 
 def _in_range(d: Optional[date], start: Optional[date], end: Optional[date]) -> bool:
@@ -37,8 +57,6 @@ def _in_range(d: Optional[date], start: Optional[date], end: Optional[date]) -> 
 def _filter_messages_by_period(
     messages: pd.DataFrame, start: Optional[date], end: Optional[date]
 ) -> pd.DataFrame:
-    """Фильтрует сырые сообщения чата по периоду ДО группировки по (телефон,
-    день)."""
     if messages is None or messages.empty or (start is None and end is None):
         return messages
     return messages[messages["Дата"].map(
@@ -46,44 +64,125 @@ def _filter_messages_by_period(
     )]
 
 
-def _classify_grouped_chat(grouped: pd.DataFrame) -> (pd.DataFrame, Counter):
-    """Классифицирует каждую сгруппированную (телефон, день) запись чата.
-    Возвращает (только жалобы, счётчик причин по всем записям)."""
+def _summary(text: str, limit: int = 200) -> str:
+    s = " / ".join(t.strip() for t in str(text or "").split("||") if t.strip())
+    return s[:limit]
+
+
+def _empty_comparison() -> pd.DataFrame:
+    return pd.DataFrame(columns=matching.COMPARISON_COLS)
+
+
+def _process_chat(
+    file,
+    source_label: str,
+    main_index: Dict,
+    other_index: Dict,
+    city_has_table: bool,
+    start: Optional[date],
+    end: Optional[date],
+    tolerance_days: int,
+    warnings: List[str],
+    label_counts: Dict[str, Dict[str, int]],
+) -> (pd.DataFrame, pd.DataFrame):
+    """Возвращает (строки сопоставления, строки «Требует внимания»)."""
+    messages = data.load_chat_messages(file, source_label, warnings)
+    messages = _filter_messages_by_period(messages, start, end)
+    grouped, no_keys_msgs = data.group_messages(messages)
+
     counts: Counter = Counter()
-    if grouped is None or grouped.empty:
-        return grouped, counts
+    comparison_rows: List[dict] = []
+    attention_rows: List[dict] = []
 
-    is_complaint = []
-    for text in grouped["Текст"]:
-        result = classify_message(text, allow_compensation=True)
+    def handle(text: str, cdate, authors: str, tickets: str, phone: str,
+               order_id: str, orders: List[dict], count: int):
+        result = classify_message(text)
         counts[result.reason_label] += 1
-        is_complaint.append(result.is_complaint)
+        city, rest, rest_label = matching.extract_restaurant(text, orders, source_label)
 
-    grouped = grouped.copy()
-    grouped["_is_complaint"] = is_complaint
-    return grouped[grouped["_is_complaint"]].drop(columns=["_is_complaint"]), counts
+        if result.reason_label == "attention":
+            attention_rows.append({
+                "Дата": cdate, "Источник": source_label, "Автор": authors,
+                "Ресторан": rest_label, "Текст": _summary(text, 500),
+                "Кол-во сообщений": count,
+            })
+            return
+        if not result.is_complaint:
+            return
 
+        if not city_has_table:
+            status, record, basis = (
+                c.STATUS_NO_KEYS, None, f"главная таблица города {city} не загружена",
+            )
+        else:
+            status, record, basis = matching.match_complaint(
+                phone, order_id, rest, cdate, result.category,
+                main_index, tolerance_days,
+            )
+            if status == c.STATUS_NOT_ENTERED and other_index:
+                other_status, other_record, other_basis = matching.match_complaint(
+                    phone, order_id, rest, cdate, result.category,
+                    other_index, tolerance_days,
+                )
+                if other_status in (c.STATUS_EXACT, c.STATUS_PROBABLE):
+                    status, record, basis = other_status, other_record, other_basis
 
-def _classify_issues(issues_df: pd.DataFrame) -> (pd.DataFrame, Counter):
-    counts: Counter = Counter()
-    if issues_df is None or issues_df.empty:
-        return issues_df, counts
+        key = matching.complaint_key(source_label, phone, order_id, cdate, text)
+        comparison_rows.append({
+            "Ключ": key,
+            "Источник": source_label,
+            "Дата": cdate,
+            "Сотрудник": authors,
+            "Тикеты": tickets,
+            "Ресторан": rest_label,
+            "Категория жалобы": result.category,
+            "Суть обращения": _summary(text),
+            "Телефон Гостя": matching.format_guest_phone(phone),
+            "Заказ": order_id,
+            "Статус": status,
+            "Результат сверки": matching.result_label(status, basis),
+            "№ записи в главной": record.get("__row_num") if record else None,
+            "Дата в главной": record.get("Дата") if record else None,
+            "Ресторан (по главной)": record.get("Ресторан") if record else None,
+            "Категория (по главной)": record.get("Категория") if record else None,
+            "Основание": basis,
+        })
 
-    is_complaint = []
-    for _, row in issues_df.iterrows():
-        result = classify_issue_row(row.get("Первичное сообщение"), row.get("Причина обращения"))
-        counts[result.reason_label] += 1
-        is_complaint.append(result.is_complaint)
+    for _, g in grouped.iterrows():
+        orders = data.find_orders_in_text(g["Текст"])
+        handle(
+            g["Текст"], g["Дата"], g["Авторы"], g["Тикеты"],
+            g["Телефон"], g["Заказ"], orders, g["Кол-во сообщений"],
+        )
 
-    issues_df = issues_df.copy()
-    issues_df["_is_complaint"] = is_complaint
-    return issues_df[issues_df["_is_complaint"]].drop(columns=["_is_complaint"]), counts
+    for _, m in no_keys_msgs.iterrows():
+        mdate = m["Дата"].date() if pd.notna(m["Дата"]) else None
+        handle(
+            m["Текст"], mdate, m["Автор"], "", "", "", [], 1,
+        )
+
+    label_counts[source_label] = dict(counts)
+    if file is not None and not comparison_rows and not attention_rows and not messages.empty:
+        warnings.append(
+            f"«{source_label}»: за период не найдено ни одной жалобы среди сообщений — "
+            "проверьте, что чат-экспорт актуален."
+        )
+
+    comparison = (
+        pd.DataFrame(comparison_rows, columns=matching.COMPARISON_COLS)
+        if comparison_rows else _empty_comparison()
+    )
+    attention = (
+        pd.DataFrame(attention_rows, columns=ATTENTION_COLS)
+        if attention_rows else pd.DataFrame(columns=ATTENTION_COLS)
+    )
+    return comparison, attention
 
 
 def build_complaints_control_report(request: ControlReportRequest) -> ControlReportResult:
     settings = request.settings
     period_label = settings.period_label
-    warnings: list = []
+    warnings: List[str] = []
 
     try:
         request.validate()
@@ -95,159 +194,85 @@ def build_complaints_control_report(request: ControlReportRequest) -> ControlRep
         for label in request.files.missing_labels():
             warnings.append(f"Источник «{label}» не загружен — соответствующий раздел будет пустым.")
 
-        # -------------------- ГЛАВНЫЕ ТАБЛИЦЫ --------------------
-        main_spb_raw = data.load_main_spb(request.files.main_spb, warnings)
-        main_spb = data.finalize_main_table(main_spb_raw, start_date, end_date)
-        main_tmn_raw = data.load_main_tyumen(request.files.main_tmn, warnings)
-        main_tmn = data.finalize_main_table(main_tmn_raw, start_date, end_date)
-        main_combined = pd.concat([main_spb, main_tmn], ignore_index=True)
+        # -------------------- ГЛАВНЫЕ ТАБЛИЦЫ (ВСЯ ТАБЛИЦА) --------------------
+        main_spb = data.finalize_main_table(
+            data.load_main_spb(request.files.main_spb, warnings), start_date, end_date,
+        )
+        main_tmn = data.finalize_main_table(
+            data.load_main_tyumen(request.files.main_tmn, warnings), start_date, end_date,
+        )
+        if request.files.main_spb is not None and main_spb.empty:
+            warnings.append("«ОС и компенсации» (СПб): таблица пуста — проверьте выгрузку.")
+        if request.files.main_tmn is not None and main_tmn.empty:
+            warnings.append("«Обратная_связь_Тюмень»: таблица пуста — проверьте выгрузку.")
 
-        if request.files.main_spb and main_spb.empty:
-            warnings.append(
-                "«ОС и компенсации» (СПб): за выбранный период нет строк — "
-                "проверьте, что таблица обновлена, это не обязательно значит «жалоб не было»."
-            )
-        if request.files.main_tmn and main_tmn.empty:
-            warnings.append(
-                "«Обратная_связь_Тюмень»: за выбранный период нет строк — "
-                "проверьте, что таблица обновлена, это не обязательно значит «жалоб не было»."
-            )
-
-        main_index_spb = matching.build_main_index(main_spb)
-        main_index_tmn = matching.build_main_index(main_tmn)
-        empty_index: Dict = {}
+        index_spb = matching.build_main_index(main_spb)
+        index_tmn = matching.build_main_index(main_tmn)
 
         label_counts: Dict[str, Dict[str, int]] = {}
 
-        # -------------------- ЧАТ ТЮМЕНЬ --------------------
-        chat_tmn_messages = data.load_chat_messages(request.files.chat_tmn, "Гости ОС Тюмень", warnings)
-        chat_tmn_messages = _filter_messages_by_period(chat_tmn_messages, start_date, end_date)
-        grouped_tmn, no_phone_tmn = data.group_messages_by_phone_day(chat_tmn_messages)
-        complaints_tmn, counts_tmn = _classify_grouped_chat(grouped_tmn)
-        label_counts["Гости ОС Тюмень (чат)"] = dict(counts_tmn)
-        if request.files.chat_tmn and complaints_tmn.empty and not chat_tmn_messages.empty:
-            warnings.append(
-                "«Гости ОС Тюмень»: за период не найдено ни одной жалобы среди сообщений — "
-                "проверьте, что чат-экспорт актуален."
-            )
-        comparison_chat_tmn = matching.match_source_to_main(
-            complaints_tmn, no_phone_tmn, main_index_tmn, "Гости ОС Тюмень",
-            tolerance_days, author_col="Авторы", count_col="Кол-во сообщений",
+        # -------------------- ЧАТЫ РЕСТОРАНОВ --------------------
+        comparison_tmn, attention_tmn = _process_chat(
+            request.files.chat_tmn, "Гости ОС Тюмень",
+            index_tmn, index_spb, request.files.main_tmn is not None,
+            start_date, end_date, tolerance_days, warnings, label_counts,
         )
-        not_confirmed_chat_tmn = matching.find_unconfirmed_main_rows(
-            main_tmn, set(complaints_tmn.get("Телефон", pd.Series(dtype=str)))
+        comparison_spb, attention_spb = _process_chat(
+            request.files.chat_spb, "Обратная связь Гости",
+            index_spb, index_tmn, request.files.main_spb is not None,
+            start_date, end_date, tolerance_days, warnings, label_counts,
         )
 
-        # -------------------- ЧАТ СПБ --------------------
-        chat_spb_messages = data.load_chat_messages(request.files.chat_spb, "Обратная связь Гости", warnings)
-        chat_spb_messages = _filter_messages_by_period(chat_spb_messages, start_date, end_date)
-        grouped_spb, no_phone_spb = data.group_messages_by_phone_day(chat_spb_messages)
-        complaints_spb, counts_spb = _classify_grouped_chat(grouped_spb)
-        label_counts["Обратная связь Гости (чат, СПб)"] = dict(counts_spb)
-        if request.files.chat_spb and complaints_spb.empty and not chat_spb_messages.empty:
-            warnings.append(
-                "«Обратная связь Гости»: за период не найдено ни одной жалобы среди сообщений — "
-                "проверьте, что чат-экспорт актуален."
-            )
-        comparison_chat_spb = matching.match_source_to_main(
-            complaints_spb, no_phone_spb, main_index_spb, "Обратная связь Гости",
-            tolerance_days, author_col="Авторы", count_col="Кол-во сообщений",
+        comparison = pd.concat(
+            [comparison_tmn, comparison_spb], ignore_index=True,
         )
-        not_confirmed_chat_spb = matching.find_unconfirmed_main_rows(
-            main_spb, set(complaints_spb.get("Телефон", pd.Series(dtype=str)))
+        attention = pd.concat(
+            [attention_tmn, attention_spb], ignore_index=True,
         )
 
-        # -------------------- issues_report --------------------
-        issues_raw = data.load_issues_report(request.files.issues_report, warnings)
-        if not issues_raw.empty:
-            issues_raw = issues_raw[issues_raw["Дата отзыва"].map(
-                lambda d: _in_range(d.date() if pd.notna(d) else None, start_date, end_date)
-            )]
-        issues_complaints, counts_issues = _classify_issues(issues_raw)
-        label_counts["issues_report"] = dict(counts_issues)
-        if request.files.issues_report and issues_complaints.empty and not issues_raw.empty:
-            warnings.append(
-                "«issues_report»: за период не найдено ни одной жалобы среди обращений СПб/Тюмени."
-            )
+        # -------------------- РУЧНАЯ РАЗМЕТКА СПОРНЫХ СЛУЧАЕВ --------------------
+        if request.overrides and not comparison.empty:
+            for key, decision in request.overrides.items():
+                status = _OVERRIDE_STATUS.get(decision)
+                if not status:
+                    continue
+                mask = comparison["Ключ"] == key
+                if mask.any():
+                    comparison.loc[mask, "Статус"] = status
+                    comparison.loc[mask, "Результат сверки"] = matching.result_label(
+                        status, "решение пользователя (ручная разметка)",
+                    )
+                    comparison.loc[mask, "Основание"] = "ручная разметка"
 
-        issues_tmn = issues_complaints[issues_complaints.get("Город") == "Тюмень"] if not issues_complaints.empty else issues_complaints
-        issues_spb = issues_complaints[issues_complaints.get("Город") == "Санкт-Петербург"] if not issues_complaints.empty else issues_complaints
-
-        comparison_issues_tmn = matching.match_issues_to_main(issues_tmn, empty_index, main_index_tmn, tolerance_days)
-        comparison_issues_spb = matching.match_issues_to_main(issues_spb, main_index_spb, empty_index, tolerance_days)
-
-        not_confirmed_issues_tmn = matching.find_unconfirmed_main_rows(
-            main_tmn, set(issues_tmn.get("Телефон", pd.Series(dtype=str)))
-        )
-        not_confirmed_issues_spb = matching.find_unconfirmed_main_rows(
-            main_spb, set(issues_spb.get("Телефон", pd.Series(dtype=str)))
-        )
-
-        # -------------------- ЛИСТ 3: СВОД --------------------
-        comparison_chats_combined = pd.concat(
-            [df for df in (comparison_chat_tmn, comparison_chat_spb) if df is not None and not df.empty],
-            ignore_index=True,
-        ) if (not comparison_chat_tmn.empty or not comparison_chat_spb.empty) else pd.DataFrame(columns=matching.COMPARISON_COLS)
-        comparison_issues_combined = pd.concat(
-            [df for df in (comparison_issues_tmn, comparison_issues_spb) if df is not None and not df.empty],
-            ignore_index=True,
-        ) if (not comparison_issues_tmn.empty or not comparison_issues_spb.empty) else pd.DataFrame(columns=matching.COMPARISON_COLS)
-
-        not_entered_all = st.build_not_entered_all(comparison_chats_combined, comparison_issues_combined)
-        no_phone_all = st.build_no_phone_all(comparison_chats_combined, comparison_issues_combined)
-        employee_share = st.build_employee_not_entered_share(comparison_chats_combined)
-        restaurant_summary = st.build_restaurant_summary(comparison_chats_combined, comparison_issues_combined)
-
-        # -------------------- ЛИСТ 4: МЕТРИКИ --------------------
-        metric_unpaid = st.metric_unpaid_compensation(main_combined)
-        metric_deviation = st.metric_deviation_confirmed(main_combined)
-        metric_cost = st.metric_compensation_cost(main_combined)
-        metric_backlog = st.metric_backlog(issues_raw)
-        metric_decision = st.metric_decision_distribution(main_combined)
-
+        # -------------------- ИТОГОВЫЕ ТАБЛИЦЫ --------------------
+        not_entered = st.build_not_entered(comparison)
+        probable = st.build_probable(comparison)
+        no_keys = st.build_no_keys(comparison)
+        employee_share = st.build_employee_not_entered_share(comparison)
+        restaurant_summary = st.build_restaurant_summary(comparison)
         classification_preview = st.build_classification_preview(label_counts)
 
-        # -------------------- EXCEL --------------------
-        excel_bytes = build_complaints_control_excel(
-            comparison_chat_tmn, comparison_chat_spb,
-            not_confirmed_chat_tmn, not_confirmed_chat_spb,
-            comparison_issues_tmn, comparison_issues_spb,
-            not_confirmed_issues_tmn, not_confirmed_issues_spb,
-            not_entered_all, employee_share, restaurant_summary,
-            metric_unpaid, metric_deviation, metric_cost, metric_backlog, metric_decision,
-            period_label,
-        )
+        review_source = comparison[
+            comparison["Статус"].isin([c.STATUS_PROBABLE, c.STATUS_NO_KEYS])
+        ].copy()
+        if not review_source.empty:
+            review_source["Решение"] = REVIEW_DEFAULT
+        review_queue = review_source.reset_index(drop=True)
 
-        # Агрегированный превью-список «не подтверждено» (для UI, не для Excel):
-        # confirmed по объединению ВСЕХ источников — иначе запись, найденная
-        # чатом, но не встретившаяся в issues_report, ложно попала бы сюда.
-        all_confirmed_tmn = set(complaints_tmn.get("Телефон", pd.Series(dtype=str))) | set(
-            issues_tmn.get("Телефон", pd.Series(dtype=str))
-        )
-        all_confirmed_spb = set(complaints_spb.get("Телефон", pd.Series(dtype=str))) | set(
-            issues_spb.get("Телефон", pd.Series(dtype=str))
-        )
-        not_confirmed_main_combined = pd.concat(
-            [
-                matching.find_unconfirmed_main_rows(main_tmn, all_confirmed_tmn),
-                matching.find_unconfirmed_main_rows(main_spb, all_confirmed_spb),
-            ],
-            ignore_index=True,
+        excel_bytes = build_complaints_control_excel(
+            not_entered, probable, comparison, attention,
+            employee_share, restaurant_summary, period_label, no_keys,
         )
 
         report_data = ControlReportData(
-            comparison_chats=comparison_chats_combined,
-            comparison_issues=comparison_issues_combined,
-            not_entered_all=not_entered_all,
-            not_confirmed_main=not_confirmed_main_combined,
-            no_phone_all=no_phone_all,
+            comparison=comparison,
+            not_entered=not_entered,
+            probable=probable,
+            no_keys=no_keys,
+            attention=attention,
+            review_queue=review_queue,
             employee_not_entered_share=employee_share,
             restaurant_summary=restaurant_summary,
-            metric_unpaid_compensation=metric_unpaid,
-            metric_deviation_confirmed=metric_deviation,
-            metric_compensation_cost=metric_cost,
-            metric_backlog=metric_backlog,
-            metric_decision_distribution=metric_decision,
             classification_preview=classification_preview,
         )
 

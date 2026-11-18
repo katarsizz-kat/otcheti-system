@@ -1,18 +1,20 @@
 """
-Классификация жалоб — ТЗ §4.
+Классификация жалоб для проверки внесения (действующие правила, ред. 18.11.2026).
 
-Порядок проверок (§4.2, важен порядок!):
-1. День рождения -> has_compensation принудительно False.
-2. has_quality = QUALITY_MARKERS (подстроки) ИЛИ QUALITY_REGEXES.
-3. has_compensation = (только если allow_compensation) COMPENSATION_REGEXES
-   И не день рождения.
-4. has_compensation истинно, но нет has_quality, и есть DELAY_ONLY_MARKERS
-   -> гасим has_compensation (компенсация за опоздание = логистика).
-5. has_logistics = LOGISTICS_EXCLUDE_MARKERS.
-6. Рейтинг: 4-5⭐ без quality/compensation -> похвала, не жалоба.
-   1-3⭐ -> has_quality = True.
-7. Решение: has_quality or has_compensation -> жалоба. Иначе по порядку:
-   birthday -> logistics -> praise -> neutral -> «не определено».
+Порядок проверок (важен!):
+1. Качество/недоложенные позиции/сервис/приготовление -> жалоба, категория
+   учебника (недоложенные > сервис > приготовление > продукт).
+2. Промокод/купон за опоздание или долгое ожидание -> жалоба «Опоздания»
+   (уточнение 17.11.2026). Обычные бонусы за задержку под это правило не
+   попадают, но сама задержка остаётся жалобой «Опоздания».
+3. Задержка/«где заказ» без изменения текущего заказа -> «Опоздания».
+4. Признание ресторана (компенсация) -> жалоба.
+5. Технические сбои, пропавшие заказы, ранний «доставлен», недоступные
+   телефоны -> «Требует внимания» (не жалоба для внесения).
+6. Изменения текущего заказа, возвраты без жалобы, лояльность/ДР, похвала,
+   нейтральные -> не жалобы.
+
+Бессодержательные реплики бота вырезаются до классификации.
 """
 from __future__ import annotations
 
@@ -28,11 +30,9 @@ _CLIENT_BOT_RE = re.compile(
 
 
 def extract_client_lines(text: Any) -> str:
-    """Вырезает реплики бота из переписки бот<->гость (§4.1).
-
-    У бота в шаблонах встречаются слова-триггеры («уточните», «акция»,
-    «бонус» и т.д.), которые ломают классификацию, если их не отфильтровать.
-    """
+    """Вырезает реплики бота из переписки бот<->гость: у бота в шаблонах
+    встречаются слова-триггеры («уточните», «акция», «бонус»), которые
+    ломают классификацию."""
     text = text or ""
     if not text or "Клиент (" not in text:
         return text
@@ -48,7 +48,8 @@ class ClassifyResult:
     has_compensation: bool
     has_logistics: bool
     is_birthday: bool
-    reason_label: str  # 'quality' | 'compensation' | 'birthday' | 'logistics' | 'praise' | 'neutral' | 'not_determined'
+    reason_label: str
+    category: str = ""
 
 
 def _match_any_substring(text: str, markers) -> bool:
@@ -65,33 +66,59 @@ def _match_any_regex(text: str, patterns) -> bool:
     return False
 
 
+def _quality_category(t: str, has_missing: bool, has_service: bool, has_cooking: bool) -> str:
+    if has_missing:
+        return c.CAT_MISSING
+    if has_service:
+        return c.CAT_SERVICE
+    if has_cooking:
+        return c.CAT_COOKING
+    return c.CAT_PRODUCT
+
+
+def is_delay_promo_request(t: str, is_birthday: bool) -> bool:
+    """Промокод/купон за опоздание/долгое ожидание (правило 17.11.2026).
+    День рождения исключается; бонусы/баллы не считаются промокодом."""
+    if is_birthday:
+        return False
+    if not re.search(c.DELAY_PROMO_WORD_RE, t):
+        return False
+    return bool(re.search(c.DELAY_PROMO_REASON_RE, t))
+
+
 def classify_message(
     text: Any,
     rating: Optional[float] = None,
     allow_compensation: bool = True,
 ) -> ClassifyResult:
-    """Классифицирует одно сообщение/жалобу. `rating` — если известна оценка
-    гостя (1-5), иначе None."""
+    """Классифицирует сообщение/группу сообщений чата ресторана."""
     raw = extract_client_lines(text)
     t = str(raw or "").lower()
 
     is_birthday = _match_any_substring(t, c.BIRTHDAY_MARKERS)
 
-    has_quality = _match_any_substring(t, c.QUALITY_MARKERS) or _match_any_regex(
+    has_missing = _match_any_substring(t, c.MISSING_MARKERS) or _match_any_regex(
         t, c.QUALITY_REGEXES
     )
+    has_service = _match_any_substring(t, c.SERVICE_MARKERS)
+    has_cooking = _match_any_substring(t, c.COOKING_MARKERS)
+    has_quality = (
+        _match_any_substring(t, c.QUALITY_MARKERS)
+        or _match_any_regex(t, c.QUALITY_REGEXES)
+        or has_missing or has_service or has_cooking
+    )
+
+    delay_promo = is_delay_promo_request(t, is_birthday)
+    has_delay = _match_any_substring(t, c.DELAY_COMPLAINT_MARKERS)
+    logistics_change = _match_any_substring(t, c.LOGISTICS_CHANGE_MARKERS)
 
     has_compensation = False
     if allow_compensation and not is_birthday:
         has_compensation = _match_any_regex(t, c.COMPENSATION_REGEXES)
 
-    if has_compensation and not has_quality and _match_any_substring(
-        t, c.DELAY_ONLY_MARKERS
-    ):
-        has_compensation = False
-
-    has_logistics = _match_any_substring(t, c.LOGISTICS_EXCLUDE_MARKERS)
-
+    attention = _match_any_substring(t, c.ATTENTION_MARKERS)
+    loyalty = _match_any_substring(t, c.LOYALTY_MARKERS)
+    finance = _match_any_substring(t, c.FINANCE_MARKERS)
     is_praise = _match_any_substring(t, c.PRAISE_MARKERS)
     is_neutral = _match_any_substring(t, c.NEUTRAL_MARKERS)
 
@@ -101,40 +128,48 @@ def classify_message(
         except (TypeError, ValueError):
             r = None
         if r is not None:
-            if r >= 4 and not has_quality and not has_compensation:
+            if r >= 4 and not has_quality and not has_compensation and not has_delay:
                 is_praise = True
             elif r <= 3:
                 has_quality = True
 
-    if has_quality or has_compensation:
-        reason_label = "quality" if has_quality else "compensation"
-        return ClassifyResult(True, has_quality, has_compensation, has_logistics, is_birthday, reason_label)
+    def result(is_complaint: bool, reason: str, category: str = "") -> ClassifyResult:
+        return ClassifyResult(
+            is_complaint, has_quality, has_compensation,
+            logistics_change, is_birthday, reason, category,
+        )
+
+    if has_quality:
+        return result(True, "quality", _quality_category(t, has_missing, has_service, has_cooking))
+
+    if delay_promo:
+        return result(True, "delay_promo", c.CAT_DELAY)
+
+    if has_delay and not logistics_change:
+        return result(True, "delay", c.CAT_DELAY)
+
+    if has_compensation and not logistics_change:
+        return result(True, "compensation", c.CAT_DELAY if has_delay else c.CAT_PRODUCT)
+
+    if attention:
+        return result(False, "attention")
+
+    if logistics_change:
+        return result(False, "logistics")
+
+    if finance:
+        return result(False, "neutral")
 
     if is_birthday:
-        reason_label = "birthday"
-    elif has_logistics:
-        reason_label = "logistics"
-    elif is_praise:
-        reason_label = "praise"
-    elif is_neutral:
-        reason_label = "neutral"
-    else:
-        reason_label = "not_determined"
+        return result(False, "birthday")
 
-    return ClassifyResult(False, has_quality, has_compensation, has_logistics, is_birthday, reason_label)
+    if loyalty:
+        return result(False, "loyalty")
 
+    if is_praise:
+        return result(False, "praise")
 
-def classify_issue_row(text: Any, reason: Any) -> ClassifyResult:
-    """Классификация строки issues_report (§4.4): категория «Причина обращения»
-    важнее текстового анализа. `allow_compensation=False` — та же просьба
-    «начислите бонусы» в issues_report почти всегда пишет ГОСТЬ про бонусную
-    программу вообще, а не признание вины ресторана (§4.2)."""
-    reason_norm = str(reason or "").strip().lower()
+    if is_neutral:
+        return result(False, "neutral")
 
-    if reason_norm in c.NONCOMPLAINT_REASONS:
-        return ClassifyResult(False, False, False, False, False, "noncomplaint_reason")
-
-    if reason_norm in c.QUALITY_REASONS:
-        return ClassifyResult(True, True, False, False, False, "quality_reason")
-
-    return classify_message(text, rating=None, allow_compensation=False)
+    return result(False, "not_determined")

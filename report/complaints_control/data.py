@@ -1,12 +1,15 @@
 """
-Слой данных модуля «Контроль жалоб» (ТЗ §2, §4.1, §4.6).
+Слой данных модуля «Контроль жалоб» (проверка внесения жалоб).
 
-Загружает и нормализует все 5 источников:
+Источники по действующим правилам (ред. 18.11.2026) — только чаты ресторанов
+Битрикс24 и Google-таблицы СПб/Тюмени; CRM в этой проверке не используется:
 - главная таблица СПб («ОС и компенсации», лист «Обращения» + «Сводная»);
 - главная таблица Тюмень («Обратная_связь_Тюмень», лист «Лист1»);
 - чат «Гости ОС Тюмень» (CSV);
-- чат «Обратная связь Гости» (CSV, СПб);
-- issues_report (Excel, вся сеть).
+- чат «Обратная связь Гости» (CSV, СПб).
+
+Ключевая колонка таблиц («Номер телефона» СПб / «Номер заказа» Тюмень)
+содержит вперемешку телефоны и номера заказов — разбираются оба ключа.
 
 Без Streamlit и openpyxl-стилей — только pandas.
 """
@@ -20,7 +23,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from . import constants as c
-from .phone import normalize_phone, find_phones_in_text
+from .phone import normalize_phone, find_phones_in_text, find_orders_in_text, parse_key_cell
 
 
 # ============================================================
@@ -226,8 +229,8 @@ def _load_restaurant_map_from_file(file: Any, warnings: Optional[List[str]]) -> 
 # ГЛАВНАЯ ТАБЛИЦА СПБ (лист «Обращения», ТЗ §2.1)
 # ============================================================
 MAIN_COLS = [
-    "Дата", "Телефон", "Город", "Источник", "Ресторан", "Номер ресторана",
-    "Вид жалобы", "Вид позиции", "Текст", "Решение", "Стоимость компенсации",
+    "Дата", "Телефон", "Заказ", "Город", "Источник", "Ресторан", "Номер ресторана",
+    "Вид жалобы", "Категория", "Вид позиции", "Текст", "Решение", "Стоимость компенсации",
     "Статус возмещения", "Сотрудник", "Отклонение", "Комментарий2",
 ]
 
@@ -266,15 +269,18 @@ def load_main_spb(file: Any, warnings: Optional[List[str]] = None) -> pd.DataFra
             unmapped += 1
 
         phone_raw = r.get(phone_col) if phone_col else None
+        keys = parse_key_cell(phone_raw)
 
         rows.append({
             "Дата": r.get(date_col),
-            "Телефон": normalize_phone(phone_raw),
+            "Телефон": keys["phone"],
+            "Заказ": keys["order_id"],
             "Город": "Санкт-Петербург",
             "Источник": _clean_str(r.get("источник")),
             "Ресторан": rest_name,
-            "Номер ресторана": num_int,
+            "Номер ресторана": num_int if num_int is not None else keys["rest"],
             "Вид жалобы": _clean_str(complaint_raw),
+            "Категория": c.normalize_table_category(complaint_raw),
             "Вид позиции": _clean_str(r.get("Вид позиции")),
             "Текст": _clean_str(r.get("Комментарий")),
             "Решение": _clean_str(r.get("Решение")) or None,
@@ -356,14 +362,20 @@ def load_main_tyumen(file: Any, warnings: Optional[List[str]] = None) -> pd.Data
         if rest_name.strip().lower() in c.TMN_EXCLUDED_RESTAURANTS:
             continue  # «Сочи» — не наш город (ТЗ §2.2)
 
+        keys = parse_key_cell(orders.get(i))
+        rest_num = pd.to_numeric(rest_raw, errors="coerce")
+        rest_num = int(rest_num) if not pd.isna(rest_num) else keys["rest"]
+
         rows.append({
             "Дата": dates.get(i),
-            "Телефон": normalize_phone(orders.get(i)),
+            "Телефон": keys["phone"],
+            "Заказ": keys["order_id"],
             "Город": "Тюмень",
             "Источник": "",
             "Ресторан": rest_name,
-            "Номер ресторана": None,
+            "Номер ресторана": rest_num,
             "Вид жалобы": _clean_str(complaint_raw),
+            "Категория": c.normalize_table_category(complaint_raw),
             "Вид позиции": "",
             "Текст": _clean_str(comments.get(i)),
             "Решение": _clean_str(decisions.get(i)) or None,
@@ -380,12 +392,14 @@ def load_main_tyumen(file: Any, warnings: Optional[List[str]] = None) -> pd.Data
 
 
 def finalize_main_table(df: pd.DataFrame, start_date: Optional[date], end_date: Optional[date]) -> pd.DataFrame:
-    """Парсит даты (с учётом коротких dd.mm) и фильтрует по периоду."""
+    """Парсит даты (с учётом коротких dd.mm), но НЕ фильтрует по периоду:
+    по действующим правилам сверяется вся доступная основная таблица,
+    включая старые строки и строки без даты. Период ограничивает только
+    источник жалоб (чаты), а не таблицу для сопоставления."""
     if df.empty:
         return df
     out = df.copy()
     out["Дата"] = out["Дата"].map(lambda v: _parse_main_date(v, start_date, end_date))
-    out = out[out["Дата"].map(lambda d: _in_range(d, start_date, end_date))]
     return out
 
 
@@ -393,9 +407,14 @@ def finalize_main_table(df: pd.DataFrame, start_date: Optional[date], end_date: 
 # ЧАТЫ (CSV, ТЗ §2.3, §2.4)
 # ============================================================
 def _is_meta_message(text: str) -> bool:
-    """Мета-сообщение (автоматический аналитический отчёт, вставленный в
-    канал вручную) — не жалоба гостя (ТЗ §2.4)."""
-    return "[b]" in text or "|---|" in text
+    """Мета-сообщения — не жалобы гостя: автоматические аналитические
+    отчёты, вставленные в канал, и уведомления Битрикс о создании задачи
+    по сообщению (они цитируют исходную жалобу и задваивали бы её)."""
+    return (
+        "[b]" in text or "|---|" in text
+        or "создал задачу на основании" in text
+        or "[USER=" in text or "[CONTEXT=" in text
+    )
 
 
 def load_chat_messages(file: Any, source_label: str, warnings: Optional[List[str]] = None) -> pd.DataFrame:
@@ -430,81 +449,160 @@ def load_chat_messages(file: Any, source_label: str, warnings: Optional[List[str
     out["Текст"] = df[text_col].fillna("").astype(str)
     out["Источник"] = source_label
 
-    out = out[out["Автор"].str.strip() != "Система"]
+    out = out[~out["Автор"].str.strip().isin(["Система", "id0"])]
     out = out[~out["Текст"].map(_is_meta_message)]
     return out
 
 
 # ============================================================
-# ГРУППИРОВКА ПО (ТЕЛЕФОН, ДЕНЬ) — ТЗ §4.6
+# ГРУППИРОВКА: (ЗАКАЗ ИЛИ ТЕЛЕФОН, ДЕНЬ) + ПОВТОРЫ ОДНОГО ВОПРОСА
 # ============================================================
-GROUPED_COLS = ["Телефон", "Дата", "Авторы", "Текст", "Кол-во сообщений", "Источник"]
-
-
-def group_messages_by_phone_day(messages: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
-    """Возвращает (grouped, no_phone). `grouped` — одна строка на
-    (телефон, календарный день); `no_phone` — сообщения без определённого
-    телефона (статус «нужна ручная проверка»)."""
-    if messages is None or messages.empty:
-        return pd.DataFrame(columns=GROUPED_COLS), pd.DataFrame(columns=["Дата", "Автор", "Текст", "Источник"])
-
-    work = messages.copy()
-    work["_phones"] = work["Текст"].map(find_phones_in_text)
-    work["_phone"] = work["_phones"].map(lambda lst: lst[0] if lst else "")
-    work["_day"] = work["Дата"].map(lambda d: d.date() if pd.notna(d) else None)
-
-    no_phone = work[(work["_phone"] == "")][["Дата", "Автор", "Текст", "Источник"]].copy()
-
-    has_phone = work[(work["_phone"] != "") & (work["_day"].notna())]
-    if has_phone.empty:
-        return pd.DataFrame(columns=GROUPED_COLS), no_phone
-
-    rows = []
-    for (phone, day), grp in has_phone.groupby(["_phone", "_day"]):
-        rows.append({
-            "Телефон": phone,
-            "Дата": day,
-            "Авторы": ", ".join(sorted(set(a for a in grp["Автор"] if a))),
-            "Текст": " || ".join(t for t in grp["Текст"] if t),
-            "Кол-во сообщений": len(grp),
-            "Источник": grp["Источник"].iloc[0],
-        })
-    return pd.DataFrame(rows, columns=GROUPED_COLS), no_phone
-
-
-# ============================================================
-# issues_report (Excel, ТЗ §2.5)
-# ============================================================
-ISSUES_COLS = [
-    "№", "Номер обращения", "Дата отзыва", "Статус", "Исполнитель", "Город",
-    "Ресторан", "Источник", "Причина обращения", "Телефон", "E-mail",
-    "Первичное сообщение",
+GROUPED_COLS = [
+    "Телефон", "Заказ", "Тикеты", "Дата", "Авторы", "Текст",
+    "Кол-во сообщений", "Источник",
 ]
 
 
-def load_issues_report(file: Any, warnings: Optional[List[str]] = None) -> pd.DataFrame:
-    if file is None:
-        return pd.DataFrame(columns=ISSUES_COLS)
+def group_messages(messages: pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
+    """Возвращает (grouped, no_keys).
 
-    df = _read_excel_sheet(file)
-    if df is None or df.empty:
-        if warnings is not None:
-            warnings.append("«issues_report»: не удалось прочитать файл.")
-        return pd.DataFrame(columns=ISSUES_COLS)
+    Группировка по действующим правилам («повторы одного вопроса в
+    переписке объединять»):
+    - сообщения с номером заказа группируются по (заказ, день), даже если
+      телефон не указан — заказ сам по себе сильный ключ;
+    - остальные — по (телефон, день);
+    - группы одного дня с общим телефоном объединяются;
+    - группы с одним заказом в разные дни объединяются (повтор вопроса);
+    - сообщения без телефона и без заказа — `no_keys` (ручная проверка).
+    """
+    empty_grouped = pd.DataFrame(columns=GROUPED_COLS)
+    no_keys_cols = ["Дата", "Автор", "Текст", "Источник"]
+    if messages is None or messages.empty:
+        return empty_grouped, pd.DataFrame(columns=no_keys_cols)
 
-    missing = [col for col in ISSUES_COLS if col not in df.columns]
-    if missing and warnings is not None:
-        warnings.append(f"«issues_report»: не найдены столбцы: {', '.join(missing)}.")
+    work = messages.copy()
+    work["_phones"] = work["Текст"].map(find_phones_in_text)
+    work["_orders"] = work["Текст"].map(find_orders_in_text)
+    work["_phone"] = work["_phones"].map(lambda lst: lst[0] if lst else "")
+    work["_order"] = work["_orders"].map(lambda lst: lst[0]["order_id"] if lst else "")
+    work["_day"] = work["Дата"].map(lambda d: d.date() if pd.notna(d) else None)
 
-    out = pd.DataFrame()
-    for col in ISSUES_COLS:
-        out[col] = df[col] if col in df.columns else None
+    no_keys = work[(work["_phone"] == "") & (work["_order"] == "")][no_keys_cols].copy()
+    keyed = work[(work["_phone"] != "") | (work["_order"] != "")].copy()
+    keyed = keyed[keyed["_day"].notna()]
+    if keyed.empty:
+        return empty_grouped, no_keys
 
-    out["Дата отзыва"] = pd.to_datetime(out["Дата отзыва"], errors="coerce", utc=True).dt.tz_localize(None)
+    # Рестораны часто пишут номер заказа, телефон и суть отдельными
+    # репликами подряд. Сообщение только с заказом, стоящее рядом (≤5 мин)
+    # с сообщением с телефоном того же дня, относим к этому телефону —
+    # иначе одна жалоба распалась бы на несколько групп.
+    phone_rows = keyed[keyed["_phone"] != ""]
+    order_only = keyed[(keyed["_order"] != "") & (keyed["_phone"] == "")]
+    for idx, row in order_only.iterrows():
+        same_day = phone_rows[phone_rows["_day"] == row["_day"]]
+        if same_day.empty:
+            continue
+        deltas = (same_day["Дата"] - row["Дата"]).abs()
+        near = same_day[deltas <= pd.Timedelta(minutes=5)]
+        near_phones = near["_phone"].unique()
+        if len(near_phones) == 1:
+            keyed.at[idx, "_phone"] = near_phones[0]
+            keyed.at[idx, "_phones"] = list(row["_phones"]) + [near_phones[0]]
 
-    # Только СПб и Тюмень — в файле есть Москва, Казань и др. (ТЗ §2.5, п.6)
-    city = out["Город"].astype(str).str.strip()
-    out = out[city.isin(["Санкт-Петербург", "Тюмень"])]
+    # Первичные группы: заказ важнее телефона.
+    keyed["_gkey"] = keyed.apply(
+        lambda r: ("o", r["_order"]) if r["_order"] else ("p", r["_phone"]), axis=1,
+    )
+    groups: Dict[Any, Dict[str, Any]] = {}
+    for (gkey, day), grp in keyed.groupby(["_gkey", "_day"], sort=False):
+        phones = {p for lst in grp["_phones"] for p in lst}
+        orders = {o["order_id"]: o for lst in grp["_orders"] for o in lst}
+        groups[(gkey, day)] = {
+            "day": day,
+            "phones": phones,
+            "orders": orders,
+            "authors": set(a for a in grp["Автор"] if a),
+            "texts": [t for t in grp["Текст"] if t],
+            "count": len(grp),
+            "source": grp["Источник"].iloc[0],
+        }
 
-    out["Телефон"] = out["Телефон"].map(normalize_phone)
-    return out
+    # Объединение групп одного дня по общему телефону (union-find).
+    parent: Dict[Any, Any] = {k: k for k in groups}
+
+    def find(k):
+        while parent[k] != k:
+            parent[k] = parent[parent[k]]
+            k = parent[k]
+        return k
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            lo, hi = sorted([ra, rb], key=str)
+            parent[hi] = lo
+
+    by_phone_day: Dict[Any, List[Any]] = {}
+    for gkey, g in groups.items():
+        for p in g["phones"]:
+            by_phone_day.setdefault((p, g["day"]), []).append(gkey)
+    for same_day_keys in by_phone_day.values():
+        for other in same_day_keys[1:]:
+            union(same_day_keys[0], other)
+
+    merged: Dict[Any, Dict[str, Any]] = {}
+    for gkey, g in groups.items():
+        root = find(gkey)
+        if root not in merged:
+            merged[root] = {
+                "day": g["day"], "phones": set(g["phones"]),
+                "orders": dict(g["orders"]), "authors": set(g["authors"]),
+                "texts": list(g["texts"]), "count": g["count"],
+                "source": g["source"],
+            }
+        else:
+            m = merged[root]
+            m["phones"] |= g["phones"]
+            m["orders"].update(g["orders"])
+            m["authors"] |= g["authors"]
+            m["texts"] += g["texts"]
+            m["count"] += g["count"]
+            m["day"] = min(m["day"], g["day"])
+
+    # Повторы одного заказа в разные дни — одна жалоба.
+    by_order: Dict[str, List[Any]] = {}
+    for gkey, g in merged.items():
+        for oid in g["orders"]:
+            by_order.setdefault(oid, []).append(gkey)
+    for gkeys in by_order.values():
+        if len(gkeys) < 2:
+            continue
+        roots = sorted({find(k) for k in gkeys}, key=str)
+        main_key = roots[0]
+        for other in roots[1:]:
+            g, o = merged[main_key], merged[other]
+            g["phones"] |= o["phones"]
+            g["orders"].update(o["orders"])
+            g["authors"] |= o["authors"]
+            g["texts"] += o["texts"]
+            g["count"] += o["count"]
+            g["day"] = min(g["day"], o["day"])
+            del merged[other]
+
+    rows = []
+    for g in merged.values():
+        order_ids = sorted(g["orders"])
+        rows.append({
+            "Телефон": sorted(g["phones"])[0] if g["phones"] else "",
+            "Заказ": order_ids[0] if order_ids else "",
+            "Тикеты": ", ".join(g["orders"][oid]["raw"] for oid in order_ids),
+            "Дата": g["day"],
+            "Авторы": ", ".join(sorted(g["authors"])),
+            "Текст": " || ".join(g["texts"]),
+            "Кол-во сообщений": g["count"],
+            "Источник": g["source"],
+        })
+    grouped = pd.DataFrame(rows, columns=GROUPED_COLS)
+    grouped = grouped.sort_values("Дата").reset_index(drop=True)
+    return grouped, no_keys
