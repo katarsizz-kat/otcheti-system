@@ -83,6 +83,10 @@ class Message:
     card: int
     msg_id: str = ""
     attachments: List[str] = field(default_factory=list)
+    # Реплика гостя/бота из более ранней бот-сессии, приложенной к карточке
+    # как история: до создания тикета ОС её не видело — часы ожидания она
+    # не запускает (допуск 60 с на рассинхрон меток создания).
+    pre_history: bool = False
 
 
 @dataclass
@@ -269,6 +273,11 @@ def parse_crm_export(source: Any) -> CrmExport:
                         seen_ids.add(m.msg_id)
                 messages.append(m)
         messages.sort(key=lambda m: m.ts)
+        if card.created:
+            cutoff = card.created - timedelta(seconds=60)
+            for m in messages:
+                if m.kind in ("guest", "bot") and m.ts < cutoff:
+                    m.pre_history = True
         card.messages = messages
         export.cards.append(card)
 

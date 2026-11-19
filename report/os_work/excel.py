@@ -125,16 +125,13 @@ def build_os_work_excel(
                      row_fill=AMBER_FILL)
 
     # ---------------- РАБОТА С РЕСТОРАНАМИ ----------------
-    if _sheet_has_content(data.restaurant_work, data.reverse_requests):
+    if _sheet_has_content(data.restaurant_work):
         ws6 = wb.create_sheet(c.SHEET_RESTAURANTS)
         row = _write_title(ws6, 1, f"Работа с ресторанами — {period_label}")
         row += 1
-        row = _write_table(ws6, row, "Вопросы ОС ресторанам", data.restaurant_work,
-                           description="Изменения текущего заказа не требуют ответа ресторана. "
-                                       "«Ответ не найден» в доступных CSV не доказывает молчание.")
-        _write_table(ws6, row, "Запросы ресторанов к ОС", data.reverse_requests,
-                     description="Просьбы отправить промокод/начислить бонусы; ДР вне часов "
-                                 "11:00–23:00 отмечены отдельно.")
+        _write_table(ws6, row, "Вопросы ОС ресторанам", data.restaurant_work,
+                     description="Изменения текущего заказа не требуют ответа ресторана. "
+                                 "«Ответ не найден» в доступных CSV не доказывает молчание.")
 
     # ---------------- ТРЕБУЕТ ВНИМАНИЯ ----------------
     if _sheet_has_content(data.attention):

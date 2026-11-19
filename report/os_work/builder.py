@@ -34,7 +34,7 @@ from .models import OsWorkRequest, OsWorkResult, OsWorkData
 
 REVIEW_QUEUE_COLS = [
     "Ключ", "Тикеты", "Дата", "Ресторан", "Суть обращения", "Подсказка",
-    "Последний ответ ОС", "Результат", "Тон", "Не к месту", "Брань Гостя",
+    "Последний ответ ОС", "Ответов", "Без ответа", "Результат", "Тон", "Не к месту", "Брань Гостя",
 ]
 
 
@@ -154,6 +154,15 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
                 f"Карточек без сообщений гостя (тестовые/служебные): {no_guest} — исключены из подсчёта."
             )
 
+        # Брань Гостя ловится детерминированно (мат однозначен) — вручную
+        # размечать её не нужно; ручная отметка только дополняет.
+        for a in active:
+            if a.abuse:
+                continue
+            guest_text = " ".join(m.text.lower() for m in a.messages if m.kind == "guest")
+            if any(marker in guest_text for marker in c.ABUSE_MARKERS):
+                a.abuse = True
+
         # -------------------- РЕСТОРАНЫ --------------------
         reference = restaurants.load_reference()
         svodnaya = _svodnaya_map(request.files.main_spb)
@@ -170,14 +179,9 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
                 + ", ".join(str(i) for i in sorted(unknown_ids))
                 + " — в отчёте показаны как «город (ID N)». Сообщите названия, чтобы пополнить справочник."
             )
-        names_by_card = {}
-        for card in export.cards:
-            name, _ = restaurants.resolve_name(card.restaurant_id, card.city, reference, svodnaya)
-            names_by_card[card.number] = name
-
         # -------------------- БИТРИКС: РАБОТА С РЕСТОРАНАМИ --------------------
         bitrix_df = bitrix.load_bitrix(request.files.chat_spb, request.files.chat_tmn, warnings)
-        work_df, transfers, reverse_df, dr_offhours = bitrix.restaurant_work(
+        work_df, transfers, _reverse_df, dr_offhours = bitrix.restaurant_work(
             active, bitrix_df, restaurant_names,
         )
         if dr_offhours:
@@ -236,7 +240,6 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
         old_open = st.build_old_period_open(appeals, start)
         hourly, daily, weekday, joint, total_days = st.build_load(active, start, end)
         weekly = st.build_weekly(active) if start and end and (end - start).days + 1 > 7 else pd.DataFrame()
-        bot_df = st.build_bot_fails(export.cards, names_by_card)
         pivot1, pivot2 = st.build_pivots(active, restaurant_names)
         attention = st.build_attention(active, cc_attention)
         remarks = st.build_remarks(active, restaurant_names)
@@ -292,6 +295,17 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
         )
 
         # -------------------- ОЧЕРЕДЬ РАЗМЕТКИ --------------------
+        # По умолчанию в очереди только обращения, требующие решения человека
+        # (подсказка, без ответа, долгое ожидание, тон/не к месту). Остальные
+        # можно отметить решёнными одной кнопкой — не проверяя каждое вручную.
+        def _needs_review(a) -> bool:
+            return bool(
+                mg.outcome_hint(a)
+                or any(w.in_period and not w.answered for w in a.waits)
+                or any(w.in_period and w.answered and w.minutes > c.DETAIL_THRESHOLD_MIN for w in a.waits)
+                or a.tone or a.wrong
+            )
+
         queue_rows = []
         for a in active:
             last_staff = a.last_staff_message()
@@ -300,6 +314,7 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
                 if a.outcome == value:
                     outcome_label = label
                     break
+            answered_n = sum(1 for w in a.waits if w.in_period and w.answered)
             queue_rows.append({
                 "Ключ": a.key,
                 "Тикеты": ", ".join(map(str, a.tickets)),
@@ -308,12 +323,21 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
                 "Суть обращения": a.summary[:200],
                 "Подсказка": mg.outcome_hint(a),
                 "Последний ответ ОС": (last_staff.text[:150] if last_staff else ""),
+                "Ответов": answered_n,
+                "Без ответа": "Да" if any(w.in_period and not w.answered for w in a.waits) else "",
                 "Результат": outcome_label,
                 "Тон": "Нарушение тона" if a.tone else "Нет",
                 "Не к месту": "Ответ не к месту / неверная информация" if a.wrong else "Нет",
                 "Брань Гостя": "Гость ругался (брань, оскорбления, угрозы)" if a.abuse else "Нет",
+                "_needs": _needs_review(a),
             })
-        review_queue = pd.DataFrame(queue_rows, columns=REVIEW_QUEUE_COLS)
+        review_queue_all = pd.DataFrame(queue_rows, columns=REVIEW_QUEUE_COLS + ["_needs"])
+        if review_queue_all.empty:
+            review_queue = pd.DataFrame(columns=REVIEW_QUEUE_COLS)
+            review_queue_all = pd.DataFrame(columns=REVIEW_QUEUE_COLS)
+        else:
+            review_queue = review_queue_all[review_queue_all["_needs"]].drop(columns=["_needs"]).reset_index(drop=True)
+            review_queue_all = review_queue_all.drop(columns=["_needs"])
         merge_queue = pd.DataFrame(merge_candidates) if merge_candidates else pd.DataFrame(
             columns=["Ключ", "Телефон", "Тикеты А", "Тикеты Б", "Дата А", "Дата Б",
                      "Суть А", "Суть Б", "Решение"]
@@ -326,10 +350,11 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
             long_answers=long_answers, next_day=next_day, old_period_closed=old_closed,
             old_period_open=old_open,
             hourly=hourly, daily=daily, weekday=weekday, joint=joint,
-            bot_fails=bot_df, pivot_detailed=pivot1, pivot_aggregated=pivot2,
-            restaurant_work=work_df, reverse_requests=reverse_df,
+            pivot_detailed=pivot1, pivot_aggregated=pivot2,
+            restaurant_work=work_df,
             not_entered=not_entered, probable=probable, attention=attention,
-            remarks=remarks, review_queue=review_queue, merge_queue=merge_queue,
+            remarks=remarks, review_queue=review_queue,
+            review_queue_all=review_queue_all, merge_queue=merge_queue,
             weekly=weekly, coverage_notes=coverage_notes, personal=personal,
             totals={
                 "обращений": len(active),

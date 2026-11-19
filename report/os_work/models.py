@@ -137,16 +137,15 @@ class OsWorkData:
     daily: pd.DataFrame
     weekday: pd.DataFrame
     joint: pd.DataFrame
-    bot_fails: pd.DataFrame
     pivot_detailed: pd.DataFrame
     pivot_aggregated: pd.DataFrame
     restaurant_work: pd.DataFrame
-    reverse_requests: pd.DataFrame
     not_entered: pd.DataFrame
     probable: pd.DataFrame
     attention: pd.DataFrame
     remarks: pd.DataFrame
-    review_queue: pd.DataFrame
+    review_queue: pd.DataFrame            # только требующие решения
+    review_queue_all: pd.DataFrame        # все обращения (для «показать все» и массовой отметки)
     merge_queue: pd.DataFrame
     weekly: pd.DataFrame = field(default_factory=pd.DataFrame)
     coverage_notes: List[str] = field(default_factory=list)

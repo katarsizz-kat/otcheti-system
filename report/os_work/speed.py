@@ -116,8 +116,12 @@ class Wait:
 
 def compute_waits(messages: List[Message]) -> List[Wait]:
     """Хронология guest/staff одной карточки (или объединённого обращения).
-    Комментарии и технические сообщения ответами не считаются."""
-    events = [m for m in messages if m.kind in ("guest", "staff")]
+    Комментарии и технические сообщения ответами не считаются.
+    Реплики-предыстория (pre_history, до создания тикета) часы не запускают."""
+    events = [
+        m for m in messages
+        if m.kind in ("guest", "staff") and not m.pre_history
+    ]
     events.sort(key=lambda m: m.ts)
 
     waits: List[Wait] = []

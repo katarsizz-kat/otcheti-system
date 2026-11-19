@@ -291,20 +291,15 @@ def apply_merge_overrides(
 
 
 def outcome_hint(appeal: Appeal) -> str:
-    """Детерминированная подсказка для очереди разметки (не решение)."""
-    last_guest = appeal.last_guest_message()
+    """Детерминированная ПОДСКАЗКА-ПРОБЛЕМА для очереди разметки (не решение).
+    Возвращает только сигналы риска; чистые обращения с ответом подсказки не
+    имеют и отмечаются решёнными массовой кнопкой, без ручной проверки."""
     last_staff = appeal.last_staff_message()
     unanswered = [w for w in appeal.waits if not w.answered]
-    if last_guest and last_staff and last_guest.ts > last_staff.ts:
-        from .speed import is_closing
-        if is_closing(last_guest.text, last_staff.text):
-            return "Гость поблагодарил после ответа — вероятно решён"
     if unanswered and last_staff:
         from .speed import staff_requested_data, staff_promised
         if staff_requested_data(last_staff.text):
             return "ОС запросило данные, Гость молчит — ожидаются данные Гостя"
         if staff_promised(last_staff.text):
             return "Обещание уточнить без продолжения — проверьте, вернулись ли с ответом"
-    if not unanswered and appeal.waits:
-        return "Все ожидания закрыты ответом — проверьте суть решения"
     return ""

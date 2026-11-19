@@ -501,7 +501,10 @@ def test_builder_end_to_end() -> None:
     assert data.totals["обращений"] == 3
     assert data.totals["без ответа"] == 1
     assert data.totals["дольше 20"] == 1  # 40 минут по карточке 32
-    assert len(data.review_queue) == 3
+    # В очереди по умолчанию только спорные (32 долгое, 33 без ответа);
+    # чистая 31 — в полном списке для массовой отметки.
+    assert len(data.review_queue) == 2
+    assert len(data.review_queue_all) == 3
     assert "Подсказка" in data.review_queue.columns
 
     wb = load_workbook(result.excels["руководителю"])
@@ -574,6 +577,57 @@ def test_merge_override() -> None:
     assert merged.data.totals["обращений"] == 1
 
 
+def test_pre_history_bot_session_not_counted() -> None:
+    # Реальный кейс 1411072: бот-сессия 16:10–16:14 (до создания тикета 21:56)
+    # не запускает часы ОС; вопрос 21:56 отвечен за ~23 мин, а не 365.
+    created = "2026-11-18 18:56:36"  # UTC = 21:56:36 МСК
+    block = _guest_block("+79111111111", [
+        ("Клиент", "2026-11-18 13:10:13", "верните бонусы"),
+        ("Клиент", "2026-11-18 13:14:07", "сбилось время доставки"),
+        ("Клиент", "2026-11-18 18:56:29", "где мой заказ?"),
+        ("Клиент", "2026-11-18 18:56:36", "Заказ не доставлен"),
+    ])
+    card = {
+        "number": 1411072, "restaurant_id": 170, "created_utc": created,
+        "entries": [_system_entry("g", created, block)],
+    }
+    card["entries"].append(_staff_entry("a", OFFICE, "2026-11-18 19:19:16", "Уточняем информацию по заказу"))
+    export = parse([card])
+    waits = compute_waits(export.cards[0].messages)
+    assert len(waits) == 1
+    assert waits[0].question_ts == datetime(2026, 11, 18, 21, 56, 29)
+    assert round(waits[0].minutes, 1) == 22.7, waits[0].minutes
+
+
+def test_abuse_auto_detected() -> None:
+    card = simple_card(60, "+79111111111", "2026-11-17 08:00:00",
+                       "идите нахуй, где заказ?", answer_utc="2026-11-17 08:10:00")
+    files = OsWorkSourceFiles(crm_json=json.dumps(make_export([card])))
+    settings = OsWorkSettings(True, date(2026, 11, 17), date(2026, 11, 18))
+    res = build_os_work_report(OsWorkRequest(files=files, settings=settings, check_not_entered=False))
+    assert res.success, res.error
+    row = res.data.review_queue_all.iloc[0]
+    assert row["Брань Гостя"] != "Нет"
+    assert not res.data.attention.empty  # тема «Гости ругались»
+
+
+def test_bulk_solved_marks_clean_appeals() -> None:
+    base = build_os_work_report(_end_to_end_request())
+    clean_keys = [
+        r["Ключ"] for _, r in base.data.review_queue_all.iterrows()
+        if not r["Подсказка"] and not r["Без ответа"] and int(r["Ответов"]) > 0
+        and r["Тон"] == "Нет" and r["Не к месту"] == "Нет" and r["Брань Гостя"] == "Нет"
+    ]
+    assert len(clean_keys) == 2  # карточки 31 и 32 (долгий ответ — не про решённость)
+    marked = build_os_work_report(_end_to_end_request(
+        overrides={"outcome": {k: c.OUTCOME_SOLVED for k in clean_keys}},
+    ))
+    assert marked.success, marked.error
+    assert marked.data.totals["размечено"] == 2
+    dash = marked.data.dashboard.set_index("Показатель")
+    assert dash.loc["Вопрос решён, % (X из Y)", "Отдел"] == "100.0% (2 из 2)"
+
+
 def main() -> None:
     tests = [
         test_parse_utc_to_msk,
@@ -598,6 +652,9 @@ def main() -> None:
         test_builder_end_to_end,
         test_manual_marking_changes_dashboard,
         test_merge_override,
+        test_pre_history_bot_session_not_counted,
+        test_abuse_auto_detected,
+        test_bulk_solved_marks_clean_appeals,
     ]
     for test in tests:
         test()

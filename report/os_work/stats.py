@@ -18,7 +18,6 @@ import pandas as pd
 from report.os_report import (
     INTERVAL_ORDER,
     WEEKDAY_ORDER,
-    analyze_bot_fails,
     get_hour_interval,
     get_interval_hours,
     get_restaurant_sort_key,
@@ -26,7 +25,6 @@ from report.os_report import (
 )
 
 from . import constants as c
-from .crm import Card
 from .merge import Appeal
 from .speed import speed_groups
 
@@ -397,47 +395,8 @@ def build_weekly(appeals: List[Appeal]) -> pd.DataFrame:
 
 
 # ============================================================
-# БОТ И КАТЕГОРИИ (переиспользование прежней страницы ОС)
+# КАТЕГОРИИ (переиспользование прежней страницы ОС)
 # ============================================================
-def build_bot_fails(cards: List[Card], restaurant_names_by_card: Dict[int, str]) -> pd.DataFrame:
-    rows = []
-    for card in cards:
-        rows.append({
-            "Номер обращения": card.number,
-            "Дата отзыва": card.created,
-            "Ресторан": restaurant_names_by_card.get(card.number, card.city),
-            "Первичное сообщение": card.description,
-        })
-    df = pd.DataFrame(rows)
-    fails = analyze_bot_fails(df) if not df.empty else pd.DataFrame()
-
-    fail_kw = ["запуталась", "не поняла", "упс, кажется", "пошло не так", "не совсем поняла"]
-    seen = set()
-    if fails is not None and not fails.empty:
-        for _, r in fails.iterrows():
-            seen.add((str(r["№ Обращения"]), str(r["Тип ошибки бота"])))
-    extra = []
-    for card in cards:
-        for m in card.messages:
-            if m.kind != "bot":
-                continue
-            text = m.text.lower()
-            if any(k in text for k in fail_kw):
-                key = (str(card.number), "Бот не понял")
-                if key not in seen:
-                    seen.add(key)
-                    extra.append({
-                        "№ Обращения": card.number,
-                        "Дата": m.ts,
-                        "Ресторан": restaurant_names_by_card.get(card.number, card.city),
-                        "Суть обращения": m.text[:120],
-                        "Тип ошибки бота": "Бот не понял",
-                    })
-    if extra:
-        fails = pd.concat([fails, pd.DataFrame(extra)], ignore_index=True)
-    return fails if fails is not None else pd.DataFrame()
-
-
 def build_pivots(appeals: List[Appeal], restaurant_names: Dict[str, str]):
     rows = []
     for a in appeals:
@@ -493,7 +452,7 @@ def build_attention(appeals: List[Appeal], cc_attention: Optional[pd.DataFrame])
             "Тема": "Гости ругались (брань, унижения, оскорбления, угрозы)",
             "Количество": len(abuse_tickets),
             "Тикеты": "; ".join(", ".join(map(str, a.tickets)) for a in abuse_tickets),
-            "Комментарий": "Отмечено вручную; отдельно от ошибок сотрудников.",
+            "Комментарий": "Определено автоматически по брани Гостя; отдельно от ошибок сотрудников.",
         })
     attention = pd.DataFrame(rows, columns=cols)
     if cc_attention is not None and not cc_attention.empty:

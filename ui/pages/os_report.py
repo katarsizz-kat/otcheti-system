@@ -95,8 +95,7 @@ def render():
         f'<h1>💬 Проверка работы ОС</h1>'
         f'<p>{greeting_by_time()}</p>'
         f'<p style="margin-top:10px; margin-bottom:0; font-size:16px;">'
-        f'Скорость ответа, решение вопросов, нагрузка и замечания — по методике v4. '
-        f'Спорные случаи размечаются вручную, без ИИ.</p></div>',
+        f'Соревнования в скорости ответа, количеству решённых обращений и качеству</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -217,7 +216,7 @@ def _render_result(result) -> None:
     m2.metric("⏱ Среднее ответа, мин", t.get("среднее") if t.get("среднее") is not None else "—")
     m3.metric("🔇 Без ответа", t.get("без ответа", 0))
     m4.metric("🐢 Дольше 20 мин", t.get("дольше 20", 0))
-    m5.metric("🧑‍⚖️ Размечено", f"{t.get('размечено', 0)} из {t.get('всего размечать', 0)}")
+    m5.metric("🧑‍⚖️ Размечено", f"{t.get('размечено', 0)}/{t.get('всего размечать', 0)}")
 
     dl1, dl2, dl3 = st.columns(3)
     with dl1:
@@ -237,9 +236,9 @@ def _render_result(result) -> None:
                     use_container_width=True, key=f"ow_dl_{emp}",
                 )
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Дашборд", "⏱ Скорость", "🧑‍⚖️ Разметка", "📈 Нагрузка",
-        "🍕 Жалобы и рестораны", "🤖 Бот", "🔧 Полнота и внимание",
+        "🍕 Жалобы и рестораны", "🔧 Полнота и внимание",
     ])
     with tab1:
         _tab_dashboard(data)
@@ -252,8 +251,6 @@ def _render_result(result) -> None:
     with tab5:
         _tab_complaints(data)
     with tab6:
-        _tab_bot(data)
-    with tab7:
         _tab_coverage(data)
 
 
@@ -275,6 +272,7 @@ def _tab_dashboard(data) -> None:
 
 
 def _tab_speed(data) -> None:
+    st.caption("Все времена — Москва (МСК, UTC+3). Отсчёт — от последнего сообщения начальной серии Гостя.")
     st.markdown(f"##### 🐢 Ответ дольше 20 рабочих минут")
     if data.long_answers.empty:
         st.success("✅ Долгих ожиданий нет.")
@@ -297,18 +295,31 @@ def _tab_speed(data) -> None:
 def _tab_review(data, result) -> None:
     st.markdown("##### 🧑‍⚖️ Очередь ручной разметки")
     st.caption(
-        "Решён/не решён, тон, ответ не к месту и брань Гостя правила определить не могут — "
-        "решение за вами, без ИИ. «Подсказка» — детерминированный признак, не решение. "
-        "Неразмеченные обращения не входят в знаменатель решённости. После разметки "
-        "нажмите «Пересобрать Excel»."
+        "Решён/не решён, тон и ответ не к месту правила определить не могут — решение за вами. "
+        "«Подсказка» — детерминированный признак, не решение. Брань Гостя ловится автоматически. "
+        "По умолчанию в очереди только спорные обращения; чистые можно отметить решёнными "
+        "одной кнопкой, не проверяя каждое. Неразмеченные не входят в знаменатель решённости."
     )
-    if data.review_queue.empty:
+    show_all = st.checkbox(
+        "Показать все обращения (не только спорные)", value=False, key="ow_show_all",
+    )
+    queue_df = data.review_queue_all if show_all else data.review_queue
+    if show_all:
+        st.caption(f"Все обращения: {len(queue_df)}. Спорных: {len(data.review_queue)}.")
+    else:
+        st.caption(
+            f"Спорных обращений: {len(queue_df)} из {len(data.review_queue_all)}. "
+            "Остальные — с ответом, без подсказок и замечаний — отмечаются кнопкой ниже."
+        )
+
+    edited = None
+    if queue_df.empty:
         st.info("Нет обращений для разметки.")
     else:
         editable = {"Результат", "Тон", "Не к месту", "Брань Гостя"}
-        disabled = [col for col in data.review_queue.columns if col not in editable]
+        disabled = [col for col in queue_df.columns if col not in editable]
         edited = st.data_editor(
-            data.review_queue,
+            queue_df,
             column_config={
                 "Результат": st.column_config.SelectboxColumn(
                     "Результат", options=[c.REVIEW_DEFAULT, *c.REVIEW_OUTCOME_CHOICES.keys()], required=True),
@@ -339,9 +350,9 @@ def _tab_review(data, result) -> None:
             hide_index=True, use_container_width=True, key="ow_merge_editor",
         )
 
-    if st.button("🔄 Пересобрать Excel с разметкой", use_container_width=True, key="ow_rebuild"):
+    def _collect_overrides(bulk_solved: bool = False) -> dict:
         overrides = {"outcome": {}, "tone": {}, "wrong": {}, "abuse": {}, "merge": {}}
-        if not data.review_queue.empty:
+        if edited is not None:
             for _, row in edited.iterrows():
                 key = row["Ключ"]
                 outcome = c.REVIEW_OUTCOME_CHOICES.get(row.get("Результат"))
@@ -353,26 +364,56 @@ def _tab_review(data, result) -> None:
                     overrides["wrong"][key] = "wrong"
                 if c.REVIEW_ABUSE_CHOICES.get(row.get("Брань Гостя")):
                     overrides["abuse"][key] = "abuse"
+        if bulk_solved:
+            for _, row in data.review_queue_all.iterrows():
+                clean = (
+                    not row.get("Подсказка")
+                    and not row.get("Без ответа")
+                    and int(row.get("Ответов") or 0) > 0
+                    and row.get("Тон") == "Нет"
+                    and row.get("Не к месту") == "Нет"
+                    and row.get("Брань Гостя") == "Нет"
+                    and row.get("Результат") == c.REVIEW_DEFAULT
+                )
+                if clean:
+                    overrides["outcome"][row["Ключ"]] = c.OUTCOME_SOLVED
         if merge_edited is not None:
             for _, row in merge_edited.iterrows():
                 if c.MERGE_CHOICES.get(row.get("Решение")):
                     overrides["merge"][row["Ключ"]] = "merge"
+        return overrides
+
+    def _rebuild(overrides: dict) -> None:
         request = st.session_state.get("ow_request")
-        if request is not None:
-            new_request = OsWorkRequest(
-                files=request.files, settings=request.settings,
-                overrides=overrides, check_not_entered=request.check_not_entered,
-            )
-            with st.spinner("⏳ Пересборка с вашей разметкой..."):
-                new_result = build_os_work_report(new_request)
-            if new_result.success:
-                st.session_state["ow_request"] = new_request
-                st.session_state["ow_result"] = new_result
-                if celebrate_report_success is not None:
-                    celebrate_report_success()
-                st.rerun()
-            else:
-                st.error(f"❌ Ошибка: {new_result.error}")
+        if request is None:
+            return
+        new_request = OsWorkRequest(
+            files=request.files, settings=request.settings,
+            overrides=overrides, check_not_entered=request.check_not_entered,
+        )
+        with st.spinner("⏳ Пересборка с вашей разметкой..."):
+            new_result = build_os_work_report(new_request)
+        if new_result.success:
+            st.session_state["ow_request"] = new_request
+            st.session_state["ow_result"] = new_result
+            if celebrate_report_success is not None:
+                celebrate_report_success()
+            st.rerun()
+        else:
+            st.error(f"❌ Ошибка: {new_result.error}")
+
+    bc1, bc2 = st.columns(2)
+    with bc1:
+        if st.button("🔄 Пересобрать Excel с разметкой", use_container_width=True, key="ow_rebuild"):
+            _rebuild(_collect_overrides(bulk_solved=False))
+    with bc2:
+        if st.button(
+            "✅ Отметить чистые решёнными и пересобрать",
+            use_container_width=True, key="ow_bulk_solved",
+            help="Решён = был ответ, нет подсказки, нет ожидания без ответа, нет тона/не к месту/брани. "
+                 "Это ваше решение, применяется массово.",
+        ):
+            _rebuild(_collect_overrides(bulk_solved=True))
 
 
 def _tab_load(data) -> None:
@@ -414,9 +455,6 @@ def _tab_complaints(data) -> None:
     else:
         st.dataframe(data.restaurant_work, use_container_width=True, hide_index=True)
         st.caption("«Ответ не найден» в доступных CSV не доказывает молчание ресторана; изменения текущего заказа ответа не требуют.")
-    if not data.reverse_requests.empty:
-        st.markdown("##### ↩️ Запросы ресторанов к ОС")
-        st.dataframe(data.reverse_requests, use_container_width=True, hide_index=True)
     st.markdown("---")
     st.markdown("##### 🕵️ Не внесённые жалобы")
     if data.not_entered.empty and data.probable.empty:
@@ -430,19 +468,6 @@ def _tab_complaints(data) -> None:
             st.markdown("###### Вероятные совпадения — требуют сверки")
             st.dataframe(data.probable, use_container_width=True, hide_index=True)
     st.markdown("[🕵️ Открыть «Контроль жалоб» — полная проверка внесения](/ControlComplaints)")
-
-
-def _tab_bot(data) -> None:
-    st.markdown("##### 🤖 Ошибки чат-бота и запросы оператора")
-    if data.bot_fails.empty:
-        st.success("✅ Сбоев бота не обнаружено.")
-        return
-    c1, c2 = st.columns([1, 3])
-    with c1:
-        st.metric("Сбоев бота", len(data.bot_fails))
-        st.dataframe(data.bot_fails["Тип ошибки бота"].value_counts(), use_container_width=True)
-    with c2:
-        st.dataframe(data.bot_fails, use_container_width=True, hide_index=True)
 
 
 def _tab_coverage(data) -> None:
