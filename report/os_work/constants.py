@@ -1,0 +1,84 @@
+"""Константы модуля «Работа ОС» (методика v4, ред. 18.11.2026)."""
+from __future__ import annotations
+
+from datetime import timedelta
+
+MSK_OFFSET = timedelta(hours=3)
+
+# --- Скорость (правила «Скорость») ---
+WINDOW_START_MIN = 11 * 60 + 10   # 11:10 МСК
+WINDOW_END_MIN = 22 * 60 + 58     # 22:58 МСК
+SERIES_GAP_MIN = 5                # плотная начальная серия дополнений
+TARGET_AVG_MIN = 10               # ориентир среднего, заданный пользователем
+DETAIL_THRESHOLD_MIN = 20         # детальный список задержек — только >20
+GROUP_BOUNDS = (10, 30)           # группы ≤10, >10–30, >30
+OFFICIAL_HOURS = (11, 23)         # официальные часы отдела 11:00–23:00
+
+# --- Сотрудники ---
+# CRM-аккаунты ОС: Женя — мужчина («Офис»), Полина — женщина («Feedback»).
+OS_CRM_ACCOUNTS = {
+    "Санкт-Петербург (Офис)": "Женя",
+    "Санкт-Петербург (Feedback)": "Полина",
+}
+# Битрикс-авторы ОС (проверено по октябрьским CSV чатов).
+OS_BITRIX_AUTHORS = {
+    "Евгений Яковлев": "Женя",
+    "Полина Применко": "Полина",
+}
+EMPLOYEES = ["Женя", "Полина"]
+# Marketing SPB — не сотрудник ОС: его ответы закрывают ожидание гостя,
+# но в личные показатели Жени/Полины не входят (как на прежней странице ОС).
+EXCLUDED_OPERATORS = ["Marketing SPB"]
+SYSTEM_AUTHOR = "Системный пользователь"
+
+# --- Результаты вопроса (знаменатель решённости) ---
+OUTCOME_SOLVED = "Решён"
+OUTCOME_UNSOLVED = "Не решён"
+OUTCOME_WAIT_GUEST = "Ожидаются данные Гостя"
+OUTCOME_NO_DATA = "Недостаточно данных"
+OUTCOME_UNMARKED = "Требует разметки"
+OUTCOMES_DENOMINATOR = (OUTCOME_SOLVED, OUTCOME_UNSOLVED)
+
+# --- Листы одобренного формата ---
+SHEET_DASHBOARD = "Дашборд"
+SHEET_DYNAMIC = "Динамика и нагрузка"
+SHEET_NO_ANSWER = "Без ответа и решения"
+SHEET_REMARKS = "Замечания"
+SHEET_NOT_ENTERED = "Не внесённые жалобы"
+SHEET_RESTAURANTS = "Работа с ресторанами"
+SHEET_ATTENTION = "Требует внимания"
+PERSONAL_SHEET_METRICS = "Мои показатели"
+PERSONAL_SHEET_APPEALS = "Обращения и комментарии"
+
+# --- Палитра одобренных отчётов ---
+HEADER_COLOR = "1F3864"
+RED_COLOR = "F8CBAD"      # подтверждённые проблемы
+AMBER_COLOR = "FFE699"    # требует сверки
+STATUS_COLORS = {
+    OUTCOME_SOLVED: "C6EFCE",
+    OUTCOME_UNSOLVED: "FFC7CE",
+    OUTCOME_WAIT_GUEST: "FFEB9C",
+    OUTCOME_NO_DATA: "D9D2E9",
+}
+
+# --- Разметка вручную ---
+REVIEW_DEFAULT = "Оставить как есть"
+REVIEW_OUTCOME_CHOICES = {
+    "Решён": OUTCOME_SOLVED,
+    "Не решён": OUTCOME_UNSOLVED,
+    "Ожидаются данные Гостя": OUTCOME_WAIT_GUEST,
+    "Недостаточно данных": OUTCOME_NO_DATA,
+}
+REVIEW_TONE_CHOICES = {"Нет": "", "Нарушение тона": "tone"}
+REVIEW_WRONG_CHOICES = {"Нет": "", "Ответ не к месту / неверная информация": "wrong"}
+REVIEW_ABUSE_CHOICES = {"Нет": "", "Гость ругался (брань, оскорбления, угрозы)": "abuse"}
+MERGE_DEFAULT = "Разные вопросы"
+MERGE_CHOICES = {"Разные вопросы": "", "Объединить (один вопрос)": "merge"}
+
+# --- Темы «Требует внимания» ---
+THREAT_KEYWORDS = [
+    "прокуратур", "роспотребнадзор", "суд ", "судебн", "исковое", "полици",
+    "заявление в", "надзорн", "правоохранительн", "адвокат", "юрист",
+]
+ATTENTION_EARLY_DELIVERED = "ранний статус «доставлен»"
+ATTENTION_PHONE_UNAVAILABLE = "недоступные телефоны"
