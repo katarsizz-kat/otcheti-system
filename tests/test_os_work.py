@@ -501,11 +501,13 @@ def test_builder_end_to_end() -> None:
     assert data.totals["обращений"] == 3
     assert data.totals["без ответа"] == 1
     assert data.totals["дольше 20"] == 1  # 40 минут по карточке 32
-    # В очереди по умолчанию только спорные (32 долгое, 33 без ответа);
-    # чистая 31 — в полном списке для массовой отметки.
-    assert len(data.review_queue) == 2
+    # Кандидатов «не к месту» нет (ответы-уточнения = «Другое / Запрос»);
+    # всё решается авто-правилами или массовой кнопкой.
+    assert len(data.review_queue) == 0
     assert len(data.review_queue_all) == 3
-    assert "Подсказка" in data.review_queue.columns
+    assert "Вопрос Гостя" in data.review_queue.columns
+    assert "Ответ ОС" in data.review_queue.columns
+    assert data.totals["авто"] == 1  # 33 без ответа -> авто не решён
 
     wb = load_workbook(result.excels["руководителю"])
     assert c.SHEET_DASHBOARD in wb.sheetnames
@@ -532,20 +534,22 @@ def test_builder_end_to_end() -> None:
 def test_manual_marking_changes_dashboard() -> None:
     base = build_os_work_report(_end_to_end_request())
     assert base.success, base.error
-    keys = list(base.data.review_queue["Ключ"])
+    keys = list(base.data.review_queue_all["Ключ"])  # 31, 32, 33
     overrides = {
         "outcome": {keys[0]: c.OUTCOME_SOLVED, keys[1]: c.OUTCOME_UNSOLVED},
-        "tone": {keys[1]: "tone"},
         "wrong": {keys[0]: "wrong"},
     }
     marked = build_os_work_report(_end_to_end_request(overrides))
     assert marked.success, marked.error
     dash = marked.data.dashboard.set_index("Показатель")
-    assert dash.loc["Вопрос решён, % (X из Y)", "Отдел"] == "50.0% (1 из 2)"
-    assert dash.loc["Вопрос не решён", "Отдел"] == "1"
-    assert dash.loc["Нарушение тона", "Отдел"] == "1"
+    # 31 решён вручную, 32 не решён вручную, 33 не решён авто (без ответа).
+    assert dash.loc["Вопрос решён, % (X из Y)", "Отдел"] == "33.3% (1 из 3)"
+    assert dash.loc["Вопрос не решён", "Отдел"] == "2"
+    assert "Нарушение тона" not in dash.index  # тон исключён из проверки
     assert dash.loc["Ответ не к месту / неверная информация", "Отдел"] == "1"
-    assert marked.data.totals["размечено"] == 2
+    assert marked.data.totals["размечено"] == 3
+    assert marked.data.totals["вручную"] == 2
+    assert marked.data.totals["авто"] == 1
     wb = load_workbook(marked.excels["руководителю"])
     assert c.SHEET_REMARKS in wb.sheetnames
 
@@ -615,17 +619,72 @@ def test_bulk_solved_marks_clean_appeals() -> None:
     base = build_os_work_report(_end_to_end_request())
     clean_keys = [
         r["Ключ"] for _, r in base.data.review_queue_all.iterrows()
-        if not r["Подсказка"] and not r["Без ответа"] and int(r["Ответов"]) > 0
-        and r["Тон"] == "Нет" and r["Не к месту"] == "Нет" and r["Брань Гостя"] == "Нет"
+        if not r["Без ответа"] and not r["Кандидат не к месту"] and int(r["Ответов"]) > 0
+        and r["Не к месту"] == "Нет" and r["Брань Гостя"] == "Нет"
+        and r["Результат"] == c.REVIEW_DEFAULT
     ]
-    assert len(clean_keys) == 2  # карточки 31 и 32 (долгий ответ — не про решённость)
+    assert len(clean_keys) == 2  # 31 и 32 (33 авто не решён, не в массовой отметке)
     marked = build_os_work_report(_end_to_end_request(
         overrides={"outcome": {k: c.OUTCOME_SOLVED for k in clean_keys}},
     ))
     assert marked.success, marked.error
-    assert marked.data.totals["размечено"] == 2
+    assert marked.data.totals["размечено"] == 3  # 31,32 вручную + 33 авто
     dash = marked.data.dashboard.set_index("Показатель")
-    assert dash.loc["Вопрос решён, % (X из Y)", "Отдел"] == "100.0% (2 из 2)"
+    assert dash.loc["Вопрос решён, % (X из Y)", "Отдел"] == "66.7% (2 из 3)"
+
+
+def test_auto_outcomes_precedence() -> None:
+    # доказательство компенсации -> решён
+    proof = simple_card(70, "+79111111111", "2026-11-17 08:00:00", "верните деньги за заказ",
+                        answer_utc="2026-11-17 08:10:00",
+                        answer_text="Здравствуйте! Возврат оформили, средства возвращены.")
+    # ОС запросило данные, Гость молчит -> ожидаются данные
+    waiting = simple_card(71, "+79222222222", "2026-11-17 08:00:00", "пришла холодная пицца",
+                          answer_utc="2026-11-17 08:10:00",
+                          answer_text="Пришлите пожалуйста скриншот и номер заказа.")
+    # Гость поблагодарил после ответа -> решён (закрыто Гостем)
+    closed = {
+        "number": 72, "restaurant_id": 198, "created_utc": "2026-11-17 08:00:00",
+        "entries": [_system_entry("g72", "2026-11-17 08:12:00", _guest_block("+79333333333", [
+            ("Клиент", "2026-11-17 08:00:00", "где заказ?"),
+            ("Клиент", "2026-11-17 08:12:00", "спасибо, всё получили!"),
+        ]))],
+    }
+    closed["entries"].append(_staff_entry("a72", OFFICE, "2026-11-17 08:10:00", "Заказ в пути."))
+    # обещали уточнить и не вернулись -> не решён
+    promise = simple_card(73, "+79444444444", "2026-11-17 08:00:00", "почему списали бонусы?",
+                          answer_utc="2026-11-17 08:10:00",
+                          answer_text="Уточню информацию и вернусь с ответом.")
+    files = OsWorkSourceFiles(crm_json=json.dumps(make_export([proof, waiting, closed, promise])))
+    settings = OsWorkSettings(True, date(2026, 11, 17), date(2026, 11, 18))
+    res = build_os_work_report(OsWorkRequest(files=files, settings=settings, check_not_entered=False))
+    assert res.success, res.error
+    by_ticket = {r["Тикеты"]: r for _, r in res.data.review_queue_all.iterrows()}
+    assert by_ticket["70"]["Результат"] == "Решён"
+    assert by_ticket["71"]["Результат"] == "Ожидаются данные Гостя"
+    assert by_ticket["72"]["Результат"] == "Решён"
+    assert by_ticket["73"]["Результат"] == "Не решён"
+    assert res.data.totals["авто"] == 4
+    assert len(res.data.review_queue) == 0  # всё решено авто, вручную нечего
+
+
+def test_wrong_candidate_category_mismatch() -> None:
+    # Вопрос про качество, ответ — шаблон про бонусы: темы противоречат ->
+    # кандидат «не к месту» с парой вопрос+ответ в очереди.
+    card = simple_card(
+        80, "+79111111111", "2026-11-17 08:00:00", "привезли холодную пиццу, есть невозможно",
+        answer_utc="2026-11-17 08:10:00",
+        answer_text="Бонусы не начислились, так как в заказе применена другая выгода: промокод или акция.",
+    )
+    files = OsWorkSourceFiles(crm_json=json.dumps(make_export([card])))
+    settings = OsWorkSettings(True, date(2026, 11, 17), date(2026, 11, 18))
+    res = build_os_work_report(OsWorkRequest(files=files, settings=settings, check_not_entered=False))
+    assert res.success, res.error
+    assert len(res.data.review_queue) == 1
+    row = res.data.review_queue.iloc[0]
+    assert row["Кандидат не к месту"] == "Да"
+    assert "холодную" in row["Вопрос Гостя"]
+    assert "Бонусы" in row["Ответ ОС"]
 
 
 def main() -> None:
@@ -655,6 +714,8 @@ def main() -> None:
         test_pre_history_bot_session_not_counted,
         test_abuse_auto_detected,
         test_bulk_solved_marks_clean_appeals,
+        test_auto_outcomes_precedence,
+        test_wrong_candidate_category_mismatch,
     ]
     for test in tests:
         test()

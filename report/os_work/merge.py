@@ -47,11 +47,12 @@ class Appeal:
     messages: List[Message] = field(default_factory=list)
     waits: List[Wait] = field(default_factory=list)
     outcome: str = c.OUTCOME_UNMARKED
-    tone: bool = False
+    outcome_source: str = ""       # "" = вручную/не размечено; "авто: …" = правило
     wrong: bool = False
+    wrong_candidate: bool = False  # детерминированный кандидат «не к месту»
     abuse: bool = False
     active: bool = True
-    outcome_hint: str = ""
+    outcome_hint: str = ""         # основание авто-метки либо причина кандидата
     employees: List[str] = field(default_factory=list)
 
     def in_period_waits(self, start, end) -> List[Wait]:
@@ -282,24 +283,90 @@ def apply_merge_overrides(
             waits=waits,
             employees=employees,
             outcome=base.outcome,
-            tone=base.tone,
+            outcome_source=base.outcome_source,
             wrong=base.wrong,
+            wrong_candidate=base.wrong_candidate,
             abuse=base.abuse,
         ))
     merged.sort(key=lambda a: a.first_question or datetime.min)
     return merged
 
 
-def outcome_hint(appeal: Appeal) -> str:
-    """Детерминированная ПОДСКАЗКА-ПРОБЛЕМА для очереди разметки (не решение).
-    Возвращает только сигналы риска; чистые обращения с ответом подсказки не
-    имеют и отмечаются решёнными массовой кнопкой, без ручной проверки."""
+_PROOF_MARKERS = [
+    "начислили", "начислен", "бонусы начисл", "промокод отправ", "промокод высл",
+    "возврат оформ", "оформили возврат", "вернули деньги", "вернули средств",
+    "средства возвращ", "деньги возвращ", "ресторан связался", "связались с гостем",
+    "курьер связался", "компенсацию начисл",
+]
+
+
+def _has_proof(staff_text: str) -> bool:
+    """Доказательство компенсации/возврата/контакта, без отрицаний
+    («не начислили», «не вернули» доказательством не являются)."""
+    for marker in _PROOF_MARKERS:
+        idx = staff_text.find(marker)
+        while idx != -1:
+            prefix = staff_text[max(0, idx - 4):idx]
+            if "не" not in prefix.split():
+                return True
+            idx = staff_text.find(marker, idx + 1)
+    return False
+
+
+def detect_wrong_candidate(appeal: Appeal) -> bool:
+    """Кандидат «ответ не к месту»: тема ответа ОС явно противоречит теме
+    вопроса Гостя (обе конкретные категории и различаются). Шаблонные
+    ответы-уточнения («Другое / Запрос») кандидатами не считаются.
+    Детерминированно, без ИИ; финальную оценку даёт человек по паре вопрос+ответ."""
     last_staff = appeal.last_staff_message()
-    unanswered = [w for w in appeal.waits if not w.answered]
-    if unanswered and last_staff:
-        from .speed import staff_requested_data, staff_promised
-        if staff_requested_data(last_staff.text):
-            return "ОС запросило данные, Гость молчит — ожидаются данные Гостя"
-        if staff_promised(last_staff.text):
-            return "Обещание уточнить без продолжения — проверьте, вернулись ли с ответом"
-    return ""
+    if last_staff is None or not appeal.summary:
+        return False
+    if not any(w.answered for w in appeal.waits):
+        return False
+    generic = "Другое / Запрос"
+    q_cat = categorize_complaint_detailed(appeal.summary, "")
+    a_cat = categorize_complaint_detailed(last_staff.text, "")
+    if q_cat == generic or a_cat == generic:
+        return False
+    return q_cat != a_cat
+
+
+def apply_auto_outcome(appeal: Appeal) -> None:
+    """Детерминированные авто-результаты по приоритету (без ИИ). Применяются
+    только к ещё не размеченным обращениям; ручная разметка главнее."""
+    if appeal.outcome != c.OUTCOME_UNMARKED:
+        return
+    from .speed import is_closing, staff_requested_data, staff_promised
+
+    last_staff = appeal.last_staff_message()
+    last_guest = appeal.last_guest_message()
+    staff_text = " ".join(m.text.lower() for m in appeal.messages if m.kind == "staff")
+
+    if _has_proof(staff_text):
+        appeal.outcome = c.OUTCOME_SOLVED
+        appeal.outcome_source = "авто: доказательство (компенсация/возврат/контакт ресторана)"
+        appeal.outcome_hint = appeal.outcome_source
+        return
+    if last_staff and staff_requested_data(last_staff.text):
+        guest_after = last_guest and last_guest.ts > last_staff.ts
+        if not guest_after:
+            appeal.outcome = c.OUTCOME_WAIT_GUEST
+            appeal.outcome_source = "авто: ожидаются данные Гостя"
+            appeal.outcome_hint = appeal.outcome_source
+            return
+    if last_staff and last_guest and last_guest.ts > last_staff.ts \
+            and is_closing(last_guest.text, last_staff.text):
+        appeal.outcome = c.OUTCOME_SOLVED
+        appeal.outcome_source = "авто: закрыто Гостем"
+        appeal.outcome_hint = appeal.outcome_source
+        return
+    if last_staff and staff_promised(last_staff.text):
+        appeal.outcome = c.OUTCOME_UNSOLVED
+        appeal.outcome_source = "авто: обещание без продолжения"
+        appeal.outcome_hint = appeal.outcome_source
+        return
+    if any(w.in_period and not w.answered for w in appeal.waits):
+        appeal.outcome = c.OUTCOME_UNSOLVED
+        appeal.outcome_source = "авто: без ответа"
+        appeal.outcome_hint = appeal.outcome_source
+        return

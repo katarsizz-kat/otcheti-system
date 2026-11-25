@@ -43,6 +43,7 @@ OUTCOMES_DENOMINATOR = (OUTCOME_SOLVED, OUTCOME_UNSOLVED)
 SHEET_DASHBOARD = "Дашборд"
 SHEET_DYNAMIC = "Динамика и нагрузка"
 SHEET_NO_ANSWER = "Без ответа и решения"
+SHEET_LONG = "Ответ дольше 20 минут"
 SHEET_REMARKS = "Замечания"
 SHEET_NOT_ENTERED = "Не внесённые жалобы"
 SHEET_RESTAURANTS = "Работа с ресторанами"
@@ -69,7 +70,6 @@ REVIEW_OUTCOME_CHOICES = {
     "Ожидаются данные Гостя": OUTCOME_WAIT_GUEST,
     "Недостаточно данных": OUTCOME_NO_DATA,
 }
-REVIEW_TONE_CHOICES = {"Нет": "", "Нарушение тона": "tone"}
 REVIEW_WRONG_CHOICES = {"Нет": "", "Ответ не к месту / неверная информация": "wrong"}
 REVIEW_ABUSE_CHOICES = {"Нет": "", "Гость ругался (брань, оскорбления, угрозы)": "abuse"}
 MERGE_DEFAULT = "Разные вопросы"

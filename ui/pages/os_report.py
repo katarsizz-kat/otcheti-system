@@ -211,12 +211,13 @@ def _render_result(result) -> None:
         return
 
     t = data.totals
-    m1, m2, m3, m4, m5 = st.columns(5)
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric("📨 Обращений", t.get("обращений", 0))
     m2.metric("⏱ Среднее ответа, мин", t.get("среднее") if t.get("среднее") is not None else "—")
     m3.metric("🔇 Без ответа", t.get("без ответа", 0))
     m4.metric("🐢 Дольше 20 мин", t.get("дольше 20", 0))
     m5.metric("🧑‍⚖️ Размечено", f"{t.get('размечено', 0)}/{t.get('всего размечать', 0)}")
+    m6.metric("🤖 Авто / ✍️ Вручную", f"{t.get('авто', 0)}/{t.get('вручную', 0)}")
 
     dl1, dl2, dl3 = st.columns(3)
     with dl1:
@@ -295,42 +296,40 @@ def _tab_speed(data) -> None:
 def _tab_review(data, result) -> None:
     st.markdown("##### 🧑‍⚖️ Очередь ручной разметки")
     st.caption(
-        "Решён/не решён, тон и ответ не к месту правила определить не могут — решение за вами. "
-        "«Подсказка» — детерминированный признак, не решение. Брань Гостя ловится автоматически. "
-        "По умолчанию в очереди только спорные обращения; чистые можно отметить решёнными "
-        "одной кнопкой, не проверяя каждое. Неразмеченные не входят в знаменатель решённости."
+        "Результаты (решён/не решён/ожидаются данные) присваиваются авто-правилами по доказательствам; "
+        "вручную остаётся только «ответ не к месту» — вопрос Гостя и ответ ОС показаны рядом. "
+        "Брань Гостя ловится автоматически. Тон не проверяется. Чистые обращения отмечаются "
+        "решёнными одной кнопкой. Неразмеченные не входят в знаменатель решённости."
     )
     show_all = st.checkbox(
-        "Показать все обращения (не только спорные)", value=False, key="ow_show_all",
+        "Показать все обращения (не только кандидатов «не к месту»)", value=False, key="ow_show_all",
     )
     queue_df = data.review_queue_all if show_all else data.review_queue
     if show_all:
-        st.caption(f"Все обращения: {len(queue_df)}. Спорных: {len(data.review_queue)}.")
+        st.caption(f"Все обращения: {len(queue_df)}. Кандидатов «не к месту»: {len(data.review_queue)}.")
     else:
         st.caption(
-            f"Спорных обращений: {len(queue_df)} из {len(data.review_queue_all)}. "
-            "Остальные — с ответом, без подсказок и замечаний — отмечаются кнопкой ниже."
+            f"Кандидатов «не к месту»: {len(queue_df)} из {len(data.review_queue_all)}. "
+            "Остальные решены авто-правилами или отмечаются кнопкой ниже."
         )
 
     edited = None
     if queue_df.empty:
         st.info("Нет обращений для разметки.")
     else:
-        editable = {"Результат", "Тон", "Не к месту", "Брань Гостя"}
+        editable = {"Результат", "Не к месту", "Брань Гостя"}
         disabled = [col for col in queue_df.columns if col not in editable]
         edited = st.data_editor(
             queue_df,
             column_config={
                 "Результат": st.column_config.SelectboxColumn(
                     "Результат", options=[c.REVIEW_DEFAULT, *c.REVIEW_OUTCOME_CHOICES.keys()], required=True),
-                "Тон": st.column_config.SelectboxColumn(
-                    "Тон", options=list(c.REVIEW_TONE_CHOICES.keys()), required=True),
                 "Не к месту": st.column_config.SelectboxColumn(
                     "Не к месту", options=list(c.REVIEW_WRONG_CHOICES.keys()), required=True),
                 "Брань Гостя": st.column_config.SelectboxColumn(
                     "Брань Гостя", options=list(c.REVIEW_ABUSE_CHOICES.keys()), required=True),
-                "Суть обращения": st.column_config.TextColumn(width="large"),
-                "Последний ответ ОС": st.column_config.TextColumn(width="large"),
+                "Вопрос Гостя": st.column_config.TextColumn(width="large"),
+                "Ответ ОС": st.column_config.TextColumn(width="large"),
             },
             disabled=disabled, hide_index=True, use_container_width=True,
             key="ow_review_editor",
@@ -351,15 +350,13 @@ def _tab_review(data, result) -> None:
         )
 
     def _collect_overrides(bulk_solved: bool = False) -> dict:
-        overrides = {"outcome": {}, "tone": {}, "wrong": {}, "abuse": {}, "merge": {}}
+        overrides = {"outcome": {}, "wrong": {}, "abuse": {}, "merge": {}}
         if edited is not None:
             for _, row in edited.iterrows():
                 key = row["Ключ"]
                 outcome = c.REVIEW_OUTCOME_CHOICES.get(row.get("Результат"))
                 if outcome:
                     overrides["outcome"][key] = outcome
-                if c.REVIEW_TONE_CHOICES.get(row.get("Тон")):
-                    overrides["tone"][key] = "tone"
                 if c.REVIEW_WRONG_CHOICES.get(row.get("Не к месту")):
                     overrides["wrong"][key] = "wrong"
                 if c.REVIEW_ABUSE_CHOICES.get(row.get("Брань Гостя")):
@@ -367,10 +364,9 @@ def _tab_review(data, result) -> None:
         if bulk_solved:
             for _, row in data.review_queue_all.iterrows():
                 clean = (
-                    not row.get("Подсказка")
-                    and not row.get("Без ответа")
+                    not row.get("Без ответа")
+                    and not row.get("Кандидат не к месту")
                     and int(row.get("Ответов") or 0) > 0
-                    and row.get("Тон") == "Нет"
                     and row.get("Не к месту") == "Нет"
                     and row.get("Брань Гостя") == "Нет"
                     and row.get("Результат") == c.REVIEW_DEFAULT

@@ -134,9 +134,6 @@ def build_dashboard(
         "Женя": transfers.get("Женя", 0),
         "Полина": transfers.get("Полина", 0),
     })
-    add("Нарушение тона", {
-        k: sum(1 for a in group if a.tone) for k, group in per_scope_appeals.items()
-    })
     add("Ответ не к месту / неверная информация", {
         k: sum(1 for a in group if a.wrong) for k, group in per_scope_appeals.items()
     })
@@ -179,8 +176,10 @@ def build_outcomes_table(appeals: List[Appeal]) -> pd.DataFrame:
             "Доля": f"{round(100 * n / total, 1)}%" if total else "—",
         })
     marked = total - counts.get(c.OUTCOME_UNMARKED, 0)
+    auto = sum(1 for a in appeals if a.outcome_source.startswith("авто"))
+    manual = marked - auto
     rows.append({
-        "Результат вопроса": f"Размечено вручную: {marked} из {total}",
+        "Результат вопроса": f"Размечено: {marked} из {total} (авто {auto} / вручную {manual})",
         "Обращений": "",
         "Доля": "",
     })
@@ -471,7 +470,7 @@ def build_attention(appeals: List[Appeal], cc_attention: Optional[pd.DataFrame])
 def build_remarks(appeals: List[Appeal], restaurant_names: Dict[str, str]) -> pd.DataFrame:
     cols = ["Проблема", "Количество обращений", "Тикеты", "Комментарий"]
     rows = []
-    for flag, label in (("tone", "Нарушение тона"), ("wrong", "Ответ не к месту / неверная информация")):
+    for flag, label in (("wrong", "Ответ не к месту / неверная информация"),):
         group = [a for a in appeals if getattr(a, flag)]
         if not group:
             continue
@@ -493,8 +492,6 @@ def build_appeals_table(appeals: List[Appeal], restaurant_names: Dict[str, str])
     for a in appeals:
         answered = [w for w in a.waits if w.in_period and w.answered]
         marks = []
-        if a.tone:
-            marks.append("тон")
         if a.wrong:
             marks.append("не к месту")
         if a.abuse:
@@ -571,7 +568,6 @@ def build_personal(
         ("Обращение без ответа", sum(1 for a in group if any(w.in_period and not w.answered for w in a.waits))),
         ("Жалобы не внесены в таблицу", not_entered_by_emp.get(employee, 0)),
         ("Жалобы переданы в ресторан", transfers.get(employee, 0)),
-        ("Нарушение тона", sum(1 for a in group if a.tone)),
         ("Ответ не к месту / неверная информация", sum(1 for a in group if a.wrong)),
     ]
     metrics_df = pd.DataFrame(

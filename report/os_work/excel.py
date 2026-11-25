@@ -88,15 +88,12 @@ def build_os_work_excel(
         row = _write_table(ws2, row, "Совместная работа (дни с ответами обоих сотрудников)", data.joint)
 
     # ---------------- БЕЗ ОТВЕТА И РЕШЕНИЯ ----------------
-    if _sheet_has_content(data.unanswered, data.long_answers, data.next_day,
+    if _sheet_has_content(data.unanswered, data.next_day,
                           data.old_period_closed, data.old_period_open):
         ws3 = wb.create_sheet(c.SHEET_NO_ANSWER)
         row = _write_title(ws3, 1, f"Без ответа и решения — {period_label}")
         row += 1
         row = _write_table(ws3, row, "Обращения без ответа", data.unanswered, row_fill=RED_FILL)
-        row = _write_table(ws3, row, f"Ответ дольше {c.DETAIL_THRESHOLD_MIN} рабочих минут",
-                           data.long_answers, row_fill=AMBER_FILL,
-                           description="Обращения хотя бы с одним таким ожиданием; максимум и детали.")
         row = _write_table(ws3, row, "Ответили только на следующий день (первый ответ)",
                            data.next_day, description="Ответ через два дня и позже — строки с «Дней до ответа» ≥ 2.")
         row = _write_table(ws3, row, "Ожидания прошлых периодов, закрытые в этом",
@@ -105,6 +102,16 @@ def build_os_work_excel(
         _write_table(ws3, row, "Незавершённые ожидания прошлых периодов",
                      data.old_period_open, row_fill=AMBER_FILL,
                      description="Продолжения, не новые обращения; вопрос задан до начала периода.")
+
+    # ---------------- ОТВЕТ ДОЛЬШЕ 20 МИНУТ (отдельный лист) ----------------
+    if _sheet_has_content(data.long_answers):
+        ws_long = wb.create_sheet(c.SHEET_LONG)
+        row = _write_title(ws_long, 1, f"Ответ дольше {c.DETAIL_THRESHOLD_MIN} минут — {period_label}")
+        row += 1
+        _write_table(ws_long, row, f"Ответ дольше {c.DETAIL_THRESHOLD_MIN} рабочих минут",
+                     data.long_answers, row_fill=AMBER_FILL,
+                     description="Обращения хотя бы с одним таким ожиданием; максимум и детали. "
+                                 "Скорость, не решение вопроса — ручной проверки не требует.")
 
     # ---------------- ЗАМЕЧАНИЯ ----------------
     if _sheet_has_content(data.remarks):

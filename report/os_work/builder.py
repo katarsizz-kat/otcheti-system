@@ -33,8 +33,8 @@ from .excel import build_os_work_excel, build_personal_excel
 from .models import OsWorkRequest, OsWorkResult, OsWorkData
 
 REVIEW_QUEUE_COLS = [
-    "Ключ", "Тикеты", "Дата", "Ресторан", "Суть обращения", "Подсказка",
-    "Последний ответ ОС", "Ответов", "Без ответа", "Результат", "Тон", "Не к месту", "Брань Гостя",
+    "Ключ", "Тикеты", "Дата", "Ресторан", "Вопрос Гостя", "Ответ ОС", "Основание",
+    "Ответов", "Без ответа", "Кандидат не к месту", "Результат", "Не к месту", "Брань Гостя",
 ]
 
 
@@ -69,7 +69,8 @@ def _apply_semantic_overrides(appeals: List[mg.Appeal], overrides: Dict[str, Dic
             c.OUTCOME_SOLVED, c.OUTCOME_UNSOLVED, c.OUTCOME_WAIT_GUEST, c.OUTCOME_NO_DATA,
         ):
             by_key[key].outcome = outcome
-    for field_name, override_key in (("tone", "tone"), ("wrong", "wrong"), ("abuse", "abuse")):
+            by_key[key].outcome_source = "вручную"
+    for field_name, override_key in (("wrong", "wrong"), ("abuse", "abuse")):
         for key, value in (overrides.get(override_key) or {}).items():
             if key in by_key and value:
                 setattr(by_key[key], field_name, True)
@@ -162,6 +163,16 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
             guest_text = " ".join(m.text.lower() for m in a.messages if m.kind == "guest")
             if any(marker in guest_text for marker in c.ABUSE_MARKERS):
                 a.abuse = True
+
+        # Авто-результаты по правилам (без ИИ) — только для ещё не размеченных;
+        # ручная разметка главнее. Кандидаты «не к месту» — в очередь человеку.
+        for a in active:
+            mg.apply_auto_outcome(a)
+            a.wrong_candidate = (
+                mg.detect_wrong_candidate(a) if a.outcome == c.OUTCOME_UNMARKED else False
+            )
+            if a.wrong_candidate and not a.outcome_hint:
+                a.outcome_hint = "кандидат: ответ не пересекается с вопросом — оцените пару"
 
         # -------------------- РЕСТОРАНЫ --------------------
         reference = restaurants.load_reference()
@@ -295,16 +306,11 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
         )
 
         # -------------------- ОЧЕРЕДЬ РАЗМЕТКИ --------------------
-        # По умолчанию в очереди только обращения, требующие решения человека
-        # (подсказка, без ответа, долгое ожидание, тон/не к месту). Остальные
-        # можно отметить решёнными одной кнопкой — не проверяя каждое вручную.
+        # В очереди только кандидаты «ответ не к месту» (вопрос+ответ рядом)
+        # и уже отмеченные «не к месту». Всё остальное решается авто-правилами
+        # или массовой кнопкой — вручную проверять не нужно.
         def _needs_review(a) -> bool:
-            return bool(
-                mg.outcome_hint(a)
-                or any(w.in_period and not w.answered for w in a.waits)
-                or any(w.in_period and w.answered and w.minutes > c.DETAIL_THRESHOLD_MIN for w in a.waits)
-                or a.tone or a.wrong
-            )
+            return bool(a.wrong_candidate or a.wrong)
 
         queue_rows = []
         for a in active:
@@ -320,13 +326,13 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
                 "Тикеты": ", ".join(map(str, a.tickets)),
                 "Дата": a.first_question,
                 "Ресторан": restaurant_names.get(a.key, a.city),
-                "Суть обращения": a.summary[:200],
-                "Подсказка": mg.outcome_hint(a),
-                "Последний ответ ОС": (last_staff.text[:150] if last_staff else ""),
+                "Вопрос Гостя": a.summary[:200],
+                "Ответ ОС": (last_staff.text[:200] if last_staff else ""),
+                "Основание": a.outcome_hint,
                 "Ответов": answered_n,
                 "Без ответа": "Да" if any(w.in_period and not w.answered for w in a.waits) else "",
+                "Кандидат не к месту": "Да" if a.wrong_candidate else "",
                 "Результат": outcome_label,
-                "Тон": "Нарушение тона" if a.tone else "Нет",
                 "Не к месту": "Ответ не к месту / неверная информация" if a.wrong else "Нет",
                 "Брань Гостя": "Гость ругался (брань, оскорбления, угрозы)" if a.abuse else "Нет",
                 "_needs": _needs_review(a),
@@ -363,6 +369,8 @@ def build_os_work_report(request: OsWorkRequest) -> OsWorkResult:
                 "без ответа": len(unanswered),
                 "дольше 20": len(long_answers),
                 "размечено": sum(1 for a in active if a.outcome != c.OUTCOME_UNMARKED),
+                "авто": sum(1 for a in active if a.outcome_source.startswith("авто")),
+                "вручную": sum(1 for a in active if a.outcome != c.OUTCOME_UNMARKED and not a.outcome_source.startswith("авто")),
                 "всего размечать": len(active),
             },
         )
