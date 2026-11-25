@@ -409,7 +409,14 @@ def test_restaurants_resolve() -> None:
     name, known = restaurants.resolve_name(198, "Санкт-Петербург", ref, {8: "Серебристый"})
     assert known and "Серебристый" in name
     name, known = restaurants.resolve_name(214, "Тюмень", ref)
-    assert not known and "ID 214" in name
+    assert known and "Орджоникидзе" in name
+    name, known = restaurants.resolve_name(427, "Тюмень", ref)
+    assert known and "Мельникайте" in name
+    name, known = restaurants.resolve_name(247, "Санкт-Петербург", ref)
+    assert known and name == restaurants.NOT_IDENTIFIED  # закрыт/не определён
+    closed_ref = {900: {"city": "Санкт-Петербург", "number": 3}}
+    name, known = restaurants.resolve_name(900, "Санкт-Петербург", closed_ref)
+    assert known and name == restaurants.NOT_IDENTIFIED  # №3 не в действующих
     name, known = restaurants.resolve_name(999, "Санкт-Петербург", ref)
     assert not known
 
