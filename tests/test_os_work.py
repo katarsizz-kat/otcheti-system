@@ -357,6 +357,28 @@ def test_first_repeat() -> None:
     assert waits[0].minutes == 10.0 and waits[1].minutes == 5.0
 
 
+def test_repeat_counts_all_staff_messages() -> None:
+    # Повторные = все сообщения сотрудника кроме первого (правило 25.11.2026):
+    # ответ1, затем ответ2 на продолжение и ответ3 подряд -> повторных 2.
+    from report.os_work.stats import first_repeat_stats
+    card = {
+        "number": 90, "restaurant_id": 198, "created_utc": "2026-11-17 08:00:00",
+        "entries": [_system_entry("g90", "2026-11-17 08:20:00", _guest_block("+79111111111", [
+            ("Клиент", "2026-11-17 08:00:00", "где заказ?"),
+            ("Клиент", "2026-11-17 08:20:00", "а соус вернёте?"),
+        ]))],
+    }
+    card["entries"].append(_staff_entry("a90a", OFFICE, "2026-11-17 08:10:00", "Заказ в пути."))
+    card["entries"].append(_staff_entry("a90b", OFFICE, "2026-11-17 08:25:00", "Соус начислим бонусами."))
+    card["entries"].append(_staff_entry("a90c", OFFICE, "2026-11-17 08:26:00", "Бонусы уже на счету."))
+    export = parse([card])
+    appeals, _ = build_appeals(export.cards)
+    f_n, r_n, f_times, r_times = first_repeat_stats(appeals, None)
+    assert f_n == 1
+    assert r_n == 2  # второе и третье сообщения сотрудника
+    assert len(r_times) == 2
+
+
 def test_period_attribution() -> None:
     # Вопрос 16.11 23:00 МСК (прошлый период), ответ 17.11 11:30 МСК.
     export = parse([simple_card(10, "+79111111111", "2026-11-16 20:00:00", "где заказ?",
@@ -451,9 +473,9 @@ def _bitrix_csv(rows):
 def test_bitrix_restaurant_work() -> None:
     from report.os_work.bitrix import load_bitrix, restaurant_work
     chat = _bitrix_csv([
-        ["2026-11-17 12:00:00", "Евгений Яковлев", "по заказу 58936486 гость жалуется на холодную пиццу, проверьте"],
+        ["2026-11-17 12:00:00", "Евгений Яковлев", "по заказу 58936486 гость +79111111111 жалуется на холодную пиццу, проверьте"],
         ["2026-11-17 12:20:00", "Мария Сухова", "проверили, курьер задержался, гостю передадим промокод"],
-        ["2026-11-17 13:00:00", "Евгений Яковлев", "измените адрес доставки по заказу 58936487, ул. Ленина 5"],
+        ["2026-11-17 13:00:00", "Евгений Яковлев", "измените адрес доставки по заказу 58936487, гость +79222222222, ул. Ленина 5"],
         ["2026-11-17 09:00:00", "Аня Копач", "прошу отправить промокод на др гостю"],
     ])
     df = load_bitrix(chat, None, [])
@@ -709,6 +731,7 @@ def main() -> None:
         test_bot_not_os_answer,
         test_marketing_closes_wait_not_personal,
         test_first_repeat,
+        test_repeat_counts_all_staff_messages,
         test_period_attribution,
         test_merge_same_phone_order,
         test_same_phone_different_questions_not_merged,

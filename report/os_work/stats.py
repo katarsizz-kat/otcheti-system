@@ -59,6 +59,41 @@ def employee_appeals(appeals: List[Appeal], employee: Optional[str]) -> List[App
     return [a for a in appeals if employee in a.employees]
 
 
+def first_repeat_stats(appeals: List[Appeal], employee: Optional[str] = None):
+    """Первые/повторные ответы по правилу пользователя 25.11.2026:
+    первый = первое сообщение сотрудника по обращению; повторные = ВСЕ
+    последующие сообщения сотрудника (вторые, третьи и т.д.).
+    Время повторного = рабочие минуты от предыдущего сообщения (гостя или
+    сотрудника) до этого сообщения. Возвращает (first_n, repeat_n,
+    first_times, repeat_times)."""
+    from .speed import work_minutes
+    first_n = repeat_n = 0
+    first_times: List[float] = []
+    repeat_times: List[float] = []
+    for a in appeals:
+        staff = [
+            m for m in a.messages
+            if m.kind == "staff" and (employee is None or c.OS_CRM_ACCOUNTS.get(m.author) == employee)
+        ]
+        if not staff:
+            continue
+        first_n += 1
+        if a.waits and a.waits[0].answered:
+            first_times.append(a.waits[0].minutes)
+        timeline = [m for m in a.messages if m.kind in ("guest", "staff")]
+        for i in range(1, len(staff)):
+            cur = staff[i]
+            prev = None
+            for m in timeline:
+                if m.ts < cur.ts:
+                    prev = m
+                else:
+                    break
+            repeat_n += 1
+            repeat_times.append(work_minutes(prev.ts, cur.ts) if prev else 0.0)
+    return first_n, repeat_n, first_times, repeat_times
+
+
 def build_dashboard(
     appeals: List[Appeal],
     transfers: Dict[str, int],
@@ -102,18 +137,15 @@ def build_dashboard(
         k: _fmt_avg([w.minutes for w in v]) for k, v in per_scope_waits.items()
     })
     add("Количество ответов", {k: len(v) for k, v in per_scope_waits.items()})
+    fr = {k: first_repeat_stats(v, scopes[k]) for k, v in per_scope_appeals.items()}
     add("Среднее время первого ответа, мин", {
-        k: _fmt_avg([w.minutes for w in v if w.kind == "first"]) for k, v in per_scope_waits.items()
+        k: _fmt_avg(fr[k][2]) for k in scopes
     })
-    add("Первых ответов, шт", {
-        k: sum(1 for w in v if w.kind == "first") for k, v in per_scope_waits.items()
-    })
+    add("Первых ответов, шт", {k: fr[k][0] for k in scopes})
     add("Среднее время повторного ответа, мин", {
-        k: _fmt_avg([w.minutes for w in v if w.kind == "repeat"]) for k, v in per_scope_waits.items()
+        k: _fmt_avg(fr[k][3]) for k in scopes
     })
-    add("Повторных ответов, шт", {
-        k: sum(1 for w in v if w.kind == "repeat") for k, v in per_scope_waits.items()
-    })
+    add("Повторных ответов, шт", {k: fr[k][1] for k in scopes})
 
     add("Ответ дольше 20 минут (обращений)", {
         k: sum(1 for a in group if any(
@@ -552,6 +584,7 @@ def build_personal(
     solved = sum(1 for a in group if a.outcome == c.OUTCOME_SOLVED)
     unsolved = sum(1 for a in group if a.outcome == c.OUTCOME_UNSOLVED)
     denom = solved + unsolved
+    f_n, r_n, f_times, r_times = first_repeat_stats(group, employee)
     metrics = [
         ("Количество обращений", len(group)),
         ("Вопрос решён, % (X из Y)",
@@ -559,10 +592,10 @@ def build_personal(
         ("Вопрос не решён", unsolved),
         ("Среднее время ответа, мин", _fmt_avg([w.minutes for w in waits])),
         ("Количество ответов", len(waits)),
-        ("Среднее время первого ответа, мин", _fmt_avg([w.minutes for w in waits if w.kind == "first"])),
-        ("Первых ответов, шт", sum(1 for w in waits if w.kind == "first")),
-        ("Среднее время повторного ответа, мин", _fmt_avg([w.minutes for w in waits if w.kind == "repeat"])),
-        ("Повторных ответов, шт", sum(1 for w in waits if w.kind == "repeat")),
+        ("Среднее время первого ответа, мин", _fmt_avg(f_times)),
+        ("Первых ответов, шт", f_n),
+        ("Среднее время повторного ответа, мин", _fmt_avg(r_times)),
+        ("Повторных ответов, шт", r_n),
         ("Ответ дольше 20 минут (обращений)", sum(
             1 for a in group if any(w.in_period and w.answered and w.minutes > c.DETAIL_THRESHOLD_MIN for w in a.waits))),
         ("Обращение без ответа", sum(1 for a in group if any(w.in_period and not w.answered for w in a.waits))),

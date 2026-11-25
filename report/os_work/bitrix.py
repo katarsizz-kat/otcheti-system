@@ -18,6 +18,7 @@ import pandas as pd
 
 from report.complaints_control import constants as cc
 from report.complaints_control.data import load_chat_messages
+from report.complaints_control.phone import find_phones_in_text
 
 from . import constants as c
 from .merge import Appeal
@@ -79,12 +80,16 @@ def restaurant_work(
 
     rows = []
     transfers: Dict[str, int] = {}
+    # Передача жалобы ищется по НОМЕРУ ТЕЛЕФОНА Гостя (правило 25.11.2026),
+    # а не по номеру заказа: телефон в чатах встречается чаще заказа.
+    bitrix = bitrix.copy()
+    bitrix["_phones"] = bitrix["Текст"].map(
+        lambda t: {p[-10:] for p in find_phones_in_text(t)}
+    )
     for appeal in appeals:
-        if not appeal.orders:
+        if not appeal.phone:
             continue
-        mask = pd.Series(False, index=bitrix.index)
-        for oid in appeal.orders:
-            mask |= bitrix["Текст"].str.contains(re.escape(oid), regex=True, na=False)
+        mask = bitrix["_phones"].map(lambda phones: appeal.phone in phones)
         matched = bitrix[mask]
         if matched.empty:
             continue
@@ -100,7 +105,7 @@ def restaurant_work(
         basis = ""
         if not later_rest.empty:
             answered = True
-            basis = "по номеру заказа"
+            basis = "по телефону Гостя"
             reply_row = later_rest.iloc[0]
         else:
             same_chat = bitrix[
